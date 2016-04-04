@@ -1,0 +1,28 @@
+plugins {
+	id 'net.saliman.cobertura' version '2.2.6'
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+version = '2016.2'
+sourceCompatibility = '1.6'
+targetCompatibility = '1.6'
+compileJava.options.encoding = 'UTF-8'
+sourceSets.main.java.srcDirs = ['source']
+sourceSets.main.resources.srcDirs = ['resources']
+sourceSets.test.java.srcDirs = ['source.test']
+jar.archiveName = 'colorize-java-commons.jar'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compile 'com.google.guava:guava:19.0'
+	compile 'org.jdom:jdom2:2.0.6'
+	compile 'jaxen:jaxen:1.1.6'
+	compile 'com.google.code.gson:gson:2.6.2'
+	compile 'javax.servlet:servlet-api:2.5'
+	testCompile 'junit:junit:4.12'
+}
