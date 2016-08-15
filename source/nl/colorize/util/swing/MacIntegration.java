@@ -26,40 +26,40 @@ import javax.swing.JFrame;
 import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 
+import nl.colorize.util.CommandRunner;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.Version;
-import nl.colorize.util.system.CommandRunner;
 
 /**
- * Utility class for making OS X specific behavior available to Swing applications.
+ * Utility class for making macOS specific behavior available to Swing applications.
  * This includes interaction with the application menu, the dock, fullscreen mode,
  * and the notification center.
  * <p>
- * Which features are available depend on both the version of OS X and the JRE.
+ * Which features are available depend on both the version of macOS and the JRE.
  * In older versions of the JRE these features were accessed through the Apple
  * Java extensions. As of Java 9 these extensions are no longer part of the JRE,
  * with the functionality being added to the AWT desktop API. This class abstracts
  * over these differences, using the appropriate API depending on the used JRE.
  * <p>
- * Some features were only introduced in later version of OS X, and are not
+ * Some features were only introduced in later version of macOS, and are not
  * available in earlier versions. Attempting to use a feature that is not available
- * in the current OS X version will have no effect, rather than throwing an 
+ * in the current macOS version will have no effect, rather than throwing an 
  * exception. This is done to prevent application code from being littered with 
  * feature detection checks. The same applies to attempting to use this class on a 
- * platform other than OS X, in which case all features will silently fail.   
+ * platform other than macOS, in which case all features will silently fail.   
  */
 public final class MacIntegration {
 	
-	public static final Version OSX_SNOW_LEOPARD = Version.parse("10.6");
-	public static final Version OSX_LION = Version.parse("10.7");
-	public static final Version OSX_MOUNTAIN_LION = Version.parse("10.8");
-	public static final Version OSX_MAVERICKS = Version.parse("10.9");
-	public static final Version OSX_YOSEMITE = Version.parse("10.10");
-	public static final Version OSX_EL_CAPITAN = Version.parse("10.11");
+	protected static final Version MACOS_LION = Version.parse("10.7");
+	protected static final Version MACOS_MOUNTAIN_LION = Version.parse("10.8");
+	protected static final Version MACOS_MAVERICKS = Version.parse("10.9");
+	protected static final Version MACOS_YOSEMITE = Version.parse("10.10");
+	protected static final Version MACOS_EL_CAPITAN = Version.parse("10.11");
+	protected static final Version MACOS_SIERRA = Version.parse("10.12");
 		
 	// Apple-specific system properties
-	public static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
+	protected static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
 	
 	// Apple-specific Swing client properties
 	public static final String AQUA_SIZE = "JComponent.sizeVariant";
@@ -68,8 +68,6 @@ public final class MacIntegration {
 	public static final String AQUA_TEXTFIELD = "JTextField.variant";
 	public static final String AQUA_PROGRESSBAR = "JProgressBar.style";
 	public static final String AQUA_VALUE_SMALL = "small";
-	public static final String AQUA_VALUE_MINI = "mini";
-	public static final String AQUA_VALUE_SQUARE = "square";
 	public static final String AQUA_VALUE_TEXTURED = "textured";
 	public static final String AQUA_VALUE_SEGMENTED = "segmented";
 	public static final String AQUA_VALUE_SEARCH = "search";
@@ -85,34 +83,32 @@ public final class MacIntegration {
 	private MacIntegration() {
 	}
 	
-	private static Version getOSXVersion() {
+	private static Version getMacOSVersion() {
 		String version = System.getProperty("os.version");
 		if (Version.canParse(version)) {
 			return Version.parse(version);
 		} else {
-			LOGGER.warning("Cannot parse OS X version " + version);
-			return OSX_LION;
+			LOGGER.warning("Cannot parse macOS version " + version);
+			return MACOS_LION;
 		}
 	}
 	
-	protected static boolean isAtLeastOSX(Version minVersion) {
-		if (Platform.isOSX()) {
-			Version osxVersion = getOSXVersion();
-			return osxVersion.isAtLeast(minVersion);
-		} else {
+	protected static boolean isAtLeast(Version minVersion) {
+		if (!Platform.isMac()) {
 			return false;
 		}
+		return getMacOSVersion().isAtLeast(minVersion);
 	}
 	
 	/**
 	 * Returns true if the used JRE supports the Apple Java extensions. These
-	 * extensions were introduced in OS X Snow Leopard (an older version used
-	 * in older OS X versions is no longer supported by this class). These APIs
-	 * were a part of the OS X version of the JRE in Java 5-8, but have been
+	 * extensions were introduced in macOS Snow Leopard (an older version used
+	 * in older macOS versions is no longer supported by this class). These APIs
+	 * were a part of the macOS version of the JRE in Java 5-8, but have been
 	 * removed from the JRE as of Java 9. 
 	 */
 	private static boolean supportsAppleJavaExtensions() {
-		if (!Platform.isOSX()) {
+		if (!Platform.isMac()) {
 			return false;
 		}
 		
@@ -121,28 +117,28 @@ public final class MacIntegration {
 	}
 	
 	private static boolean supportsFullscreen() {
-		return Platform.isOSX() && supportsAppleJavaExtensions() && isAtLeastOSX(OSX_LION);
+		return Platform.isMac() && supportsAppleJavaExtensions() && isAtLeast(MACOS_LION);
 	}
 	
 	private static boolean supportsNotificationCenter() {
-		return Platform.isOSX() && isAtLeastOSX(OSX_MOUNTAIN_LION);
+		return Platform.isMac() && isAtLeast(MACOS_MOUNTAIN_LION);
 	}
 	
 	/**
 	 * Enables the application menu bar for Swing applications. By default, Swing
 	 * will show separate menu bars for each window. This approach is common on
-	 * Windows and Linux, but OS X applications generally use the same menu bar
+	 * Windows and Linux, but macOS applications generally use the same menu bar
 	 * for the entire application.
 	 */
 	public static void enableApplicationMenuBar() {
-		if (Platform.isOSX()) {
+		if (Platform.isMac()) {
 			System.setProperty(MacIntegration.SYSTEM_PROPERTY_MENUBAR, "true");
 		}
 	}
 	
 	/**
 	 * Registers a listener that will be notified every time a menu item in the 
-	 * OS X application menu is clicked.
+	 * macOS application menu is clicked.
 	 * @param showPreferences Indicates whether the "preferences" menu item should
 	 *        be shown as part of the application menu. 
 	 */
@@ -152,16 +148,16 @@ public final class MacIntegration {
 	}
 	
 	/**
-	 * Changes the default Swing look-and-feel to look more like native OS X
+	 * Changes the default Swing look-and-feel to look more like native macOS
 	 * applications. This includes different look-and-feels for different versions
-	 * of OS X.
+	 * of macOS.
 	 */
 	public static void augmentLookAndFeel() {
-		if (isAtLeastOSX(OSX_EL_CAPITAN)) {
-			//TODO OS X now uses the San Fransisco font, which is not
+		if (isAtLeast(MACOS_EL_CAPITAN)) {
+			//TODO macOS now uses the San Fransisco font, which is not
 			//     available to the user.
 			changeSwingSystemFont("Helvetica Neue");
-		} else if (isAtLeastOSX(OSX_YOSEMITE)) {
+		} else if (isAtLeast(MACOS_YOSEMITE)) {
 			changeSwingSystemFont("Helvetica Neue");
 		}
 	}
@@ -262,7 +258,7 @@ public final class MacIntegration {
 	}
 	
 	/**
-	 * Sends a notification to OS X's Notification Center.
+	 * Sends a notification to the macOS Notification Center.
 	 * <p>
 	 * Integration with Notification Center is only allowed if the JVM was started
 	 * from inside an application bundle. Notifications sent from other locations
@@ -301,7 +297,7 @@ public final class MacIntegration {
 	/**
 	 * Accesses the Apple Java extensions through reflection. The reason that 
 	 * reflection is used is that these APIs are only available on specific
-	 * versions of the JRE on OS X.
+	 * versions of the JRE on macOS.
 	 */
 	private static class AppleJavaExtensionsProxy implements InvocationHandler {
 		

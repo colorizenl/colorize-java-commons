@@ -11,7 +11,6 @@ import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
@@ -19,7 +18,6 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
@@ -29,7 +27,6 @@ import nl.colorize.util.swing.Action;
 import nl.colorize.util.swing.ActionDelegate;
 import nl.colorize.util.swing.CircularLoader;
 import nl.colorize.util.swing.ComboFileDialog;
-import nl.colorize.util.swing.ContentAssistField;
 import nl.colorize.util.swing.FormPanel;
 import nl.colorize.util.swing.MultiLabel;
 import nl.colorize.util.swing.Popups;
@@ -58,7 +55,6 @@ public class TestCustomComponents {
 		tabs.addTab("FormPanel", createFormPanelTab());
 		tabs.addTab("MultiLabel", createMultiLabelTab());
 		tabs.addTab("SimpleTable", createSimpleTableTab());
-		tabs.addTab("ContentAssistField", createContentAssistTab());
 		tabs.addTab("Dialogs", createDialogsTab());
 		tabs.setSelectedIndex(1);
 		
@@ -92,7 +88,7 @@ public class TestCustomComponents {
 		form.addRow("Custom height:", customHeightLabel);
 		form.addRow("Radio buttons:", new JRadioButton("First"), new JRadioButton("Second"));
 		form.addRow(new JCheckBox("Row with checkbox"));
-		form.addRow();
+		form.addEmptyRow();
 		form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
 		return form;
 	}
@@ -130,29 +126,6 @@ public class TestCustomComponents {
 		table.addDoubleClickListener(new ActionDelegate(this, "tableDoubleClicked"));
 		return table;
 	}
-	
-	private JPanel createContentAssistTab() {
-		List<String> suggestions = Arrays.asList("something", "something else", "nonsense", 
-				"none", "first", "second");
-		ContentAssistField contentAssistField = new ContentAssistField();
-		contentAssistField.setContentAssistSuggestions(suggestions);
-		contentAssistField.setMinimalMatch(2);
-		
-		JPopupMenu dummyPopup = new JPopupMenu();
-		dummyPopup.add("First");
-		dummyPopup.add("Second");
-		dummyPopup.add("Third");
-		
-		MultiLabel fillerLabel = new MultiLabel("Some text that has no relation to the " +
-				"content assist field, and that will be overlapped by the content " +
-				"assist pop-up window.", 500);
-		fillerLabel.setComponentPopupMenu(dummyPopup);
-		
-		JPanel panel = new JPanel(new BorderLayout(0, 10));
-		panel.add(contentAssistField, BorderLayout.NORTH);
-		panel.add(fillerLabel, BorderLayout.CENTER);
-		return panel;
-	}
 
 	private JPanel createDialogsTab() {
 		JButton popupButton = new JButton("Show Pop-up");
@@ -173,13 +146,6 @@ public class TestCustomComponents {
 				"This is a message that spans multiple  lines and word wraps across multiple lines.",
 				Arrays.asList("One", "Two"));
 		LOGGER.info("Selected button: " + button);
-		
-		String text = Popups.inputMessage(frame, "Test", "Input message:", "Initial value");
-		LOGGER.info("Entered text: " + text);
-		
-		String option = Popups.selectMessage(frame, "Test", "Combobox message:", 
-				Arrays.asList("A", "B", "C"), "B");
-		LOGGER.info("Selected option: " + option);
 	}
 	
 	@Action

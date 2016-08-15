@@ -31,6 +31,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
+import com.google.common.net.MediaType;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -60,6 +61,7 @@ public abstract class RestServlet extends HttpServlet {
 	public static final Charset REQUEST_CHARSET = Charsets.UTF_8;
 	private static final Splitter PATH_SPLITTER = Splitter.on('/').omitEmptyStrings();
 	private static final Joiner HEADER_JOINER = Joiner.on(", ");
+	private static final Splitter ACCEPT_SPLITTER = Splitter.on(",").omitEmptyStrings().trimResults();
 	private static final Logger LOGGER = LogHelper.getLogger(RestServlet.class);
 	
 	@Override
@@ -336,6 +338,7 @@ public abstract class RestServlet extends HttpServlet {
 	 *   <li>404 if no service accepts the request</li>
 	 *   <li>401 if the request fails authorization</li>
 	 *   <li>405 if the service is called with the wrong request method</li>
+	 *   <li>406 if the service does not support the request's Accept header</li>
 	 *   <li>500 if an exception occurs while dispatching the request</li>
 	 *   <li>The response of the matched service, if none of the above apply</li>
 	 * </ul>
@@ -348,11 +351,43 @@ public abstract class RestServlet extends HttpServlet {
 			return createEmptyResponse(HttpStatus.NOT_FOUND);
 		} else if (matchingMapping == null) {
 			return createEmptyResponse(HttpStatus.METHOD_NOT_ALLOWED);
+		} else if (!isAcceptable(request)) {
+			return createEmptyResponse(HttpStatus.NOT_ACCEPTABLE);
 		} else {
 			return dispatchRequestTo(request, matchingMapping);
 		}
 	}
 	
+	private boolean isAcceptable(RestRequest request) {
+		String accept = request.getHttpRequest().getHeader(HttpHeaders.ACCEPT);
+		if (accept == null || accept.isEmpty()) {
+			return true;
+		}
+		
+		for (String requestedContentType : ACCEPT_SPLITTER.split(accept)) {
+			if (isAcceptable(requestedContentType)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	private boolean isAcceptable(String requestedContentType) {
+		if (requestedContentType.indexOf(';') != -1) {
+			requestedContentType = requestedContentType.substring(0, requestedContentType.indexOf(';'));
+		}
+		
+		for (MediaType supportedContentType : getAcceptableContentTypes()) {
+			if (supportedContentType.withoutParameters().toString().equals(requestedContentType) ||
+					requestedContentType.contains("*")) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
 	private HttpResponse dispatchRequestTo(RestRequest request, Mapping mapping) {
 		// Bind the request parameters based on the service configuration, now 
 		// that we know for sure that the request was intended for this service.
@@ -476,6 +511,13 @@ public abstract class RestServlet extends HttpServlet {
 		
 		return cause instanceof BadRequestException;
 	}
+	
+	/**
+	 * Returns the supported Content-Type values. Requests that contain a 
+	 * Content-Type header with an incompatible value will result in a
+	 * response with HTTP status 406 (Not Acceptable).
+	 */
+	protected abstract List<MediaType> getAcceptableContentTypes();
 	
 	/**
 	 * Returns the response headers that will be added for CORS requests from 

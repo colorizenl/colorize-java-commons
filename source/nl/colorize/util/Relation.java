@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ForwardingList;
@@ -52,6 +53,16 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	}
 	
 	/**
+	 * Adds all elements from a map to this relation. The map's keys will be
+	 * used as the domain, and the maps values as the range.
+	 */
+	public void addAll(Map<L, R> pairs) {
+		for (Map.Entry<L, R> entry : pairs.entrySet()) {
+			add(entry.getKey(), entry.getValue());
+		}
+	}
+	
+	/**
 	 * Returns a relation where each tuple has its left and right elements swapped.
 	 */
 	public Relation<R, L> inverse() {
@@ -75,7 +86,7 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	public List<L> domainList() {
 		List<L> domain = new ArrayList<L>();
 		for (Tuple<L, R> tuple : tuples) {
-			domain.add(tuple.fst());
+			domain.add(tuple.getLeft());
 		}
 		return domain;
 	}
@@ -93,7 +104,7 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	public List<R> rangeList() {
 		List<R> range = new ArrayList<R>();
 		for (Tuple<L, R> tuple : tuples) {
-			range.add(tuple.snd());
+			range.add(tuple.getRight());
 		}
 		return range;
 	}
@@ -104,6 +115,24 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	
 	public Tuple<L, R> last() {
 		return tuples.isEmpty() ? null : tuples.get(tuples.size() - 1);
+	}
+	
+	public Tuple<L, R> removeFirst() {
+		if (tuples.isEmpty()) {
+			return null;
+		}
+		Tuple<L, R> first = tuples.get(0);
+		tuples.remove(0);
+		return first;
+	}
+	
+	public Tuple<L, R> removeLast() {
+		if (tuples.isEmpty()) {
+			return null;
+		}
+		Tuple<L, R> last = tuples.get(tuples.size() - 1);
+		tuples.remove(tuples.size() - 1);
+		return last;
 	}
 	
 	/**
@@ -146,5 +175,19 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	 */
 	public static <L, R> Relation<L, R> from(List<Tuple<L, R>> underlyingList) {
 		return new Relation<L, R>(underlyingList);
+	}
+	
+	/**
+	 * Creates a relation from an existing map. The elements in the relation
+	 * will be equal to the key/value pairs in the map. The created relation
+	 * is <em>not</em> a view of the underlying map, changes to the map will
+	 * therefore not be reflected in the relation.
+	 */
+	public static <L, R> Relation<L, R> fromMap(Map<L, R> map) {
+		Relation<L, R> relation = Relation.of();
+		for (Map.Entry<L, R> entry : map.entrySet()) {
+			relation.add(Tuple.fromEntry(entry));
+		}
+		return relation;
 	}
 }

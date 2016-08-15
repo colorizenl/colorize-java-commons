@@ -5,9 +5,9 @@ plugins {
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-version = '2016.2'
-sourceCompatibility = '1.6'
-targetCompatibility = '1.6'
+version = '2016.4'
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
 compileJava.options.encoding = 'UTF-8'
 sourceSets.main.java.srcDirs = ['source']
 sourceSets.main.resources.srcDirs = ['resources']

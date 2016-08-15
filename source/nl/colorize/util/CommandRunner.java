@@ -4,7 +4,7 @@
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.system;
+package nl.colorize.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,10 +24,9 @@ import java.util.logging.Logger;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
 import com.google.common.io.Closeables;
-
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.Platform;
 
 /**
  * Runs an external process and captures its output. This can optionally be done
@@ -42,6 +41,17 @@ import nl.colorize.util.Platform;
  * Attempting to use a feature tha is not supported on the current platform will
  * result in an {@code UnsupportedOperationException}. Feature support can be
  * queried by calling the different {@code isXXXSupported} methods.
+ * <p>
+ * Running shell commands exposes both the application and the underlying system
+ * to considerable security risks, such as code injection. Do not perform shell 
+ * commands that contain user-supplied input, or that access or use user-supplied 
+ * files. Escaping user input does not properly address the security risks, due
+ * to the number of possible edge cases (e.g. command substitution, variable 
+ * evaluation, redirection). Because of the potential risks, {@code CommandRunner}
+ * is automatically disabled in sandboxed environments, to protect those 
+ * environments from attackers that want to break out of the sandbox. Attempting
+ * to run shell commands in those environments will result in a 
+ * {@code SecurityException}.
  */
 public class CommandRunner {
 	
@@ -50,30 +60,45 @@ public class CommandRunner {
 	private String remoteHost;
 	private String remoteUser;
 	private File workingDir;
+	private long timeout = 0;
 	private boolean loggingEnabled;
 	
 	private AtomicBoolean done;
 	private int exitCode;
 	private StringWriter output;
 	
+	private static final Escaper BASH_ESCAPER = Escapers.builder()
+			.addEscape(' ', "\\ ")
+			.addEscape('$', "\\$")
+			.addEscape('`', "\\`")
+			.addEscape('\\', "\\\\")
+			.addEscape('!', "\\!")
+			.build();
+	
 	private static final Joiner COMMAND_JOINER = Joiner.on(' ').skipNulls();
+	private static final char SSH_COMMAND_WRAP_CHAR = '"';
 	private static final Logger LOGGER = LogHelper.getLogger(CommandRunner.class);
 	
 	/**
 	 * Creates a {@code CommandRunner} that will execute the specified command.
 	 * The process will not start until {@link #execute()} is called.
+	 * @throws SecurityException when attempting to use {@code CommandRunner}
+	 *         in a sandboxed environment, due to the security risks. Refer to
+	 *         the class documentation for more information. 
 	 * @throws IllegalArgumentException if the command is empty.
 	 */
 	public CommandRunner(List<String> cmd) {
+		if (isSandboxedEnvironment()) {
+			throw new SecurityException("CommandRunner not allowed in sandboxed environments");
+		}
+		
 		if (cmd.isEmpty()) {
 			throw new IllegalArgumentException("Empty command");
 		}
 		
 		command = ImmutableList.copyOf(cmd);
 		shellMode = false;
-		remoteHost = null;
-		remoteUser = null;
-		workingDir = null;
+		timeout = 0L;
 		loggingEnabled = false;
 		
 		done = new AtomicBoolean(false);
@@ -97,12 +122,14 @@ public class CommandRunner {
 	 * {@link #getOutput()}.
 	 * @throws IOException if an error occurs while reading the output from the
 	 *         external process.
+	 * @throws TimeoutException if the external process's running time exceeds
+	 *         the maximum allowed time (as indicated by {@link #getTimeout()}).
 	 * @throws SecurityException if the JVM's security settings do not allow
-	 *         the external process to be started.
+	 *         the external process to be started. 
 	 * @throws UnsupportedOperationException if the platform does not support
 	 *         starting an external process.
 	 */
-	public void execute() throws IOException {
+	public void execute() throws IOException, TimeoutException {
 		if (!isExecuteSupported()) {
 			throw new UnsupportedOperationException("Running an external process is " +
 					"not supported on the current platform");
@@ -113,7 +140,11 @@ public class CommandRunner {
 		output = new StringWriter();
 		
 		try {
-			runProcess();
+			if (timeout > 0) {
+				runProcessInBackground();
+			} else {
+				runProcess();
+			}
 		} catch (InterruptedException e) {
 			throw new IOException("External process execution interrupted", e);
 		}
@@ -121,17 +152,36 @@ public class CommandRunner {
 		setDone(true);
 	}
 	
-	private void runProcess() throws IOException, InterruptedException {
-		List<String> wrappedCommand = getWrappedCommand();
-		if (loggingEnabled) {
-			LOGGER.info(getWrappedCommandString());
+	private void runProcessInBackground() throws IOException, TimeoutException {
+		FutureTask<String> task = wrapInBackgroundTask();
+		Thread workerThread = new Thread(task);
+		workerThread.start();
+		
+		try {
+			task.get(timeout, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			throw new IOException("Waiting for external process interrupted", e);
+		} catch (ExecutionException e) {
+			throw new IOException("Error while executing external process", e);
+		} catch (TimeoutException e) {
+			// Set the status to done so that the partial output can
+			// be obtained, even though the command resulted in a timeout.
+			setDone(true);
+			throw e;
 		}
-		
-		ProcessBuilder processBuilder = new ProcessBuilder(wrappedCommand);
-		processBuilder.directory(workingDir);
-		processBuilder.redirectErrorStream(true);
-		
-		Process process = processBuilder.start();
+	}
+	
+	private FutureTask<String> wrapInBackgroundTask() {
+		return new FutureTask<String>(new Callable<String>() {
+			public String call() throws Exception {
+				runProcess();
+				return "";
+			}
+		});
+	}
+	
+	private void runProcess() throws IOException, InterruptedException {
+		Process process = startProcess();
 		BufferedReader outputReader = null;
 		
 		try {
@@ -148,6 +198,18 @@ public class CommandRunner {
 		}
 	}
 
+	private Process startProcess() throws IOException {
+		if (loggingEnabled) {
+			LOGGER.info(getCommandString());
+		}
+		
+		ProcessBuilder processBuilder = new ProcessBuilder(getCommand());
+		processBuilder.directory(workingDir);
+		processBuilder.redirectErrorStream(true);
+		
+		return processBuilder.start();
+	}
+
 	private void captureProcessOutput(BufferedReader outputReader) throws IOException {
 		String line = null;
 		String lineSeparator = Platform.getLineSeparator();
@@ -161,84 +223,51 @@ public class CommandRunner {
 			}
 		}
 	}
-
-	/**
-	 * Runs the external process by executing the command. This method is
-	 * similar to {@link #execute()}, but runs the external process in a
-	 * separate thread. If the running time of this thread exceeds the timeout
-	 * value a {@code TimeoutException} will be thrown.
-	 * @param timeout Maximum allowed running time, in milliseconds.
-	 * @throws IOException if an error occurs while reading the output from the
-	 *         external process.
-	 * @throws SecurityException if the JVM's security settings do not allow
-	 *         the external process to be started.
-	 * @throws TimeoutException if the external process's running time exceeds
-	 *         the timeout.
-	 * @throws UnsupportedOperationException if the platform does not support
-	 *         starting an external process.
-	 */
-	public void execute(long timeout) throws IOException, TimeoutException {
-		FutureTask<String> task = new FutureTask<String>(new Callable<String>() {
-			public String call() throws Exception {
-				execute();
-				return "";
-			}
-		});
-		
-		Thread workerThread = new Thread(task);
-		workerThread.start();
-		
-		try {
-			task.get(timeout, TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
-			throw new IOException("Waiting for external process interrupted", e);
-		} catch (ExecutionException e) {
-			throw new IOException("Error while executing external process", e);
-		} catch (TimeoutException e) {
-			// Set the status to done so that the partial output can
-			// be obtained.
-			setDone(true);
-			throw e;
-		}
-	}
 	
-	public String getCommandString() {
-		return COMMAND_JOINER.join(command);
-	}
-	
-	private List<String> getWrappedCommand() {
+	private List<String> getCommand() {
 		if (shellMode) {
-			List<String> wrappedCommand = new ArrayList<String>();
-			wrappedCommand.add("sh");
-			wrappedCommand.add("-c");
-			if (remoteHost == null) {
-				wrappedCommand.add(getCommandString());
-			} else {
-				wrappedCommand.add(getSSHCommandString());
+			List<String> shellCommandArgs = escapeArguments(command);
+			String shellCommand = COMMAND_JOINER.join(shellCommandArgs);
+			if (remoteHost != null) {
+				shellCommand = "ssh " + getRemoteDestination() + " " + 
+						escapeCommand(shellCommand, SSH_COMMAND_WRAP_CHAR); 
 			}
-			return wrappedCommand;
+			return ImmutableList.of("sh", "-c", shellCommand);
 		} else {
 			return command;
 		}
 	}
 	
-	private String getWrappedCommandString() {
-		List<String> wrappedCommand = getWrappedCommand();
-		return COMMAND_JOINER.join(wrappedCommand);
+	public String getCommandString() {
+		return COMMAND_JOINER.join(getCommand());
 	}
 	
-	private String getSSHCommandString() {
-		String host = (remoteHost != null) ? remoteHost : "localhost";
-		String destination = host;
-		if (remoteUser != null) {
-			destination = remoteUser + "@" + host;
+	private List<String> escapeArguments(List<String> args) {
+		List<String> escaped = new ArrayList<>();
+		for (String arg : args) {
+			escaped.add(BASH_ESCAPER.escape(arg));
 		}
+		return escaped;
+	}
+	
+	private String escapeCommand(String command, char escapeChar) {
+		Escaper escaper = Escapers.builder()
+				.addEscape(escapeChar, "\\" + escapeChar)
+				.build();
 		
-		List<String> sshCommand = new ArrayList<String>();
-		sshCommand.add("ssh");
-		sshCommand.add(destination);
-		sshCommand.add("\"" + getCommandString() + "\"");
-		return COMMAND_JOINER.join(sshCommand);
+		StringBuilder buffer = new StringBuilder();
+		buffer.append(escapeChar);
+		buffer.append(escaper.escape(command));
+		buffer.append(escapeChar);
+		return buffer.toString();
+	}
+
+	private String getRemoteDestination() {
+		if (remoteUser == null) {
+			return remoteHost;
+		} else {
+			return remoteUser + "@" + remoteHost;
+		}
 	}
 	
 	public void setShellMode(boolean shellMode) {
@@ -254,13 +283,20 @@ public class CommandRunner {
 	}
 	
 	public void setRemoteHost(String remoteHost, String remoteUser) {
-		if ((remoteHost != null) && !isRemoteHostSupported()) {
+		if (remoteHost != null && !isRemoteHostSupported()) {
 			throw new UnsupportedOperationException("Executing commands on a remote host " + 
 					"is not supported on the current platform");
 		}
+		
 		this.remoteHost = remoteHost;
 		this.remoteUser = remoteUser;
-		this.shellMode = true;
+		if (remoteHost != null) {
+			shellMode = true;
+		}
+	}
+	
+	public void setRemoteHost(String remoteHost) {
+		setRemoteHost(remoteHost, null);
 	}
 	
 	public String getRemoteHost() {
@@ -282,6 +318,19 @@ public class CommandRunner {
 		return workingDir;
 	}
 	
+	/**
+	 * Configure the maximum time (in milliseconds) a command is allowed to take.
+	 * Exceeding this time limit will result in a {@code TimeoutException}. 
+	 * Setting a value of 0 indicates that commands will run without a timeout.
+	 */
+	public void setTimeout(long timeout) {
+		this.timeout = timeout;
+	}
+	
+	public long getTimeout() {
+		return timeout;
+	}
+
 	public void setLoggingEnabled(boolean loggingEnabled) {
 		this.loggingEnabled = loggingEnabled;
 	}
@@ -335,8 +384,14 @@ public class CommandRunner {
 		return isUnixLikePlatform();
 	}
 	
+	@SuppressWarnings("deprecation")
+	private boolean isSandboxedEnvironment() {
+		return Platform.isGoogleAppEngine() || Platform.isMacAppSandboxEnabled() ||
+				Platform.isAndroid() || Platform.isWebstartEnabled();
+	}
+	
 	private boolean isUnixLikePlatform() {
-		return Platform.isOSX() || Platform.isLinux();
+		return Platform.isMac() || Platform.isLinux();
 	}
 	
 	@Override

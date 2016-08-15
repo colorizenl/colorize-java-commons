@@ -7,18 +7,22 @@
 package nl.colorize.util;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * An interval between two integers. Ranges represented by this class are both
  * left-bounded and right-bounded, meaning both the start and end values are
- * included in the range.
+ * included in the range. This class implements the {@link java.lang.Iterable}
+ * interface, so ranges can be used directly in foreach loops.
  */
-public final class Range implements Comparable<Range>, Serializable {
+public final class Range implements Iterable<Integer>, Comparable<Range>, Serializable {
 
 	private int start;
 	private int end;
 	
-	private static final long serialVersionUID = 5;
+	private static final long serialVersionUID = 6;
 	
 	/**
 	 * Creates a range from all integers between {@code start} (inclusive) and 
@@ -96,6 +100,36 @@ public final class Range implements Comparable<Range>, Serializable {
 			throw new IllegalStateException("Range has no interior: " + this);
 		}
 		return new Range(start + 1, end - 1);
+	}
+	
+	/**
+	 * Returns an array that contains all integers within this range.
+	 */
+	public int[] toArray() {
+		if (start == end) {
+			return new int[0];
+		}
+		
+		int[] values = new int[end - start + 1];
+		for (int i = start; i <= end; i++) {
+			values[i - start] = i;
+		}
+		return values;
+	}
+	
+	/**
+	 * Returns a list that contains all integers within this range.
+	 */
+	public List<Integer> toList() {
+		List<Integer> values = new ArrayList<>();
+		for (int i = start; i <= end; i++) {
+			values.add(Integer.valueOf(i));
+		}
+		return values;
+	}
+	
+	public Iterator<Integer> iterator() {
+		return toList().iterator();
 	}
 	
 	@Override

@@ -61,8 +61,8 @@ public class FormPanel extends JPanel {
 		
 		// Platform-dependent layout options.
 		int horizontalMargin = 10;
-		int verticalMargin = Platform.isOSX() ? 2 : 5;
-		boolean rightAlignLabels = Platform.isOSX();
+		int verticalMargin = Platform.isMac() ? 2 : 5;
+		boolean rightAlignLabels = Platform.isMac();
 		
 		FormLayout layoutManager = new FormLayout(horizontalMargin, verticalMargin, rightAlignLabels);
 		setLayout(layoutManager);
@@ -73,9 +73,10 @@ public class FormPanel extends JPanel {
 	
 	/**
 	 * Adds an empty row.
+	 * @deprecated Use the more clearly titled {@link #addEmptyRow()} instead.
 	 */
+	@Deprecated
 	public void addRow() {
-		//TODO deprecate this in favor of addEmptyRow()
 		addEmptyRow();
 	}
 	
@@ -121,6 +122,10 @@ public class FormPanel extends JPanel {
 	 * Adds a row that consists of a text label in and a number of radio buttons. 
 	 */
 	public void addRow(String label, JRadioButton... choices) {
+		if (choices.length == 0) {
+			throw new IllegalArgumentException("Must provide at least 1 choice");
+		}
+		
 		for (int row = 0; row < choices.length; row++) {
 			JLabel labelCell = new JLabel(row == 0 ? label : "");
 			addSplitWidthRow(labelCell, choices[row]);
@@ -153,20 +158,32 @@ public class FormPanel extends JPanel {
 	}
 	
 	/**
+	 * Adds a row that consists of a text label and a button. Clicking the button 
+	 * will perform an action that results in the text label being updated.
+	 * @param action Callback action invoked when the button is clicked. This
+	 *        should return the new text to be used for the text label. 
+	 */
+	public void addRow(String label, String actionButtonText, Callable<String> action) {
+		addRow(label, null, actionButtonText, action);
+	}
+	
+	/**
 	 * Adds a row that consists of a text label, a value label, and a button.
 	 * Clicking the button will perform an action that results in the value
 	 * label being updated.
 	 * @param action Callback action invoked when the button is clicked. This
 	 *        should return the new text to be used for the value label. 
 	 */
-	public void addRow(String label, String initialValueLabel, String actionButtonText, 
+	public void addRow(String label, final String initialValueLabel, String actionButtonText, 
 			final Callable<String> action) {
+		final JLabel textLabel = new JLabel(label);
 		final JLabel valueLabel = new JLabel(initialValueLabel);
 		JButton actionButton = new JButton(actionButtonText);
 		actionButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					valueLabel.setText(action.call());
+					JLabel target = initialValueLabel == null ? textLabel : valueLabel;
+					target.setText(action.call());
 				} catch (Exception ex) {
 					throw new RuntimeException(ex);
 				}
@@ -174,9 +191,34 @@ public class FormPanel extends JPanel {
 		});
 		
 		JPanel valuePanel = new JPanel(new BorderLayout(getHorizontalMargin(), 0));
-		valuePanel.add(valueLabel, BorderLayout.CENTER);
+		if (initialValueLabel != null) {
+			valuePanel.add(valueLabel, BorderLayout.CENTER);
+		}
 		valuePanel.add(actionButton, BorderLayout.EAST);
-		addSplitWidthRow(new JLabel(label), valuePanel);
+		addSplitWidthRow(textLabel, valuePanel);
+	}
+	
+	/**
+	 * Adds a row that consists of a single button.
+	 * @param fullWidth If true, the button will span the full width of the row.
+	 *        If false, it will only take its preferred width.
+	 */
+	public void addRow(JButton button, boolean fullWidth) {
+		if (fullWidth) {
+			addRow(button);
+		} else {
+			JPanel rowWrapper = new JPanel(new BorderLayout(0, 0));
+			rowWrapper.add(button, BorderLayout.WEST);
+			addRow(rowWrapper);
+		}
+	}
+	
+	/**
+	 * Adds a row that only consists of a single text label that spans the
+	 * entire width of the row. 
+	 */
+	public void addRow(String label) {
+		addRow(new JLabel(label));
 	}
 	
 	/**
@@ -200,6 +242,7 @@ public class FormPanel extends JPanel {
 	
 	private void addFullWidthRow(JComponent component) {
 		add(component);
+		packFormHeight();
 	}
 	
 	private void addSplitWidthRow(JComponent... components) {
@@ -215,6 +258,8 @@ public class FormPanel extends JPanel {
 			
 			add(components[i]);
 		}
+		
+		packFormHeight();
 	}
 	
 	private void applyLabelLayout(JLabel label) {
@@ -225,12 +270,13 @@ public class FormPanel extends JPanel {
 	}
 	
 	/**
-	 * Updates the form's preferred height, indicated by {@link #getPreferredSize()},
-	 * to reflect the minimum possible height that fits all rows.
+	 * Updates the form's preferred height based on the minimum height that 
+	 * fits all rows. The form's height is automatically updated every time
+	 * a row is added using one of the {@code addRow(...)} methods, but can
+	 * also be called manually if one of the row components has changed and
+	 * the form's layout needs to be updated.
 	 */
 	public void packFormHeight() {
-		//TODO integrate this into FormLayout so that the form's preferred size
-		//     is updated automatically.
 		Dimension preferredFormSize = getLayout().preferredLayoutSize(this);
 		SwingUtils.setPreferredHeight(this, preferredFormSize.height);
 	}

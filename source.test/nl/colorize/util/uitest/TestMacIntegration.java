@@ -32,8 +32,8 @@ import nl.colorize.util.swing.Utils2D;
 
 /**
  * Graphical test for the {@code MacIntegration} class, which provides access to
- * a number of OS X specific features for Swing applications. For obvious reasons
- * this test should only be run when running on OS X.
+ * a number of macOS specific features for Swing applications. For obvious reasons
+ * this test should only be run when running on macOS.
  */
 public class TestMacIntegration implements ApplicationMenuListener {
 	
@@ -42,14 +42,15 @@ public class TestMacIntegration implements ApplicationMenuListener {
 	private JLabel iconLabel;
 
 	public static void main(String[] args) {
-		if (!Platform.isOSX()) {
-			throw new UnsupportedOperationException("Test must run on OS X");
+		if (!Platform.isMac()) {
+			throw new UnsupportedOperationException("Test must run on macOS");
 		}
 		
 		TestMacIntegration test = new TestMacIntegration();
 		test.createWindow();
 	}
 	
+	@SuppressWarnings("deprecation")
 	public JFrame createWindow() {
 		message = new JLabel("");
 		message.setHorizontalAlignment(JLabel.CENTER);
@@ -59,6 +60,9 @@ public class TestMacIntegration implements ApplicationMenuListener {
 		
 		JPanel contentPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
 		contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+		contentPanel.add(new JLabel("Screen size: " + SwingUtils.getScreenSize().width + "x" +
+				SwingUtils.getScreenSize().height));
+		contentPanel.add(new JLabel("Screen pixel ratio: " + SwingUtils.getScreenPixelRatio()));
 		contentPanel.add(createButton("Change dock icon", "setDockIcon"));
 		contentPanel.add(createButton("Change dock badge", "setDockBadge"));
 		contentPanel.add(createButton("Bounce dock icon", "bounceDockIcon"));
@@ -69,8 +73,8 @@ public class TestMacIntegration implements ApplicationMenuListener {
 		contentPanel.add(message);
 		contentPanel.add(iconLabel);
 		
-		window = new JFrame("Test OS X Integration");
-		window.setSize(600, 400);
+		window = new JFrame("Test Mac Integration");
+		window.setSize(470, 400);
 		window.setLocationRelativeTo(null);
 		window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		window.setLayout(new BorderLayout());

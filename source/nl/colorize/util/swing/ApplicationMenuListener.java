@@ -7,9 +7,9 @@
 package nl.colorize.util.swing;
 
 /**
- * Interface for receiving events from the OS X Application Menu. Once listeners
+ * Interface for receiving events from the macOS Application Menu. Once listeners
  * have been registered using 
- * {@link MacIntegration#setApplicationMenuListener(ApplicationMenuListener)}
+ * {@link MacIntegration#setApplicationMenuListener(ApplicationMenuListener, boolean)}
  * they are notified whenever a menu item in the application menu is clicked. 
  */
 public interface ApplicationMenuListener {

@@ -12,9 +12,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import nl.colorize.util.LockedIterationList;
 import nl.colorize.util.Range;
 import nl.colorize.util.Relation;
 import nl.colorize.util.Tuple;
@@ -38,6 +38,8 @@ public class TestCollections {
 		assertEquals("<second, first>", tuple.inverse().toString());
 		assertEquals("<123, second>", tuple.withLeft("123").toString());
 		assertEquals("<first, 2>", tuple.withRight("2").toString());
+		assertEquals("<a, 2>", Tuple.fromEntry(
+				ImmutableMap.of("a", 2).entrySet().iterator().next()).toString());
 	}
 	
 	@Test
@@ -67,23 +69,37 @@ public class TestCollections {
 		assertEquals(Tuple.of("a", 2), rel.findInDomain("a"));
 		assertEquals(Tuple.of("a", 9), rel.findInRange(9));
 		assertNull(rel.findInRange(11));
+		
+		rel.addAll(ImmutableMap.of("r", 17, "p", 18));
+		assertEquals("[<a, 2>, <b, 1>, <a, 9>, <r, 17>, <p, 18>]", rel.toString());
+		
+		Tuple<String, Integer> first = rel.removeFirst();
+		assertEquals(Tuple.of("a", 2), first);
+		assertEquals("[<b, 1>, <a, 9>, <r, 17>, <p, 18>]", rel.toString());
+		
+		Tuple<String, Integer> last = rel.removeLast();
+		assertEquals(Tuple.of("p", 18), last);
+		assertEquals("[<b, 1>, <a, 9>, <r, 17>]", rel.toString());
+		
+		assertEquals("[<a, 1>, <b, 2>]", Relation.fromMap(ImmutableMap.of("a", 1, "b", 2)).toString());
 	}
 	
 	@Test
 	public void testRange() {
 		Range range = new Range(2, 6);
+		
 		assertEquals(2, range.getStart());
 		assertEquals(6, range.getEnd());
 		assertEquals(5, range.length());
 		assertEquals("2..6", range.toString());
-		
 		assertTrue(range.contains(2));
 		assertTrue(range.contains(3));
 		assertTrue(range.contains(6));
 		assertFalse(range.contains(7));
-		
 		assertTrue(range.contains(2));
 		assertFalse(range.contains(7));
+		assertArrayEquals(new int[] { 2, 3, 4, 5, 6 }, range.toArray());
+		assertEquals(ImmutableList.of(2, 3, 4, 5, 6), range.toList());
 	}
 	
 	@Test
@@ -145,38 +161,13 @@ public class TestCollections {
 	}
 	
 	@Test
-	public void testLockedIterationList() {
-		LockedIterationList<String> list = new LockedIterationList<String>();
-		list.add("a");
-		list.add("b");
-		list.add("c");
+	public void testRangeIterator() {
+		Range range = new Range(2, 4);
+		Iterator<Integer> iterator = range.iterator();
 		
-		for (String element : list) {
-			assertNotNull(element);
-			list.add("d");
-		}
-		assertEquals(ImmutableList.of("a", "b", "c", "d", "d", "d"), list);
-		
-		for (String element : list) {
-			assertNotNull(element);
-			
-			for (String element2 : list) {
-				if (element2.equals("d")) {
-					list.remove(element2);
-					list.add(0, "0");
-				}
-			}
-		}
-		assertEquals(ImmutableList.of("0", "0", "0", "a", "b", "c"), list);
-	}
-	
-	@Test(expected=UnsupportedOperationException.class)
-	public void testLockedIteratorDoesNotSupportRemove() {
-		LockedIterationList<String> list = new LockedIterationList<String>();
-		list.add("a");
-		list.add("b");
-		
-		Iterator<String> iterator = list.iterator();
-		iterator.remove();
+		assertEquals(2, iterator.next().intValue());
+		assertEquals(3, iterator.next().intValue());
+		assertEquals(4, iterator.next().intValue());
+		assertFalse(iterator.hasNext());
 	}
 }

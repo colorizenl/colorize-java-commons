@@ -6,17 +6,21 @@
 
 package nl.colorize.util.xml;
 
+import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableList;
+import com.google.gson.internal.Primitives;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
+
+import nl.colorize.util.ReflectionUtils;
 
 /**
  * Converts Java object structures into XML elements. This takes the approach
@@ -26,25 +30,22 @@ import org.jdom2.Element;
  * annotations from being added to non-XML-related classes, and allows you to also
  * convert classes for which you do not have the source code.
  * <p>
- * Unlike Gson, no reflection is used to convert arbitrary objects to XML. The types
- * supported by default are all primitives, strings, dates, and collections. Support
- * for additional types can be added by implementing the {@link XMLTypeConverter}
- * interface.
+ * By default, all non-primitive types are serialized to XML by accessing their
+ * properties using reflection. Support for custom serialization is available by
+ * implementing the {@link XMLTypeConverter} interface.
  */
 public class XMLConverter {
 	
 	private Map<Class<?>, XMLTypeConverter<?>> typeConverters;
 	private String dateFormat;
-	private String listEntryElementName;
+	private String collectionElementName;
 	
 	public XMLConverter() {
 		typeConverters = new LinkedHashMap<Class<?>, XMLTypeConverter<?>>();
 		dateFormat = "yyyy-MM-dd HH:mm:ss";
-		listEntryElementName = "entry";
+		collectionElementName = "element";
 		
-		registerPrimitiveTypeConverters();
 		registerStandardTypeConverters();
-		registerCollectionTypeConverters();
 	}
 	
 	/**
@@ -55,49 +56,12 @@ public class XMLConverter {
 		typeConverters.put(type, typeConverter);
 	}
 	
-	private void registerPrimitiveTypeConverters() {
-		XMLTypeConverter<Object> primitiveTypeConverter = new XMLTypeConverter<Object>() {
-			public Element convertObject(Object obj, String elementName) {
-				if (obj == null) {
-					return new Element(elementName);
-				}
-				return XMLHelper.createPropertyElement(elementName, String.valueOf(obj));
-			}
-		};
-		
-		List<Class<? extends Object>> primitiveTypes = ImmutableList.<Class<? extends Object>>of(
-				Integer.class, Long.class, Float.class, Double.class, Boolean.class, 
-				Character.class, Byte.class, Short.class);
-		
-		for (Class<? extends Object> primitiveType : primitiveTypes) {
-			registerTypeConverter(primitiveType, primitiveTypeConverter);
-		}
-	}
-	
+	@SuppressWarnings("rawtypes")
 	private void registerStandardTypeConverters() {
-		registerTypeConverter(String.class, new XMLTypeConverter<String>() {
-			public Element convertObject(String obj, String elementName) {
-				return XMLHelper.createPropertyElement(elementName, obj);
-			}
-		});
-		
 		registerTypeConverter(Date.class, new XMLTypeConverter<Date>() {
 			public Element convertObject(Date obj, String elementName) {
 				return XMLHelper.createPropertyElement(elementName,
 						new SimpleDateFormat(dateFormat).format(obj));
-			}
-		});
-	}
-	
-	@SuppressWarnings("rawtypes")
-	private void registerCollectionTypeConverters() {
-		registerTypeConverter(Collection.class, new XMLTypeConverter<Collection>() {
-			public Element convertObject(Collection obj, String elementName) {
-				Element element = new Element(elementName);
-				for (Object entry : obj) {
-					element.addContent(convertObjectToXML(entry, listEntryElementName));
-				}
-				return element;
 			}
 		});
 		
@@ -105,30 +69,19 @@ public class XMLConverter {
 			public Element convertObject(Map obj, String elementName) {
 				Element element = new Element(elementName);
 				for (Object key : obj.keySet()) {
-					element.addContent(convertObjectToXML(obj.get(key), key.toString()));
+					element.addContent(serializeObject(obj.get(key), key.toString()));
 				}
 				return element;
 			}
 		});
 	}
 	
-	@SuppressWarnings("unchecked")
-	private XMLTypeConverter<Object> getTypeConverterForObject(Object obj) {
-		for (Class<?> type : typeConverters.keySet()) {
-			if (type.isInstance(obj)) {
-				return (XMLTypeConverter<Object>) typeConverters.get(type);
-			}
-		}
-		
-		throw new UnsupportedOperationException("Type not supported: " + obj.getClass());
-	}
-	
 	/**
-	 * Converts the specified object to XML.
+	 * Converts the specified object to XML. The object will be serialized using
+	 * either the provided custom serialization format for the object's type, or
+	 * the default serialization format if no custom one has been registered.
 	 * @param rootElementName Will be used as the element name for the root element
 	 *        in the created XML document.
-	 * @throws UnsupportedOperationException when no type support exists for the
-	 *         object, or any of its children if the object is a hierarchy.
 	 * @throws NullPointerException when {@code obj} is {@code null}.
 	 */
 	public Document toXML(Object obj, String rootElementName) {
@@ -136,13 +89,87 @@ public class XMLConverter {
 			throw new NullPointerException();
 		}
 		
-		Element rootElement = convertObjectToXML(obj, rootElementName);
+		Element rootElement = serializeObject(obj, rootElementName);
 		return new Document(rootElement);
 	}
 	
-	private Element convertObjectToXML(Object obj, String elementName) {
-		XMLTypeConverter<Object> typeConverter = getTypeConverterForObject(obj);
-		return typeConverter.convertObject(obj, elementName);
+	private Element serializeObject(Object obj, String elementName) {
+		// Use a custom serialization format if one has been registered.
+		XMLTypeConverter<Object> customTypeConverter = getTypeConverter(obj);
+		if (customTypeConverter != null) {
+			return customTypeConverter.convertObject(obj, elementName);
+		}
+		
+		// Default serialization formats: for complex types, access the 
+		// object's properties using reflection. For simple types,
+		// serialize the elements to strings.
+		if (isSimpleType(obj)) {
+			return serializeSimpleType(obj, elementName);
+		} else if (isCollectionType(obj)) {
+			return serializeCollectionType(obj, elementName);
+		} else {
+			return serializeComplexTypeUsingReflection(obj, elementName);
+		}
+	}
+	
+	private Element serializeSimpleType(Object obj, String elementName) {
+		if (obj == null) {
+			return XMLHelper.createPropertyElement(elementName, "");
+		}
+		return XMLHelper.createPropertyElement(elementName, String.valueOf(obj));
+	}
+	
+	private Element serializeCollectionType(Object obj, String elementName) {
+		Collection<?> collection = null;
+		if (obj instanceof Collection<?>) {
+			collection = (Collection<?>) obj;
+		} else if (obj.getClass().isArray()) {
+			collection = convertPrimitiveArrayToList(obj);
+		}
+		
+		Element element = new Element(elementName);
+		for (Object collectionElement : collection) {
+			element.addContent(serializeObject(collectionElement, collectionElementName));
+		}
+		return element;
+	}
+
+	private Element serializeComplexTypeUsingReflection(Object obj, String elementName) {
+		Element element = new Element(elementName);
+		for (Map.Entry<String, Object> prop : ReflectionUtils.getProperties(obj).entrySet()) {
+			element.addContent(serializeObject(prop.getValue(), prop.getKey()));
+		}
+		return element;
+	}
+	
+	private boolean isSimpleType(Object obj) {
+		if (obj == null) {
+			return true;
+		}
+		Class<?> type = obj.getClass();
+		return Primitives.isPrimitive(type) || Primitives.isWrapperType(type) || type == String.class;
+	}
+	
+	private boolean isCollectionType(Object obj) {
+		return obj instanceof Collection<?> || obj.getClass().isArray();
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T> XMLTypeConverter<T> getTypeConverter(T obj) {
+		for (Class<?> type : typeConverters.keySet()) {
+			if (type.isInstance(obj)) {
+				return (XMLTypeConverter<T>) typeConverters.get(type);
+			}
+		}
+		return null;
+	}
+	
+	private List<Object> convertPrimitiveArrayToList(Object primitiveArray) {
+		List<Object> converted = new ArrayList<>();
+		for (int i = 0; i < Array.getLength(primitiveArray); i++) {
+			converted.add(Array.get(primitiveArray, i));
+		}
+		return converted;
 	}
 
 	public void setDateFormat(String dateFormat) {
@@ -153,11 +180,11 @@ public class XMLConverter {
 		return dateFormat;
 	}
 
-	public void setListEntryElementName(String listEntryElementName) {
-		this.listEntryElementName = listEntryElementName;
+	public void setCollectionElementName(String collectionElementName) {
+		this.collectionElementName = collectionElementName;
 	}
 	
-	public String getListEntryElementName() {
-		return listEntryElementName;
+	public String getCollectionElementName() {
+		return collectionElementName;
 	}
 }

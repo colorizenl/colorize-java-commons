@@ -7,6 +7,7 @@
 package nl.colorize.util;
 
 import java.io.Serializable;
+import java.util.Map;
 
 import com.google.common.base.Objects;
 
@@ -21,7 +22,7 @@ public final class Tuple<L, R> implements Serializable {
 	private L left;
 	private R right;
 	
-	private static final long serialVersionUID = 4;
+	private static final long serialVersionUID = 5;
 
 	public Tuple(L left, R right) {
 		this.left = left;
@@ -32,23 +33,7 @@ public final class Tuple<L, R> implements Serializable {
 		return left;
 	}
 	
-	/**
-	 * Alias for {@link #getLeft()} that uses the name from pair classes in
-	 * other languages.
-	 */
-	public L fst() {
-		return left;
-	}
-	
 	public R getRight() {
-		return right;
-	}
-	
-	/**
-	 * Alias for {@link #getRight()} that uses the name from pair classes in
-	 * other languages.
-	 */
-	public R snd() {
 		return right;
 	}
 	
@@ -115,5 +100,12 @@ public final class Tuple<L, R> implements Serializable {
 	 */
 	public static <L, R> Tuple<L, R> of(L left, R right) {
 		return new Tuple<L, R>(left, right);
+	}
+	
+	/**
+	 * Factory method for creating a tuple from an entry in a map.
+	 */
+	public static <L, R> Tuple<L, R> fromEntry(Map.Entry<L, R> entry) {
+		return new Tuple<L, R>(entry.getKey(), entry.getValue());
 	}
 }

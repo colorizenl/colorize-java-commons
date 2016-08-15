@@ -12,14 +12,15 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 import com.google.common.collect.ImmutableList;
 
+import nl.colorize.util.CommandRunner;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.swing.Utils2D;
-import nl.colorize.util.system.CommandRunner;
 
 /**
  * Command line tool that creates an ICNS icon file from a single image. The
@@ -105,6 +106,10 @@ public class IconTool {
 				iconSetDir.getAbsolutePath(), "-o", icnsFile.getAbsolutePath());
 		commandRunner.setShellMode(true);
 		commandRunner.setLoggingEnabled(true);
-		commandRunner.execute();
+		try {
+			commandRunner.execute();
+		} catch (TimeoutException e) {
+			throw new IOException("iconutil timeout");
+		}
 	}
 }

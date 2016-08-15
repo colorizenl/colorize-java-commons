@@ -4,7 +4,7 @@
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.system;
+package nl.colorize.util;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,13 +16,11 @@ import java.util.List;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
+import nl.colorize.util.DirectoryWalker;
 import nl.colorize.util.LoadUtils;
-import nl.colorize.util.system.DirectoryWalker;
-import nl.colorize.util.system.GlobFilter;
 
 import org.junit.Before;
 import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 /**
@@ -95,7 +93,7 @@ public class TestDirectoryWalker {
 	@Test
 	public void testFilterOnFileExtension() throws IOException {
 		DirectoryWalker directoryWalker = new DirectoryWalker();
-		directoryWalker.setFileFilter(new GlobFilter("*.txt"));
+		directoryWalker.setFileFilter(LoadUtils.getGlobFilter("*.txt"));
 		
 		File[] visitedFiles = sort(directoryWalker.walk(rootDir));
 		assertEquals(2, visitedFiles.length);
@@ -125,7 +123,7 @@ public class TestDirectoryWalker {
 		dirWalker.setVisitHiddenFiles(true);
 		assertEquals(2, dirWalker.walk(tempDir).size());
 		
-		dirWalker.setDirectoryFilter(new GlobFilter(".svn"));
+		dirWalker.setDirectoryFilter(LoadUtils.getGlobFilter(".svn"));
 		assertEquals(1, dirWalker.walk(tempDir).size());
 		assertEquals("b.txt", dirWalker.walk(tempDir).get(0).getName());
 	}

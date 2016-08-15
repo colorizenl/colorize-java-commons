@@ -9,6 +9,7 @@ package nl.colorize.util;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -21,8 +22,6 @@ import java.util.Properties;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-
-import nl.colorize.util.LoadUtils;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -207,6 +206,24 @@ public class TestLoadUtils {
 		LoadUtils.touch(tempFile);
 		long newValue = tempFile.lastModified();
 		assertTrue(newValue > oldValue);
+	}
+	
+	@Test
+	public void testFileExtensionFilter() throws Exception {
+		FilenameFilter filter = LoadUtils.getFileExtensionFilter("jpg", "png");
+		assertTrue(filter.accept(new File("/tmp"), "test.jpg"));
+		assertTrue(filter.accept(new File("/tmp"), "test.png"));
+		assertTrue(filter.accept(new File("/tmp"), "test.PNG"));
+		assertFalse(filter.accept(new File("/tmp"), "test.txt"));
+		assertFalse(filter.accept(new File("/tmp"), "test.jpg.txt"));
+	}
+	
+	@Test
+	public void testGlobFilter() throws Exception {
+		FilenameFilter filter = LoadUtils.getGlobFilter("*.txt");
+		assertTrue(filter.accept(new File("/tmp"), "test.txt"));
+		assertTrue(filter.accept(new File("/tmp"), "test.TXT"));
+		assertFalse(filter.accept(new File("/tmp"), "test.png"));
 	}
 	
 	private InputStreamReader fileReader(File f) throws IOException {

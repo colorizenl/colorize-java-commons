@@ -54,7 +54,7 @@ public class TestPlatform {
 		File appdir = Platform.getApplicationDataDirectory("TestResources");
 		assertTrue(appdir.exists());
 		assertTrue(appdir.isDirectory());
-		if (Platform.isOSX()) {
+		if (Platform.isMac()) {
 			assertEquals("TestResources", appdir.getName());
 		} else {
 			assertEquals(".TestResources", appdir.getName());
@@ -94,7 +94,7 @@ public class TestPlatform {
 	
 	@Test
 	public void testDevelopmentImplementationVersion() {
-		assertEquals("2016.2", Platform.getImplementationVersion(Platform.class).toString());
+		assertEquals("2016.4", Platform.getImplementationVersion(Platform.class).toString());
 	}
 	
 	@Test

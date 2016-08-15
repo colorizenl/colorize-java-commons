@@ -354,7 +354,8 @@ public final class Utils2D {
 	 * pixel's RGB values will be replaced with the tint color.
 	 */
 	public static BufferedImage applyTint(BufferedImage image, Color tint) {
-		BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+		BufferedImage result = new BufferedImage(image.getWidth(), image.getHeight(), 
+				BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2 = Utils2D.createGraphics(result, true, true);
 		for (int x = 0; x < image.getWidth(); x++) {
 			for (int y = 0; y < image.getHeight(); y++) {

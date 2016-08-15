@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -28,6 +29,29 @@ public class TestReflectionUtils {
 		
 		assertEquals("first", ReflectionUtils.getProperty(subject, "firstProperty"));
 		assertEquals("second", ReflectionUtils.getProperty(subject, "secondProperty"));
+	}
+	
+	@Test
+	public void testGetPropertyNamesAndTypes() {
+		Map<String, Class<?>> properties = ReflectionUtils.getPropertyTypes(ReflectionSubject.class);
+		
+		assertEquals(3, properties.size());
+		assertEquals(String.class, properties.get("firstProperty"));
+		assertEquals(String.class, properties.get("secondProperty"));
+		assertEquals(Object.class, properties.get("thirdProperty"));
+		assertEquals(properties.keySet(), ReflectionUtils.getPropertyNames(ReflectionSubject.class));
+	}
+	
+	@Test
+	public void testGetProperties() {
+		ReflectionSubject subject = new ReflectionSubject();
+		subject.thirdProperty = 123;
+		Map<String, Object> properties = ReflectionUtils.getProperties(subject);
+		
+		assertEquals(3, properties.size());
+		assertEquals("first", properties.get("firstProperty"));
+		assertEquals("second", properties.get("secondProperty"));
+		assertEquals(123, properties.get("thirdProperty"));
 	}
 	
 	@Test
@@ -91,6 +115,8 @@ public class TestReflectionUtils {
 		public String firstProperty = "first";
 		private String secondProperty = "second";
 		public Object thirdProperty = new Object();
+		@SuppressWarnings("unused")
+		private static int staticProperty = 0; 
 		
 		@SuppressWarnings("unused")
 		public String firstMethod() {

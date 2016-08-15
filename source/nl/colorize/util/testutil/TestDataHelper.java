@@ -26,7 +26,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 
-import nl.colorize.util.CompactFormatter;
 import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.FormatUtils;
 import nl.colorize.util.LoadUtils;
@@ -197,7 +196,7 @@ public final class TestDataHelper {
 	 * {@code StringWriter}.
 	 */
 	public static Handler createInMemoryLogHandler(StringWriter writer) {
-		return LogHelper.createStringHandler(writer, new CompactFormatter());
+		return LogHelper.createStringHandler(writer, LogHelper.createCompactFormatter());
 	}
 	
 	public static void sleep(long time) {

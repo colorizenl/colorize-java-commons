@@ -11,7 +11,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringWriter;
-import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -22,15 +21,12 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
 import nl.colorize.util.Callback;
-import nl.colorize.util.CompactFormatter;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
-import nl.colorize.util.testutil.TestDataHelper;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 /**
@@ -80,26 +76,20 @@ public class TestLogHelper {
 	@Test
 	public void testConfigureLogger() throws Exception {
 		LogHelper.resetColorizeLoggerConfiguration();
-		Logger logger = LogHelper.getLogger("nl.test.c", LogHelper.createPlainConsoleHandler());
+		Logger logger = LogHelper.getLogger("nl.test.c", LogHelper.createConsoleHandler());
 		logger.warning("This is a test");
-		assertEquals("WARNING  This is a test\n", errBuffer.toString());
-	}
-	
-	@Test
-	public void testConfigureColorizeLogger() throws Exception {
-		Logger logger = LogHelper.getLogger("nl.kees.c", LogHelper.createPlainConsoleHandler());
-		logger.warning("This is a test");
-		assertEquals("WARNING  This is a test\n", errBuffer.toString());
+		assertEquals("WARNING  This is a test\n", errBuffer.toString().replaceFirst("[\\d-: ]+", ""));
 	}
 
 	@Test
 	public void testFileHandler() throws IOException {
 		File tempFile = LoadUtils.getTempFile(".log");
 		FileHandler fileHandler = LogHelper.createFileHandler(tempFile, Charsets.UTF_8);
-		fileHandler.setFormatter(new CompactFormatter(true, false));
+		fileHandler.setFormatter(LogHelper.createCompactFormatter());
 		Logger logger = LogHelper.getLogger("nl.test.x.y.z", fileHandler);
 		logger.info("Test log message");
-		assertEquals("INFO     Test log message\n", Files.toString(tempFile, Charsets.UTF_8));
+		assertEquals("INFO     Test log message\n", Files.toString(tempFile, Charsets.UTF_8)
+				.replaceFirst("[\\d-: ]+", ""));
 	}
 	
 	@Test
@@ -125,9 +115,9 @@ public class TestLogHelper {
 	public void testStringHandler() {
 		StringWriter stringWriter = new StringWriter();
 		Logger logger = LogHelper.getLogger(getClass().getName(), 
-				LogHelper.createStringHandler(stringWriter, new CompactFormatter(true, false)));
+				LogHelper.createStringHandler(stringWriter, LogHelper.createCompactFormatter()));
 		logger.info("Test");
-		assertEquals("INFO     Test\n", stringWriter.toString());
+		assertEquals("INFO     Test\n", stringWriter.toString().replaceFirst("[\\d-: ]+", ""));
 	}
 	
 	@Test
@@ -135,18 +125,5 @@ public class TestLogHelper {
 		String stackTrace = LogHelper.getStackTrace(new Exception());
 		assertTrue(stackTrace.startsWith("java.lang.Exception\n" +
 				"\tat nl.colorize.util.TestLogHelper.testGetStackTrace"));
-	}
-	
-	@Test
-	public void testCompactFormatterLevelNames() {
-		CompactFormatter formatter = new CompactFormatter(true, true);
-		Date date = TestDataHelper.asDate("2013-01-14 14:53:00");
-		
-		assertEquals("2013-01-14 14:53:00  INFO     First\n", 
-				formatter.format("First", null, Level.INFO, date));
-		assertEquals("2013-01-14 14:53:00  WARNING  Second\n", 
-				formatter.format("Second", null, Level.WARNING, date));
-		assertEquals("2013-01-14 14:53:00  SEVERE   Third\n", 
-				formatter.format("Third", null, Level.SEVERE, date));
 	}
 }

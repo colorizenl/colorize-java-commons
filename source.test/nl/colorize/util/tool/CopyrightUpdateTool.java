@@ -22,11 +22,11 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
+import nl.colorize.util.DirectoryWalker;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Relation;
 import nl.colorize.util.Tuple;
-import nl.colorize.util.system.DirectoryWalker;
 
 /**
  * Command line tool that updates the copyright statement at the top of the 

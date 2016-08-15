@@ -1,9 +1,0 @@
-customer: colorizenl
-system: colorize-java-commons
-project: M0000-0000
-model: 2016
-source_dir: ./
-component_depth: 5
-database: colorizenl_colorize_java_commons
-languages:
-    - java

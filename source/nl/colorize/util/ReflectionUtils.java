@@ -10,9 +10,13 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Various utility and convenience methods for working with reflection. Unless
@@ -37,11 +41,8 @@ public final class ReflectionUtils {
 	 *         the environment does not allow access to non-public properties.
 	 */
 	public static Object getProperty(Object subject, String propertyName) {
-		try {
-			return getProperty(subject.getClass(), propertyName).get(subject);
-		} catch (IllegalAccessException e) {
-			throw new IllegalArgumentException("Property " + propertyName + " is not accessible");
-		}
+		Field property = getProperty(subject.getClass(), propertyName);
+		return getPropertyValue(subject, property);
 	}
 	
 	private static Field getProperty(Class<?> forClass, String propertyName) {
@@ -53,6 +54,70 @@ public final class ReflectionUtils {
 			throw new IllegalArgumentException("Class " + forClass.getName() + 
 					" does not have property " + propertyName);
 		}
+	}
+	
+	private static Object getPropertyValue(Object subject, Field property) {
+		try {
+			property.setAccessible(true);
+			return property.get(subject);
+		} catch (IllegalAccessException e) {
+			throw new IllegalArgumentException("Property " + property.getName() + " is not accessible");
+		}
+	}
+	
+	/**
+	 * Returns the names of the properties defined by the specified class. This
+	 * does include private and protected properties, but does not include any
+	 * properties defined by parent classes, or static or transient properties.
+	 */
+	public static Set<String> getPropertyNames(Class<?> forClass) {
+		return getPropertyTypes(forClass).keySet();
+	}
+	
+	/**
+	 * Returns the names and types of the properties defined by the specified 
+	 * class. This does include private and protected properties, but does not 
+	 * include any properties defined by parent classes, or static or transient
+	 * properties.
+	 * <p>
+	 * This method does not retrieve the actual property values for an instance
+	 * of the class. Use {@link #getProperties(Object)} for that purpose.
+	 */
+	public static Map<String, Class<?>> getPropertyTypes(Class<?> forClass) {
+		Map<String, Class<?>> properties = new HashMap<>();
+		for (Field property : getDeclaredProperties(forClass)) {
+			properties.put(property.getName(), property.getType());
+		}
+		return properties;
+	}
+	
+	private static List<Field> getDeclaredProperties(Class<?> forClass) {
+		List<Field> properties = new ArrayList<>();
+		for (Field property : forClass.getDeclaredFields()) {
+			int modifiers = property.getModifiers();
+			if (!Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers)) {
+				properties.add(property);
+			}
+		}
+		return properties;
+	}
+	
+	/**
+	 * Accesses an object's properties using reflection. The properties are
+	 * obtained using the approach described in {@link #getProperty(Object, String)}.
+	 * This does include private and protected properties, but does not include any
+	 * properties defined by parent classes, or static or transient properties.
+	 */
+	public static Map<String, Object> getProperties(Object subject) {
+		if (subject instanceof Class<?>) {
+			throw new IllegalArgumentException("Trying to get properties from an object of type Class");
+		}
+		
+		Map<String, Object> properties = new HashMap<>();
+		for (Field property : getDeclaredProperties(subject.getClass())) {
+			properties.put(property.getName(), getPropertyValue(subject, property));
+		}
+		return properties;
 	}
 	
 	/**
@@ -106,7 +171,8 @@ public final class ReflectionUtils {
 	 */
 	public static Object callMethod(Object subject, String methodName, Class<?>... parameterTypes) {
 		try {
-			return getMethod(subject, methodName, parameterTypes).invoke(subject, parameterTypes);
+			Method method = getMethod(subject, methodName, parameterTypes);
+			return method.invoke(subject, (Object[]) parameterTypes);
 		} catch (InvocationTargetException e) {
 			throw new RuntimeException("Exception while calling method " + methodName, e);
 		} catch (IllegalAccessException e) {

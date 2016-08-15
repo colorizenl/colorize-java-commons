@@ -97,7 +97,7 @@ public final class SwingUtils {
 	
 	/**
 	 * Initializes Swing by selecting the best look-and-feel for the current
-	 * platform. On OS X this method also changes system properties so that
+	 * platform. On macOS this method also changes system properties so that
 	 * menus appear at the top of the screen, instead of inside the window.
 	 * <p>
 	 * This method must be called before the first window is shown. 
@@ -113,7 +113,7 @@ public final class SwingUtils {
 			
 			MacIntegration.enableApplicationMenuBar();
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			if (Platform.isOSX()) {
+			if (Platform.isMac()) {
 				MacIntegration.augmentLookAndFeel();
 			}
 		} catch (Exception e) {
@@ -137,16 +137,38 @@ public final class SwingUtils {
 	}
 	
 	/**
-	 * Returns true if the current display is a "retina" display (a display with
-	 * a pixel density higher than 1.0). 
+	 * Returns the "device pixel ratio" for the current display. A return value 
+	 * higher than 1.0 indicates a "retina" or "HiDPI" screen.
+	 * @deprecated This method relies on Apple-specific AWT properties, which
+	 *             remain from the old Apple JDK but will be removed from the
+	 *             JDK in Java 9.
 	 */
-	public static boolean isRetinaDisplay() {
-		Toolkit toolkit = Toolkit.getDefaultToolkit();
-		Object contentScaleFactor = toolkit.getDesktopProperty("apple.awt.contentScaleFactor");
-		if (contentScaleFactor instanceof Float) {
-			return (Float) contentScaleFactor >= 2.0f;
+	@Deprecated
+	public static float getScreenPixelRatio() {
+		//TODO replace with API from Java 9 once that is released
+		if (Platform.isMac()) {
+			Toolkit toolkit = Toolkit.getDefaultToolkit();
+			Object contentScaleFactor = toolkit.getDesktopProperty("apple.awt.contentScaleFactor");
+			if (contentScaleFactor instanceof Number) {
+				return ((Number) contentScaleFactor).floatValue();
+			} else {
+				return 1.0f;
+			}
+		} else {
+			return 1.0f;
 		}
-		return false;
+	}
+	
+	/**
+	 * Returns true if the current display is a "retina" display (a display with
+	 * a pixel density higher than 1). 
+	 * @deprecated This method relies on Apple-specific AWT properties, which 
+	 *             remain from the old Apple JDK but will be removed from the
+	 *             JDK in Java 9. 
+	 */
+	@Deprecated
+	public static boolean isRetinaDisplay() {
+		return getScreenPixelRatio() > 1.0f;
 	}
 	
 	/**
@@ -158,7 +180,7 @@ public final class SwingUtils {
 		Dimension screenSize = getScreenSize();
 		String description = screenSize.width + "x" + screenSize.height;
 		if (isRetinaDisplay()) {
-			description += " (description)";
+			description += String.format(" (x%.1f)", getScreenPixelRatio());
 		}
 		return description;
 	}
@@ -507,14 +529,14 @@ public final class SwingUtils {
 	}
 	
 	static boolean isStripedComponentAllowed() {
-		return Platform.isOSX();
+		return Platform.isMac();
 	}
 	
 	static Color getStripedRowColor(int row) {
 		if (row % 2 == 0) {
 			return STANDARD_ROW_COLOR;
 		} else {
-			if (Platform.isOSX() && !MacIntegration.isAtLeastOSX(MacIntegration.OSX_YOSEMITE)) {
+			if (Platform.isMac() && !MacIntegration.isAtLeast(MacIntegration.MACOS_YOSEMITE)) {
 				return AQUA_ROW_COLOR;
 			} else {
 				return YOSEMITE_ROW_COLOR;

@@ -48,7 +48,7 @@ public final class Platform {
 	private static List<PlatformAccessProvider> accessProviders = Lists.newCopyOnWriteArrayList(
 			ImmutableList.<PlatformAccessProvider>of(new StandardPlatformAccessProvider()));
 	
-	private static final Map<String, String> OS_X_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
+	private static final Map<String, String> MACOS_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
 			.put("10.4", "Tiger")
 			.put("10.5", "Leopard")
 			.put("10.6", "Snow Leopard")
@@ -57,6 +57,7 @@ public final class Platform {
 			.put("10.9", "Mavericks")
 			.put("10.10", "Yosemite")
 			.put("10.11", "El Capitan")
+			.put("10.12", "Sierra")
 			.build();
 	
 	private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.6.0");
@@ -70,10 +71,10 @@ public final class Platform {
 	
 	/**
 	 * Returns the platform's name. Examples of returned values are "Windows 8"
-	 * and "OS X Mavericks".
+	 * and "macOS Sierra".
 	 * <p>
 	 * Also see {@link #getPlatformFamily()} to obtain the platform's "family"
-	 * (i.e. Windows/OS X/Linux) and the {@code isX()} convenience methods for 
+	 * (i.e. Windows/macOS/Linux) and the {@code isX()} convenience methods for 
 	 * testing against a specific platform (e.g. {@link #isWindows()}).
 	 */
 	public static String getPlatformName() {	
@@ -90,21 +91,21 @@ public final class Platform {
 			platformName = "Android " + getAndroidVersion();
 		} else if (System.getProperty("com.google.appengine.runtime.version") != null) {
 			platformName = "Google App Engine";
-		} else if (os.toLowerCase().contains("os x")) {
-			platformName = "OS X " + getOSXVersionName();
+		} else if (os.toLowerCase().contains("os x") || os.toLowerCase().contains("macos")) {
+			platformName = "macOS " + getMacOSVersionName();
 		}
 		
 		return platformName;
 	}
 	
-	private static String getOSXVersionName() {
+	private static String getMacOSVersionName() {
 		String version = System.getProperty("os.version");
-		for (Map.Entry<String, String> entry : OS_X_VERSION_NAMES.entrySet()) {
+		for (Map.Entry<String, String> entry : MACOS_VERSION_NAMES.entrySet()) {
 			if (version.startsWith(entry.getKey())) {
 				return entry.getValue();
 			}
 		}
-		LOGGER.warning("Unknown OS X version: " + version);
+		LOGGER.warning("Unknown macOS version: " + version);
 		return version;
 	}
 	
@@ -135,8 +136,8 @@ public final class Platform {
 	public static String getPlatformFamily() {
 		if (isWindows()) {
 			return "Windows";
-		} else if (isOSX()) {
-			return "OS X";
+		} else if (isMac()) {
+			return "macOS";
 		} else if (isLinux()) {
 			return "Linux";
 		} else if (isGoogleAppEngine()) {
@@ -150,8 +151,8 @@ public final class Platform {
 		return getPlatformName().startsWith("Windows");
 	}
 	
-	public static boolean isOSX() {
-		return getPlatformName().contains("OS X");
+	public static boolean isMac() {
+		return getPlatformName().contains("macOS");
 	}
 	
 	public static boolean isLinux() {
@@ -179,12 +180,12 @@ public final class Platform {
 	}
 	
 	/**
-	 * Returns true if the application is running inside of the OS X app sandbox.
+	 * Returns true if the application is running inside of the Mac app sandbox.
 	 * When running inside of the sandbox access to system resources is limited 
 	 * to the entitlements specified when signing the app.
 	 */
-	public static boolean isOSXAppSandboxEnabled() {
-		if (!isOSX()) {
+	public static boolean isMacAppSandboxEnabled() {
+		if (!isMac()) {
 			return false;
 		}
 		
@@ -195,10 +196,10 @@ public final class Platform {
 	/**
 	 * Returns true if the application was downloaded from the Mac App Store.
 	 * Note that App Store applications are always sandboxed (see
-	 * {@link isOSXAppSandboxEnabled() for more information).
+	 * {@link isMacAppSandboxEnabled()} for more information).
 	 */
 	public static boolean isMacAppStore() {
-		return isOSXAppSandboxEnabled();
+		return isMacAppSandboxEnabled();
 	}
 	
 	/**
@@ -248,9 +249,9 @@ public final class Platform {
 		Version androidVersion = getAndroidVersion();
 		Version froyo = Version.parse("2.2"); // API level 8
 		Version kitkat = Version.parse("4.4"); // API level 19
-		Version androidN = Version.parse("6.1"); // API level 24
+		Version nougat = Version.parse("7.0"); // API level 24
 		
-		if (androidVersion.isAtLeast(androidN)) {
+		if (androidVersion.isAtLeast(nougat)) {
 			return Version.parse("1.8.0-android");
 		} else if (androidVersion.isAtLeast(kitkat)) {
 			return Version.parse("1.7.0-android");
@@ -515,8 +516,8 @@ public final class Platform {
 			if (isWindows()) { 
 				File applicationData = new File(System.getenv("APPDATA"));
 				appDir = new File(applicationData, app);
-			} else if (isOSX()) {
-				appDir = getOSXApplicationDataDirectory(app);
+			} else if (isMac()) {
+				appDir = getMacApplicationDataDirectory(app);
 			} else {
 				appDir = new File(getUserHome(), "." + app);
 			}
@@ -530,8 +531,8 @@ public final class Platform {
 			return appDir;
 		}
 		
-		private File getOSXApplicationDataDirectory(String app) {
-			if (isOSXAppSandboxEnabled()) {
+		private File getMacApplicationDataDirectory(String app) {
+			if (isMacAppSandboxEnabled()) {
 				File sandboxContainer = new File(System.getenv("HOME"));
 				return sandboxContainer;				
 			} else {
@@ -543,8 +544,8 @@ public final class Platform {
 		public File getUserDataDirectory() {
 			if (isWindows()) { 
 				return getWindowsMyDocumentsDirectory();
-			} else if (isOSX()) {
-				return getOSXDocumentsDirectory();
+			} else if (isMac()) {
+				return getMacDocumentsDirectory();
 			} else {
 				return getUserHome();
 			}
@@ -564,13 +565,13 @@ public final class Platform {
 			}
 		}
 		
-		private File getOSXDocumentsDirectory() {
-			if (isOSXAppSandboxEnabled()) {
+		private File getMacDocumentsDirectory() {
+			if (isMacAppSandboxEnabled()) {
 				// Mac App Store has a sandbox container per application.
 				return new File(System.getenv("HOME"));
 			} else {
 				// The "Documents" directory has the same name on non-English 
-				// versions of OS X, according to Apple's documentation.
+				// versions of macOS, according to Apple's documentation.
 				return new File(System.getenv("HOME") + "/Documents");
 			}
 		}

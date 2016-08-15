@@ -13,7 +13,7 @@ the following features:
 - various other utility classes
 
 The library is used in a large variety of application types: web applications, the cloud (Google
-App Engine), desktop applications (Windows/OS X/Linux), mobile applications (Android), command
+App Engine), desktop applications (Windows/macOS/Linux), mobile applications (Android), command
 line tools, and other libraries. In order to support these different environments the source code 
 has to be extremely portable. 
 

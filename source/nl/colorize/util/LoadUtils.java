@@ -28,8 +28,11 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Closeables;
@@ -369,6 +372,61 @@ public final class LoadUtils {
 	}
 	
 	/**
+	 * Returns a file filter that will only accept files that match one of the
+	 * specified file extensions. The file extension check is case-insensitive.
+	 * @param extensions File extensions to accept (without the leading dot).
+	 * @throws IllegalArgumentException if the provided list is empty.
+	 */
+	public static FilenameFilter getFileExtensionFilter(String... extensions) {
+		if (extensions.length == 0) {
+			throw new IllegalArgumentException("No file extensions provided");
+		}
+		
+		final List<String> extensionList = ImmutableList.copyOf(extensions);
+		return new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				String ext = Files.getFileExtension(name).toLowerCase();
+				return extensionList.contains(ext);
+			}
+		};
+	}
+	
+	/**
+	 * Returns a file filter that accepts files with a name matching a glob 
+	 * pattern. Refer to http://en.wikipedia.org/wiki/Glob_(programming) for
+	 * a list of supported constructs. 
+	 */
+	public static FilenameFilter getGlobFilter(String globPattern) {
+		final Pattern fileNamePattern = convertGlobPattern(globPattern);
+		return new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				Matcher nameMatcher = fileNamePattern.matcher(name);
+				return nameMatcher.matches();
+			}
+		};
+	}
+	
+	private static Pattern convertGlobPattern(String globPattern) {
+		StringBuilder buffer = new StringBuilder();
+		buffer.append("\\Q");
+		for (int i = 0; i < globPattern.length(); i++) {
+			char c = globPattern.charAt(i);
+			switch (c) {
+				case '\\' : buffer.append(globPattern.charAt(++i)); break;
+				case '?' : buffer.append("\\E.\\Q"); break;
+				case '*' : buffer.append("\\E.*?\\Q"); break;
+				case '[' : buffer.append("\\E["); break;
+				case ']' : buffer.append("]\\Q"); break;
+				default : buffer.append(c); break;
+			}
+		}
+		buffer.append("\\E");
+		// Strip off empty escape sequences
+		String pattern = buffer.toString().replace("\\Q\\E", "");
+		return Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+	}
+
+	/**
 	 * Converts a {@link java.io.FilenameFilter} to a {@link java.io.FileFilter}.
 	 */
 	public static FileFilter toFileFilter(final FilenameFilter filter) {
@@ -627,7 +685,7 @@ public final class LoadUtils {
 			throws IOException {
 		File tempFile = new File(dir, name);
 		if (tempFile.exists()) {
-			throw new IllegalArgumentException("File already exists");
+			throw new IllegalArgumentException("File already exists: " + tempFile.getAbsolutePath());
 		}
 		tempFile.deleteOnExit();
 		Files.write(text, tempFile, encoding);
@@ -670,6 +728,4 @@ public final class LoadUtils {
 		}
 		return tempDir;
 	}
-	
-	
 }

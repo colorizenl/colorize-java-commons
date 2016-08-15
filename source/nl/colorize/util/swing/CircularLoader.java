@@ -21,7 +21,7 @@ import nl.colorize.util.animation.Animatable;
 /**
  * A circular progressbar commonly used in web based AJAX applications. The look
  * of this component has become popular, and although it is available by default
- * on OS X this class provides a generic implementation. The component can be
+ * on macOS this class provides a generic implementation. The component can be
  * rescaled to any size using {@link #setPreferredSize(Dimension)}.
  */
 public class CircularLoader extends JPanel implements Animatable {

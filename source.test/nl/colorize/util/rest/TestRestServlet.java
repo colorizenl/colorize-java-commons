@@ -12,8 +12,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
+import com.google.common.net.MediaType;
 
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.HttpStatus;
@@ -48,6 +50,11 @@ public class TestRestServlet {
 			protected boolean isRequestAuthorized(RestRequest request, String authorizedRoles) {
 				return authorizedRoles.isEmpty() || 
 						request.getOptionalParameter("authenticated", "").equals("true");
+			}
+			
+			@Override
+			protected List<MediaType> getAcceptableContentTypes() {
+				return ImmutableList.of(MediaType.parse("text/plain"));
 			}
 		};
 		servlet.init();
@@ -331,6 +338,29 @@ public class TestRestServlet {
 		assertEquals("OK: 3", servlet.mapping(Method.POST, "/third/3").apply(
 				createMockRequest("POST", "/third/3")).getBodyText());
 		assertNull(servlet.mapping(Method.GET, "/nothing"));
+	}
+	
+	@Test
+	public void testAcceptHeader() {
+		RestRequest request = createMockRequest("GET", "/first");
+		MockHttpServletRequest httpRequest = (MockHttpServletRequest) request.getHttpRequest();
+		
+		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
+		
+		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/plain");
+		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
+		
+		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/plain;charset=UTF-8");
+		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
+		
+		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml, text/plain");
+		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
+		
+		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml, */*");
+		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
+		
+		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml");
+		assertEquals(HttpStatus.NOT_ACCEPTABLE, servlet.dispatchRequest(request).getStatus());
 	}
 	
 	private RestRequest createMockRequest(final String method, String path, String... params) {

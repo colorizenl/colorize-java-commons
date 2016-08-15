@@ -192,8 +192,8 @@ public class URLLoader {
 	
 	/**
 	 * Adds a request header with the specified name and value. Note that unlike
-	 * {@link #addRequestHeader(String, String)} this does not allow multiple
-	 * headers with the same name.
+	 * {@link #addRequestHeader(String, String, boolean)} this does not allow
+	 * multiple headers with the same name.
 	 * @throws IllegalStateException if a request header with the same name has 
 	 *         already been set.
 	 * @throws NullPointerException if the name and/or value are null.
@@ -251,7 +251,7 @@ public class URLLoader {
 	 * Returns the request's respons body. This will normally consist of the
 	 * URL-encoded request parameters, unless the response body has been
 	 * replaced using {@link #setRequestBody(String, String)}.
-	 * @throws IllegalStateExcepyion if the request method does not allow a
+	 * @throws IllegalStateException if the request method does not allow a
 	 *         request body to be set.
 	 */
 	public String getRequestBody() {

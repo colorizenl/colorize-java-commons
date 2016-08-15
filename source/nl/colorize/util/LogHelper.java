@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
@@ -21,6 +23,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -151,10 +154,13 @@ public final class LogHelper {
 	/**
 	 * Creates a log handler that will print messages to {@code stderr} and will
 	 * not apply any formatting to messages.
+	 * @deprecated Use {@link #createConsoleHandler()} in combination with 
+	 *             {@link #createCompactFormatter()} instead.
 	 */
+	@Deprecated
 	public static ConsoleHandler createPlainConsoleHandler() {
 		ConsoleHandler consoleHandler = new ConsoleHandler();
-		consoleHandler.setFormatter(new CompactFormatter(false, false));
+		consoleHandler.setFormatter(createCompactFormatter());
 		consoleHandler.setLevel(Level.INFO);
 		return consoleHandler;
 	}
@@ -262,6 +268,45 @@ public final class LogHelper {
 
 		@Override
 		public void close() {
+		}
+	}
+	
+	/**
+	 * Creates a log message formatter that uses a compact format so that log 
+	 * messages only contain a single line. This makes it easier to visually 
+	 * scan log files.
+	 */
+	public static Formatter createCompactFormatter() {
+		return new CompactFormatter();
+	}
+	
+	private static class CompactFormatter extends Formatter {
+	
+		private SimpleDateFormat dateFormat;
+		private Date scratchDate;
+
+		public CompactFormatter() {
+			dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			scratchDate = new Date();
+		}
+		
+		@Override
+		public synchronized String format(LogRecord record) {
+			scratchDate.setTime(record.getMillis());
+			return format(record.getMessage(), record.getThrown(), record.getLevel(), scratchDate);
+		}
+		
+		public String format(String message, Throwable thrown, Level level, Date timestamp) {
+			StringBuilder log = new StringBuilder();
+			log.append(dateFormat.format(timestamp));
+			log.append("  ");
+			log.append(Strings.padEnd(level.toString(), 9, ' '));
+			log.append(message);
+			log.append(Platform.getLineSeparator());
+			if (thrown != null) {
+				log.append(LogHelper.getStackTrace(thrown));
+			}
+			return log.toString();
 		}
 	}
 }

@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import nl.colorize.util.Version;
 import nl.colorize.util.testutil.TestDataHelper;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 /**
@@ -45,8 +45,8 @@ public class TestXMLConverter {
 		
 		String expected = "";
 		expected += "<a>\n";
-		expected += "    <entry>first</entry>\n";
-		expected += "    <entry>second</entry>\n";
+		expected += "    <element>first</element>\n";
+		expected += "    <element>second</element>\n";
 		expected += "</a>";
 		
 		XMLConverter converter = new XMLConverter();
@@ -68,6 +68,20 @@ public class TestXMLConverter {
 		XMLConverter converter = new XMLConverter();
 		assertEquals(expected, toXmlString(converter.toXML(map, "a")));
 	}
+	
+	@Test
+	public void testSerializeArray() {
+		XMLConverter converter = new XMLConverter();
+		Document xml = converter.toXML(new int[] { 1, 7 }, "a");
+		
+		String expected = "";
+		expected += "<a>\n";
+		expected += "    <element>1</element>\n";
+		expected += "    <element>7</element>\n";
+		expected += "</a>";
+		
+		assertEquals(expected, toXmlString(xml));
+	}
 
 	@Test(expected=NullPointerException.class)
 	public void testSerializeNullNotAllowed() {
@@ -75,10 +89,22 @@ public class TestXMLConverter {
 		converter.toXML(null, "a");
 	}
 	
-	@Test(expected=UnsupportedOperationException.class)
-	public void testConvertUnsupportedType() {
+	@Test
+	public void testConvertComplexType() {
 		XMLConverter converter = new XMLConverter();
-		converter.toXML(new Locale("nl", "NL"), "locale");
+		Document xml = converter.toXML(Version.parse("1.2.3"), "a");
+		
+		String expected = "";
+		expected += "<a>\n";
+		expected += "    <versionString>1.2.3</versionString>\n";
+		expected += "    <digits>\n";
+		expected += "        <element>1</element>\n";
+		expected += "        <element>2</element>\n";
+		expected += "        <element>3</element>\n";
+		expected += "    </digits>\n";
+		expected += "</a>";
+		
+		assertEquals(expected, toXmlString(xml));
 	}
 	
 	@Test

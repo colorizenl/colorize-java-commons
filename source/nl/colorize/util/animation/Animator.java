@@ -6,9 +6,12 @@
 
 package nl.colorize.util.animation;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-import nl.colorize.util.LockedIterationList;
+import com.google.common.collect.ForwardingList;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Schedules animations and drives them by performing frame updates at regular
@@ -174,6 +177,31 @@ public abstract class Animator {
 			this.duration = duration;
 			frameUpdateListeners = new LockedIterationList<AnimationListener<?>>();
 			completionListeners = new LockedIterationList<AnimationListener<?>>();
+		}
+	}
+	
+	/**
+	 * List that iterates over an immutable snapshot instead of the "live" list,
+	 * meaning the list can be modified during iteration without causing a
+	 * {@link java.util.ConcurrentModificationException}.
+	 */
+	private static class LockedIterationList<E> extends ForwardingList<E> {
+		
+		private List<E> elements;
+		
+		public LockedIterationList() {
+			elements = new ArrayList<E>();
+		}
+		
+		@Override
+		protected List<E> delegate() {
+			return elements;
+		}
+		
+		@Override
+		public Iterator<E> iterator() {
+			ImmutableList<E> immutableSnapshot = ImmutableList.copyOf(elements);
+			return immutableSnapshot.iterator();
 		}
 	}
 }

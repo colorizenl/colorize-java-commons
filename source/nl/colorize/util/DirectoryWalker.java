@@ -4,7 +4,7 @@
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.system;
+package nl.colorize.util;
 
 import java.io.File;
 import java.io.FilenameFilter;

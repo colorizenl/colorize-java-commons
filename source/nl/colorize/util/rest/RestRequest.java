@@ -41,8 +41,8 @@ public class RestRequest {
 	 * <p>
 	 * Note that request parameters and path parameters are <em>not</em> directly
 	 * obtained from the HTTP request. Instead, they are passed in separately
-	 * using {@link #bindParameters(Map)} and {@link #bindPathParameters()}. This
-	 * allows REST APIs to support multiple parameter formats. 
+	 * using {@link #bindParameters(Map)} and {@link #bindPathParameters(Map)}.
+	 * This allows REST APIs to support multiple parameter formats. 
 	 */
 	protected RestRequest(HttpServletRequest httpRequest, List<String> pathComponents) {
 		this.httpRequest = httpRequest;

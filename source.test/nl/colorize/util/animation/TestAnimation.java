@@ -296,6 +296,26 @@ public class TestAnimation {
 		assertRGBA(colorWithKeyFrames, 255, 0, 0, 5);
 	}
 	
+	@Test
+	public void testReplaceKeyFrame() {
+		Timeline timeline = new Timeline();
+		timeline.addKeyFrame(1f, 10f);
+		timeline.addKeyFrame(2f, 20f);
+		timeline.setPlayhead(20f);
+		
+		assertTrue(timeline.hasKeyFrameAtPosition(2f));
+		assertEquals(20f, timeline.getLastKeyFrame().getValue(), EPSILON);
+		assertTrue(timeline.isCompleted());
+		
+		timeline.removeKeyFrame(2f);
+		timeline.addKeyFrame(3f, 30f);
+		
+		assertFalse(timeline.hasKeyFrameAtPosition(2f));
+		assertTrue(timeline.hasKeyFrameAtPosition(3f));
+		assertEquals(30f, timeline.getLastKeyFrame().getValue(), EPSILON);
+		assertFalse(timeline.isCompleted());
+	}
+	
 	private void assertRGBA(Color color, int r, int g, int b, int a) {
 		assertEquals(r, color.getRed());
 		assertEquals(g, color.getGreen());

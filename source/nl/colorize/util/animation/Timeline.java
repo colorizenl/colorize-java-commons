@@ -287,18 +287,22 @@ public class Timeline implements Animatable, Serializable {
 	
 	private KeyFrame getKeyFrameAtPosition(float position) {
 		for (KeyFrame keyframe : keyframes) {
-			if (isKeyFrameAtPosition(keyframe, position)) {
+			if (hasKeyFrameAtPosition(keyframe, position)) {
 				return keyframe;
 			}
 		}
 		return null;
 	}
 	
-	private boolean isKeyFrameAtPosition(KeyFrame keyframe, float position) {
-		return isKeyFrameAtPosition(keyframe, position, EPSILON);
+	public boolean hasKeyFrameAtPosition(float position) {
+		return getKeyFrameAtPosition(position) != null;
 	}
 	
-	private boolean isKeyFrameAtPosition(KeyFrame keyframe, float position, float tolerance) {
+	private boolean hasKeyFrameAtPosition(KeyFrame keyframe, float position) {
+		return hasKeyFrameAtPosition(keyframe, position, EPSILON);
+	}
+	
+	private boolean hasKeyFrameAtPosition(KeyFrame keyframe, float position, float tolerance) {
 		return keyframe.getTime() >= position - tolerance && 
 				keyframe.getTime() <= position + tolerance;
 	}
