@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -12,11 +12,15 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+import com.google.common.base.Splitter;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 
@@ -25,10 +29,15 @@ import com.google.common.io.BaseEncoding;
  * number of different formats.
  */
 public final class Escape {
+	
+	private static final Splitter FORM_DATA_SPLITTER = Splitter.on("&");
 
 	private Escape() {
 	}
 	
+	/**
+	 * Encodes a string using URL encoding.
+	 */
 	public static String urlEncode(String str, Charset charset) {
 		try {
 			return URLEncoder.encode(str, charset.displayName());
@@ -37,12 +46,54 @@ public final class Escape {
 		}
 	}
 	
+	/**
+	 * Decodes a URL encoded string.
+	 */
 	public static String urlDecode(String encoded, Charset charset) {
 		try {
 			return URLDecoder.decode(encoded, charset.displayName());
 		} catch (UnsupportedEncodingException e) {
 			throw new AssertionError(e);
 		}
+	}
+	
+	/**
+	 * Encodes a number of key/value pairs using URL encoding, as used in the
+	 * {@code application/x-www-form-urlencoded} media type.
+	 */
+	public static String formEncode(Map<String, String> data, Charset charset) {
+		StringBuilder buffer = new StringBuilder();
+		for (Map.Entry<String,String> entry : data.entrySet()) {
+			if (buffer.length() > 0) {
+				buffer.append('&');
+			}
+			buffer.append(Escape.urlEncode(entry.getKey(), charset));
+			buffer.append('=');
+			buffer.append(Escape.urlEncode(entry.getValue(), charset));
+		}
+		return buffer.toString();
+	}
+	
+	/**
+	 * Decodes a URL encoded collection of key/value pairs, as used in the
+	 * {@code application/x-www-form-urlencoded} media type.
+	 */
+	public static Map<String, String> formDecode(String encoded, Charset charset) {
+		if (encoded.startsWith("?")) {
+			encoded = encoded.substring(1);
+		}
+		
+		if (encoded.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		
+		Map<String, String> data = new HashMap<>();
+		for (String param : FORM_DATA_SPLITTER.split(encoded)) {
+			String paramName = param.substring(0, param.indexOf('='));
+			String paramValue = param.substring(param.indexOf('=') + 1);
+			data.put(Escape.urlDecode(paramName, charset), Escape.urlDecode(paramValue, charset));
+		}
+		return data;
 	}
 	
 	public static String base64Encode(String str, Charset charset) {
@@ -104,7 +155,7 @@ public final class Escape {
 		try {
 			SecretKey key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(keySpec);
 			byte[] hash = key.getEncoded();
-			return toHexString(hash, charset);
+			return toHexString(hash);
 		} catch (InvalidKeySpecException e) {
 			throw new IllegalArgumentException("Invalid key", e);
 		} catch (NoSuchAlgorithmException e) {
@@ -145,7 +196,7 @@ public final class Escape {
 	/**
 	 * Returns the hexcode for the specified byte array.
 	 */
-	public static String toHexString(byte[] bytes, Charset charset) {
+	public static String toHexString(byte[] bytes) {
 		// Implementation based on
 		// http://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
 		char[] hexArray = "0123456789ABCDEF".toCharArray();

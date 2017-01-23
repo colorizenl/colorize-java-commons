@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ public class TestServletUtils {
 	
 	@Test
 	public void testGetRequestBody() {
-		MockHttpServletRequest mockRequest = new MockHttpServletRequest("GET", "/");
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest("POST", "/");
 		mockRequest.setParameter("a", "2");
 		mockRequest.setParameter("b", "3");
 		
@@ -71,7 +71,7 @@ public class TestServletUtils {
 		MockHttpServletResponse mockResponse = new MockHttpServletResponse();
 		ServletUtils.fillServletResponse(new HttpResponse(HttpStatus.OK, headers, "Test"), mockResponse);
 		
-		assertEquals(200, mockResponse.getStatus().getStatusCode());
+		assertEquals(200, mockResponse.getStatus().getCode());
 		assertEquals("Test", mockResponse.getBuffer());
 		assertEquals("1", mockResponse.getHeader(HttpHeaders.CONTENT_LENGTH));
 		assertEquals("application/json; charset=utf-8", mockResponse.getHeader(HttpHeaders.CONTENT_TYPE));
@@ -87,7 +87,7 @@ public class TestServletUtils {
 		
 		ServletUtils.forwardRequest(request, "http://www.dennisbijlsma.com/temp/test_post.php", response);
 		
-		assertEquals(200, response.getStatus().getStatusCode());
+		assertEquals(200, response.getStatus().getCode());
 		assertEquals("2", response.getBuffer());
 	}
 }

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -35,6 +35,8 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+
+import com.google.common.base.Supplier;
 
 import nl.colorize.util.Relation;
 import nl.colorize.util.Tuple;
@@ -149,6 +151,10 @@ public class SimpleTable<R> extends JPanel implements TableModel {
 	}
 	
 	public void addRow(R key, List<String> data) {
+		if (key == null) {
+			throw new NullPointerException("Rows keys cannot be null");
+		}
+		
 		if (data.size() != columns.size()) {
 			throw new IllegalArgumentException("Invalid number of columns: " + data.size());
 		}
@@ -239,6 +245,18 @@ public class SimpleTable<R> extends JPanel implements TableModel {
 	public R getSelectedRowKey() {
 		return getRowKey(getSelectedRowIndex());
 	}
+	
+	/**
+	 * Returns a {@link Supplier} that produces the currentlty selected row key
+	 * when called. Returns {@code null} when no row is selected. 
+	 */
+	public Supplier<R> getSelectedRowKeySupplier() {
+		return new Supplier<R>() {
+			public R get() {
+				return getSelectedRowKey();
+			}
+		};
+	}
 
 	private void assertColumnIndex(int columnIndex) {
 		if (columnIndex < 0 || columnIndex >= columns.size()) {
@@ -317,23 +335,18 @@ public class SimpleTable<R> extends JPanel implements TableModel {
 		
 		public StripedTable(TableModel tableModel) {
 			super(tableModel);
-			
-			if (SwingUtils.isStripedComponentAllowed()) {
-				setFillsViewportHeight(true);
-				setShowHorizontalLines(false);
-				setShowVerticalLines(false);
-			}
+			setFillsViewportHeight(true);
+			setShowHorizontalLines(false);
+			setShowVerticalLines(false);
 		}
 		
 		@Override
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
 			
-			if (SwingUtils.isStripedComponentAllowed()) {
-				Graphics2D g2 = Utils2D.createGraphics(g, false, false);
-				paintEmptyRows(g2);
-				paintColumnLines(g2);
-			}
+			Graphics2D g2 = Utils2D.createGraphics(g, false, false);
+			paintEmptyRows(g2);
+			paintColumnLines(g2);
 		}
 		
 		private void paintEmptyRows(Graphics2D g2) {
@@ -363,8 +376,7 @@ public class SimpleTable<R> extends JPanel implements TableModel {
 		@Override
 		public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
 			Component cell = super.prepareRenderer(renderer, row, column);
-			if (SwingUtils.isStripedComponentAllowed() && cell instanceof JComponent && 
-					!isRowSelected(row)) {
+			if (cell instanceof JComponent && !isRowSelected(row)) {
 				((JComponent) cell).setOpaque(true);
 				((JComponent) cell).setBackground(SwingUtils.getStripedRowColor(row));
 			}

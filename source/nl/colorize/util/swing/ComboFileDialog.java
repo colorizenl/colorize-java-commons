@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ public class ComboFileDialog {
 	}
 
 	private File showSwingOpenDialog(JFrame parent) {
-		JFileChooser fileDialog = createSwingFileDialog(parent, false);
+		JFileChooser fileDialog = createSwingFileDialog(false);
 		if (fileDialog.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
 			return fileDialog.getSelectedFile();
 		} else {
@@ -160,7 +160,7 @@ public class ComboFileDialog {
 	}
 	
 	private File showSwingSaveDialog(JFrame parent) {
-		JFileChooser fileDialog = createSwingFileDialog(parent, true);
+		JFileChooser fileDialog = createSwingFileDialog(true);
 		if (fileDialog.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION) {
 			return fileDialog.getSelectedFile();
 		} else {
@@ -194,7 +194,7 @@ public class ComboFileDialog {
 		return fileDialog;
 	}
 	
-	private JFileChooser createSwingFileDialog(JFrame parent, boolean saveMode) {
+	private JFileChooser createSwingFileDialog(boolean saveMode) {
 		JFileChooser dialog = new JFileChooser();
 		dialog.setDialogTitle(getRealTitle(saveMode));
         dialog.setCurrentDirectory(startDirectory);
@@ -284,7 +284,7 @@ public class ComboFileDialog {
 	}
 	
 	private File getDefaultStartDirectory() {
-		return Platform.getUserDataDirectory();
+		return Platform.getUserDataDir();
 	}
 	
 	/**
@@ -311,7 +311,7 @@ public class ComboFileDialog {
 		private List<String> extensions;
 	
 		public FileExtFilter(String description, String... extensions) {
-			this.description = buildDescriptionString(description, extensions);
+			this.description = description + " (" + Joiner.on(", ").join(extensions) + ")";
 			this.extensions = ImmutableList.copyOf(normalizeFileExtensions(extensions));
 		}
 		
@@ -328,10 +328,6 @@ public class ComboFileDialog {
 		@Override
 		public String getDescription() {
 			return description;
-		}
-		
-		private String buildDescriptionString(String base, String... extensions) {
-			return "(" + Joiner.on(", ").join(extensions) + ")";
 		}
 		
 		public static String[] normalizeFileExtensions(String[] ext) {

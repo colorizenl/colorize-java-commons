@@ -1,11 +1,8 @@
-plugins {
-	id 'net.saliman.cobertura' version '2.2.6'
-}
-
 apply plugin: 'java'
+apply plugin: 'jacoco'
 apply plugin: 'eclipse'
 
-version = '2016.4'
+version = '2017.1'
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
 compileJava.options.encoding = 'UTF-8'
@@ -19,10 +16,14 @@ repositories {
 }
 
 dependencies {
-	compile 'com.google.guava:guava:19.0'
+	compile 'com.google.guava:guava:20.0'
 	compile 'org.jdom:jdom2:2.0.6'
 	compile 'jaxen:jaxen:1.1.6'
-	compile 'com.google.code.gson:gson:2.6.2'
+	compile 'com.google.code.gson:gson:2.8.0'
 	compile 'javax.servlet:servlet-api:2.5'
 	testCompile 'junit:junit:4.12'
+}
+
+test.doLast {
+	tasks.jacocoTestReport.execute()
 }

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ public class TestCommandRunner {
 		CommandRunner commandRunner = new CommandRunner("pwd");
 		commandRunner.execute();
 		assertEquals(0, commandRunner.getExitCode());
-		assertEquals(Platform.getWorkingDirectory().getAbsolutePath(), commandRunner.getOutput());
+		assertEquals(Platform.getUserWorkingDirectory().getAbsolutePath(), commandRunner.getOutput());
 	}
 	
 	@Test
@@ -61,14 +61,6 @@ public class TestCommandRunner {
 	}
 	
 	@Test
-	public void testEscapeShellCommand() {
-		CommandRunner commandRunner = new CommandRunner("cat", "first second.txt", "3'.txt", "4\\'.txt");
-		commandRunner.setShellMode(true);
-		
-		assertEquals("sh -c cat first\\ second.txt 3'.txt 4\\\\'.txt", commandRunner.toString());
-	}
-	
-	@Test
 	public void testDoubleEscapeRemoteCommand() {
 		CommandRunner commandRunner = new CommandRunner("cat", "first second.txt");
 		commandRunner.setRemoteHost("test.colorize.nl");
@@ -78,7 +70,7 @@ public class TestCommandRunner {
 	
 	@Test
 	public void testQuoteArguments() throws Exception {
-		File tempFile = LoadUtils.createTempFile(Platform.getTempDirectory(), "test file.txt", 
+		File tempFile = LoadUtils.createTempFile(Platform.getTempDir(), "test file.txt", 
 				"test", Charsets.UTF_8);
 		
 		CommandRunner commandRunner = new CommandRunner("cat", tempFile.getAbsolutePath());

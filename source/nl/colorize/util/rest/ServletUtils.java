@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -26,6 +26,7 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 
 import nl.colorize.util.Escape;
+import nl.colorize.util.http.HttpRequest;
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.Method;
 import nl.colorize.util.http.URLLoader;
@@ -37,7 +38,6 @@ import nl.colorize.util.http.URLLoader;
 public final class ServletUtils {
 
 	private static final MediaType DEFAULT_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
-	private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
 	private static final Charset COOKIE_BASE64_CHARSET = Charsets.UTF_8;
 
 	private ServletUtils() {
@@ -117,17 +117,51 @@ public final class ServletUtils {
 	}
 	
 	/**
+	 * Returns the request path relative to the servlet root, starting with a
+	 * leading slash. Requests to the root of the servlet will have a path of "/".
+	 */
+	public static String getRequestPath(HttpServletRequest request) {
+		String requestPath = request.getRequestURI();
+		String servletPath = request.getServletPath();
+		if (servletPath.length() > 1 && requestPath.startsWith(servletPath)) {
+			requestPath = requestPath.substring(servletPath.length());
+		}
+		return requestPath;
+	}
+	
+	/**
 	 * Reads the request body and returns it as a string. If the request contains
-	 * no body, or if the request method does not support it, this method will
-	 * return an empty string.
+	 * no body, or if the request method does not support a request body to be
+	 * sent, this method will return an empty string.
 	 */
 	public static String getRequestBody(HttpServletRequest request) {
+		Method method = Method.parse(request.getMethod());
+		if (!method.hasRequestBody()) {
+			return "";
+		}
+		
 		try {
 			BufferedReader requestBody = request.getReader();
 			return CharStreams.toString(requestBody);
 		} catch (IOException e) {
 			throw new RuntimeException("Unexpected read error while reading request body", e);
 		}
+	}
+	
+	/**
+	 * Returns all headers sent with a HTTP request. If the request contains
+	 * multiple headers with the same name, the first occurrence will be used
+	 * (which is consistent with the behavor of
+	 * {@link HttpServletRequest#getHeader(String)}).
+	 */
+	public static Map<String, String> getRequestHeaders(HttpServletRequest request) {
+		Map<String, String> headers = new LinkedHashMap<>();
+		Enumeration<?> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements()) {
+			String headerName = (String) headerNames.nextElement();
+			headers.put(headerName, request.getHeader(headerName));
+		}
+		return headers;
 	}
 	
 	/**
@@ -161,22 +195,22 @@ public final class ServletUtils {
 	 */
 	public static void fillServletResponse(HttpResponse source, HttpServletResponse dest) 
 			throws IOException {
-		dest.setStatus(source.getStatus().getStatusCode());
+		dest.setStatus(source.getStatus().getCode());
 		
 		MediaType contentType = source.getContentType(DEFAULT_CONTENT_TYPE);
 		dest.setContentType(contentType.withoutParameters().toString());
-		dest.setCharacterEncoding(source.getCharset(DEFAULT_CHARSET).displayName());
+		dest.setCharacterEncoding(source.getCharset().displayName());
 		
-		for (String header : source.getHeaderNames()) {
+		for (Map.Entry<String, String> entry : source.getHeaders().entrySet()) {
 			// The Content-Type is a special case, because it's already set 
 			// using HttpServletResponse.setContentType().
-			if (!HttpHeaders.CONTENT_TYPE.equalsIgnoreCase(header)) {
-				dest.addHeader(header, source.getHeader(header));
+			if (!HttpHeaders.CONTENT_TYPE.equalsIgnoreCase(entry.getKey())) {
+				dest.addHeader(entry.getKey(), entry.getValue());
 			}
 		}
 		
 		PrintWriter responseWriter = dest.getWriter();
-		responseWriter.print(source.getBodyText());
+		responseWriter.print(source.getBody());
 		responseWriter.flush();
 		responseWriter.close();
 	}
@@ -224,5 +258,13 @@ public final class ServletUtils {
 			HttpServletResponse response) throws IOException {
 		HttpResponse responseFromURL = forwardRequest(request, forwardToURL);
 		fillServletResponse(responseFromURL, response);
+	}
+	
+	public static HttpRequest convertRequest(HttpServletRequest request) {
+		Method method = Method.parse(request.getMethod());
+		String path = getRequestPath(request);
+		Map<String, String> headers = getRequestHeaders(request);
+		String body = getRequestBody(request);
+		return new HttpRequest(method, path, headers, body);
 	}
 }

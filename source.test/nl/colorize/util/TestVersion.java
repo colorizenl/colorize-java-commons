@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -96,6 +96,7 @@ public class TestVersion {
 		assertFalse(Version.parse("1.0").isAtLeast(Version.parse("1.1")));
 		assertTrue(Version.parse("10.10").isAtLeast(Version.parse("10.10.0")));
 		assertTrue(Version.parse("10.10.0").isAtLeast(Version.parse("10.10")));
+		assertTrue(Version.parse("9.0").isAtLeast(Version.parse("1.9")));
 		assertTrue(Version.parse("10.11").isNewerThan(Version.parse("10.10.3")));
 		assertFalse(Version.parse("10.11").isNewerThan(Version.parse("10.11.0")));
 		assertEquals(Version.parse("10.11"), Version.parse("10.11.0"));

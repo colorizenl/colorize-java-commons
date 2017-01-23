@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -10,19 +10,25 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 
+import com.google.common.base.Suppliers;
+
 import nl.colorize.util.LogHelper;
+import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.swing.Action;
 import nl.colorize.util.swing.ActionDelegate;
 import nl.colorize.util.swing.CircularLoader;
@@ -41,6 +47,7 @@ public class TestCustomComponents {
 	
 	private JFrame frame;
 	private SimpleTable<String> table;
+	private List<String> items;
 	
 	private static final Logger LOGGER = LogHelper.getLogger(TestCustomComponents.class);
 
@@ -88,9 +95,21 @@ public class TestCustomComponents {
 		form.addRow("Custom height:", customHeightLabel);
 		form.addRow("Radio buttons:", new JRadioButton("First"), new JRadioButton("Second"));
 		form.addRow(new JCheckBox("Row with checkbox"));
-		form.addEmptyRow();
 		form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
+		form.addEmptyRow();
+		form.addRow(createAddRemoveItemsPanel(), 100);
 		return form;
+	}
+
+	private JComponent createAddRemoveItemsPanel() {
+		items = new ArrayList<String>();
+		items.add("First item");
+		items.add("Second item");
+		items.add("Third item");
+		
+		return SwingUtils.createAddRemoveItemsPanel(Suppliers.ofInstance(items), "Item", 
+				ReflectionUtils.toMethodCallback(this, "onAddRow"),
+				ReflectionUtils.toMethodCallback(this, "onRemoveRow", String.class));
 	}
 
 	private JPanel createMultiLabelTab() {
@@ -166,5 +185,17 @@ public class TestCustomComponents {
 	@Action
 	public void tableDoubleClicked() {
 		LOGGER.info("Double-clicked on row: " + table.getSelectedRowKey());
+	}
+	
+	@Action
+	public void onAddRow() {
+		JTextField inputField = new JTextField();
+		Popups.message(frame, "Add row", inputField);
+		items.add(inputField.getText());
+	}
+	
+	@Action
+	public void onRemoveRow(String selected) {
+		items.remove(selected);
 	}
 }

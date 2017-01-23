@@ -1,16 +1,18 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics;
@@ -30,6 +32,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -55,8 +58,10 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeCellRenderer;
 
+import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 
+import nl.colorize.util.Callback;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.Platform;
 import nl.colorize.util.ResourceFile;
@@ -72,6 +77,7 @@ public final class SwingUtils {
 	private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);
 	private static final Color YOSEMITE_ROW_COLOR = new Color(245, 245, 245);
 	private static final Color ROW_BORDER_COLOR = new Color(220, 220, 220);
+	private static final int TOOLBAR_ICON_SIZE = 30;
 	
 	private SwingUtils() {
 	}
@@ -381,15 +387,14 @@ public final class SwingUtils {
 	}
 	
 	/**
-	 * Calls {@link javax.swing.JPanel#setOpaque(boolean)} recursively on a panel
-	 * and all its sub-panels.
+	 * Calls {@link javax.swing.JComponent#setOpaque(boolean)} recursively.
 	 */
-	public static void setOpaque(JPanel panel, boolean opaque) {
-		panel.setOpaque(opaque);
-		for (int i = 0; i < panel.getComponentCount(); i++) {
-			Component child = panel.getComponent(i);
-			if (child instanceof JPanel) {
-				setOpaque((JPanel) child, opaque);
+	public static void setOpaque(JComponent component, boolean opaque) {
+		component.setOpaque(opaque);
+		for (int i = 0; i < component.getComponentCount(); i++) {
+			Component child = component.getComponent(i);
+			if (child instanceof JComponent) {
+				setOpaque((JComponent) child, opaque);
 			}
 		}
 	}
@@ -426,18 +431,25 @@ public final class SwingUtils {
 		JScrollPane scrollPane = new JScrollPane(component);
 		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		scrollPane.getVerticalScrollBar().setUnitIncrement(8);
 		return scrollPane;
 	}
 	
 	public static JScrollPane wrapInScrollPane(JComponent component, int height) {
+		boolean largeScrollArea = component.getPreferredSize().height >= 4 * height;
+		int scrollAmount = largeScrollArea ? 16 : 8;
+		
 		JScrollPane scrollPane = wrapInScrollPane(component);
 		setPreferredHeight(scrollPane, height);
+		if (largeScrollArea) {
+			scrollPane.getVerticalScrollBar().setUnitIncrement(scrollAmount);
+		}
 		return scrollPane;
 	}
 	
 	public static JScrollPane wrapInScrollPane(JComponent component, int width, int height) {
-		JScrollPane scrollPane = wrapInScrollPane(component);
-		setPreferredSize(scrollPane, width, height);
+		JScrollPane scrollPane = wrapInScrollPane(component, height);
+		SwingUtils.setPreferredWidth(scrollPane, width);
 		return scrollPane;
 	}
 	
@@ -528,8 +540,112 @@ public final class SwingUtils {
 		});
 	}
 	
-	static boolean isStripedComponentAllowed() {
-		return Platform.isMac();
+	/**
+	 * Returns an {@link java.awt.event.ActionListener} that will invoke the
+	 * specified callback function.
+	 * @param arg The argument that will be passed to the callback function.
+	 */
+	public static <T> ActionListener toActionListener(final Callback<T> callback, final T arg) {
+		return new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				callback.call(arg);
+			}
+		};
+	}
+	
+	/**
+	 * Returns an {@link java.awt.event.ActionListener} that will invoke the
+	 * specified callback function. The argument to the callback function is
+	 * provided by {@code arg} supplier every time an action is performed. 
+	 */
+	public static <T> ActionListener toActionListener(final Callback<T> callback, final Supplier<T> arg) {
+		return new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				callback.call(arg.get());
+			}
+		};
+	}
+	
+	/**
+	 * Creates a component that consists of a list of items, plus buttons to add
+	 * and/or remove items. Changes made using those buttons are immediately
+	 * reflected in the list of items. After using one of the buttons the list
+	 * is automatically updated.
+	 * @param itemSupplier Used to populate the list of items, both initially
+	 *                     and after updates.
+	 * @param addButtonAction Performed when the add button is used.
+	 * @param removeButtonAction Performed when the remove button is used.
+	 */
+	public static JPanel createAddRemoveItemsPanel(Supplier<List<String>> itemSupplier, String header,
+			Callback<?> addButtonAction, Callback<String> removeButtonAction) {
+		SimpleTable<String> table = new SimpleTable<String>(header);
+		populateTable(table, itemSupplier);
+		
+		JButton addButton = new JButton("+");
+		addButton.addActionListener(createInvokeCallbackAndPopulateTableAction(addButtonAction,
+				table, itemSupplier));
+		
+		JButton removeButton = new JButton("-");
+		removeButton.addActionListener(createInvokeCallbackAndPopulateTableAction(removeButtonAction,
+				table, itemSupplier));
+		
+		JPanel buttonSubPanel = new JPanel(new BorderLayout(5, 0));
+		buttonSubPanel.add(addButton, BorderLayout.WEST);
+		buttonSubPanel.add(removeButton, BorderLayout.CENTER);
+		
+		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		buttonPanel.add(buttonSubPanel);
+		
+		JPanel panel = new JPanel(new BorderLayout(0, 10));
+		panel.add(table, BorderLayout.CENTER);
+		panel.add(buttonPanel, BorderLayout.SOUTH);
+		return panel;
+	}
+	
+	private static void populateTable(SimpleTable<String> table, Supplier<List<String>> itemSupplier) {
+		table.removeAllRows();
+		for (String item : itemSupplier.get()) {
+			table.addRow(item, item);
+		}
+	}
+
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	private static ActionListener createInvokeCallbackAndPopulateTableAction(
+			final Callback callback, final SimpleTable<String> table, 
+			final Supplier<List<String>> itemSupplier) {
+		return new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				callback.call(table.getSelectedRowKey());
+				populateTable(table, itemSupplier);
+			}
+		};
+	}
+	
+	/**
+	 * Creates a button suitable for usage in a toolbar. The size of the button
+	 * and the size of the icon will depend on the platform's user interface
+	 * conventions.
+	 */
+	public static JButton createToolBarButton(String label, ImageIcon icon) {
+		if (icon.getIconWidth() != TOOLBAR_ICON_SIZE || icon.getIconHeight() != TOOLBAR_ICON_SIZE) {
+			icon = new ImageIcon(Utils2D.scaleImage(icon.getImage(), TOOLBAR_ICON_SIZE, TOOLBAR_ICON_SIZE));
+		}
+		
+		JButton button = new JButton(label, icon);
+		button.setHorizontalTextPosition(JButton.CENTER);
+		button.setVerticalTextPosition(JButton.BOTTOM);
+		button.setFont(button.getFont().deriveFont(11f));
+		removeLookAndFeel(button, true);
+		return button;
+	}
+	
+	/**
+	 * Creates a button suitable for usage in a toolbar. The size of the button
+	 * and the size of the icon will depend on the platform's user interface
+	 * conventions.
+	 */
+	public static JButton createToolBarButton(String label, BufferedImage icon) {
+		return createToolBarButton(label, new ImageIcon(icon));
 	}
 	
 	static Color getStripedRowColor(int row) {
@@ -548,6 +664,15 @@ public final class SwingUtils {
 		return ROW_BORDER_COLOR;
 	}
 	
+	private static void paintStripedRows(Graphics2D g2, JComponent component, int rowHeight) {
+		int row = 0;
+		for (int y = 0; y <= component.getHeight(); y += rowHeight) {
+			g2.setColor(getStripedRowColor(row));
+			g2.fillRect(0, y, component.getWidth(), rowHeight);
+			row++;
+		}
+	}
+	
 	/**
 	 * Creates a {@link javax.swing.JTree} that paints rows in alternating 
 	 * background colors, if allowed by the platform's UI conventions.
@@ -562,34 +687,19 @@ public final class SwingUtils {
 		
 		public StripedTree(DefaultTreeModel treeModel) {
 			super(treeModel);
-			
-			if (isStripedComponentAllowed()) {
-				setOpaque(false);
-				renderer = getCellRenderer();
-				((DefaultTreeCellRenderer) renderer).setOpenIcon(null);
-				((DefaultTreeCellRenderer) renderer).setClosedIcon(null);
-				((DefaultTreeCellRenderer) renderer).setLeafIcon(null);
-				setCellRenderer(this);
-			}
+			setOpaque(false);
+			renderer = getCellRenderer();
+			((DefaultTreeCellRenderer) renderer).setOpenIcon(null);
+			((DefaultTreeCellRenderer) renderer).setClosedIcon(null);
+			((DefaultTreeCellRenderer) renderer).setLeafIcon(null);
+			setCellRenderer(this);
 		}
 		
 		@Override
 		protected void paintComponent(Graphics g) {
-			if (isStripedComponentAllowed()) {
-				Graphics2D g2 = Utils2D.createGraphics(g, false, false);
-				paintEmptyRows(g2);
-			}
-			
+			Graphics2D g2 = Utils2D.createGraphics(g, false, false);
+			paintStripedRows(g2, this, getRowHeight());
 			super.paintComponent(g);
-		}
-
-		private void paintEmptyRows(Graphics2D g2) {
-			int row = 0;
-			for (int y = 0; y <= getHeight(); y += getRowHeight()) {
-				g2.setColor(getStripedRowColor(row));
-				g2.fillRect(0, y, getWidth(), getRowHeight());
-				row++;
-			}
 		}
 
 		public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,

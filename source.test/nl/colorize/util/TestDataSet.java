@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -34,11 +34,17 @@ public class TestDataSet {
 		
 		assertFalse(dataSet.isEmpty());
 		assertEquals(3, dataSet.getNumDataPoints());
-		assertEquals(ImmutableList.of("a", "b", "c"), dataSet.getKeys());
+		assertEquals(ImmutableList.of("a", "b", "c"), dataSet.getRows());
 		assertEquals("{a=1, c=7}", dataSet.select("1").toString());
 		assertEquals(1, dataSet.getData("a", "1"));
 		assertArrayEquals(new double[] { 3 }, dataSet.toValuesArray(dataSet.select("3")), EPSILON);
 		assertEquals(ImmutableSet.of("1", "2", "3", "4"), dataSet.getColumns());
+		assertTrue(dataSet.containsDataPoint("a", "3"));
+		assertFalse(dataSet.containsDataPoint("a", "999"));
+		assertTrue(dataSet.containsRow("c"));
+		assertFalse(dataSet.containsRow("z"));
+		assertTrue(dataSet.containsColumn("1"));
+		assertFalse(dataSet.containsColumn("999"));
 	}
 	
 	@Test
@@ -184,6 +190,16 @@ public class TestDataSet {
 		assertEquals(5.333f, dataSet.calculateWeightedAverage("a", "b").floatValue(), EPSILON);
 	}
 	
+	@Test
+	public void testCalculateWeightedAverageWithAllWeightsZero() { 
+		DataSet<String, String> dataSet = new DataSet<>();
+		dataSet.addDataPoint("first", "a", 2);
+		dataSet.addDataPoint("second", "a", 6);
+		dataSet.fillMissing("b", 0);
+		
+		assertEquals(4f, dataSet.calculateWeightedAverage("a", "b").floatValue(), EPSILON);
+	}
+	
 	@Test(expected=IllegalStateException.class)
 	public void testCannotCalculateForEmptyDataSet() {
 		DataSet<String, String> dataSet = new DataSet<>();
@@ -233,7 +249,7 @@ public class TestDataSet {
 		dataSet.addDataPoint("fourth", "a", null);
 		dataSet.sortAscending("a");
 		
-		assertEquals(ImmutableList.of("third", "first", "second", "fourth"), dataSet.getKeys());
+		assertEquals(ImmutableList.of("third", "first", "second", "fourth"), dataSet.getRows());
 	}
 	
 	@Test
@@ -245,7 +261,33 @@ public class TestDataSet {
 		dataSet.addDataPoint("fourth", "a", null);
 		dataSet.sortDescending("a");
 		
-		assertEquals(ImmutableList.of("second", "first", "third", "fourth"), dataSet.getKeys());
+		assertEquals(ImmutableList.of("second", "first", "third", "fourth"), dataSet.getRows());
+	}
+	
+	@Test
+	public void testFill() {
+		DataSet<String, String> dataSet = new DataSet<>();
+		dataSet.addDataPoint("a", "1", 123);
+		dataSet.addDataPoint("a", "2", 123);
+		dataSet.addDataPoint("b", "1", 123);
+		dataSet.fill("2", 0);
+		
+		assertEquals(0, dataSet.getData("a", "2"));
+		assertEquals(123, dataSet.getData("b", "1"));
+		assertEquals(0, dataSet.getData("b", "2"));
+	}
+	
+	@Test
+	public void testFillMissing() {
+		DataSet<String, String> dataSet = new DataSet<>();
+		dataSet.addDataPoint("a", "1", 123);
+		dataSet.addDataPoint("a", "2", 123);
+		dataSet.addDataPoint("b", "1", 123);
+		dataSet.fillMissing("2", 0);
+		
+		assertEquals(123, dataSet.getData("a", "2"));
+		assertEquals(123, dataSet.getData("b", "1"));
+		assertEquals(0, dataSet.getData("b", "2"));
 	}
 	
 	@Test
@@ -257,7 +299,7 @@ public class TestDataSet {
 		DataSet<String, String> copy = dataSet.copy();
 		copy.removeDataPoint("first");
 		
-		assertEquals(ImmutableList.of("first", "second"), dataSet.getKeys());
-		assertEquals(ImmutableList.of("second"), copy.getKeys());
+		assertEquals(ImmutableList.of("first", "second"), dataSet.getRows());
+		assertEquals(ImmutableList.of("second"), copy.getRows());
 	}
 }

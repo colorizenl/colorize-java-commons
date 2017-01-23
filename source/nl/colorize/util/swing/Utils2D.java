@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Transparency;
 import java.awt.font.FontRenderContext;
@@ -84,6 +85,22 @@ public final class Utils2D {
 	 */
 	public static BufferedImage loadImage(ResourceFile file) throws IOException {
 		return loadImage(file.openStream());
+	}
+	
+	/**
+	 * Converts an {@link Image} of an unknown type to a {@link BufferedImage}.
+	 */
+	public static BufferedImage toBufferedImage(Image image) {
+		if (image instanceof BufferedImage) {
+			return (BufferedImage) image;
+		} else {
+			BufferedImage wrapper = new BufferedImage(image.getWidth(null), image.getHeight(null), 
+					BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g2 = createGraphics(wrapper, false, false);
+			g2.drawImage(image, 0, 0, null);
+			g2.dispose();
+			return wrapper;
+		}
 	}
 	
 	/**
@@ -244,7 +261,7 @@ public final class Utils2D {
 	 * ignored, meaning the image will appear stretched or squashed if the
 	 * target width/height have a different aspect ratio.
 	 */
-	public static BufferedImage scaleImage(BufferedImage original, int targetWidth, int targetHeight) {
+	public static BufferedImage scaleImage(Image original, int targetWidth, int targetHeight) {
 		BufferedImage scaled = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2 = createGraphics(scaled, true, true);
 		g2.drawImage(original, 0, 0, targetWidth, targetHeight, null);
@@ -257,9 +274,9 @@ public final class Utils2D {
 	 * image from looking stretched or squashed if the target width/height have a
 	 * different aspect ratio. 
 	 */
-	public static BufferedImage scaleImageProportional(BufferedImage original, int targetWidth, 
+	public static BufferedImage scaleImageProportional(Image original, int targetWidth, 
 			int targetHeight) {
-		float originalAspectRatio = (float) original.getWidth() / (float) original.getHeight();
+		float originalAspectRatio = (float) original.getWidth(null) / (float) original.getHeight(null);
 		float targetAspectRatio = (float) targetWidth / (float) targetHeight;
 		
 		int scaledWidth = targetWidth;

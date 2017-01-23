@@ -1,12 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.http;
 
-import java.io.ByteArrayInputStream;
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
@@ -15,54 +16,70 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.SSLHandshakeException;
-
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HttpHeaders;
 
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.http.HttpStatus;
-import nl.colorize.util.http.URLLoader;
-import nl.colorize.util.swing.Utils2D;
-
-import org.junit.Ignore;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.swing.Utils2D;
+import nl.colorize.util.testutil.SimpleHttpServer;
 
 /**
  * Unit test for the {@code URLLoader} and associated {@code HttpResponse} classes. 
  */
 public class TestURLLoader {
 	
+	private static SimpleHttpServer server;
+	private static String testURL;
+	
+	@BeforeClass
+	public static void before() {
+		server = new SimpleHttpServer();
+		server.start(9090);
+		testURL = "http://localhost:9090";
+	}
+	
+	@AfterClass
+	public static void after() {
+		server.stop(true);
+	}
+	
 	// Implementation note:
-	// To make sure reading URLs and sending parameters actually works, a number 
-	// of requests to real websites is made in these tests. This is obviously not 
+	// To make sure reading URLs and sending parameters actually works, some of
+	// these tests send read requests to real websites. This is obviously not 
 	// very robust, since the tests will break if the site changes.
 	
 	@Test
 	public void testLoadTextResponse() throws IOException {
 		String response = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
-				.sendRequest().getBodyText();
+				.sendRequest().getBody();
 		assertTrue(response.contains("<base href=\"http://www.colorize.nl/\" />"));
 		assertTrue(response.contains("</html>"));
 	}
 	
 	@Test
 	public void testLoadBinaryResponse() throws IOException {
-		byte[] response = URLLoader.get("http://www.colorize.nl/images/logo.png", 
-				Charsets.UTF_8).sendRequest().getBodyBytes();
-		assertNotNull(Utils2D.loadImage(new ByteArrayInputStream(response)));
+		HttpResponse response = URLLoader.get("http://www.colorize.nl/images/logo.png", 
+				Charsets.UTF_8).sendRequest();
+		assertNotNull(Utils2D.loadImage(response.openStream()));
 	}
 	
 	@Test
 	public void testPostRequest() throws IOException {
-		URLLoader urlLoader = URLLoader.post("http://www.dennisbijlsma.com/temp/test_post.php", 
-				Charsets.UTF_8);
+		URLLoader urlLoader = URLLoader.post(testURL, Charsets.UTF_8);
 		urlLoader.addParam("a", "2");
-		assertEquals("2", urlLoader.sendRequest().getBodyText());
+		HttpResponse response = urlLoader.sendRequest();
+		
+		assertEquals(HttpStatus.OK, response.getStatus());
+		assertTrue(response.getBody().contains("POST /"));
+		assertTrue(response.getBody().contains("Content-Type: application/x-www-form-urlencoded"));
+		assertTrue(response.getBody().contains("a=2"));
 	}
 	
 	@Test(expected=IOException.class)
@@ -91,7 +108,7 @@ public class TestURLLoader {
 		URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
 		loader.addParam("page", "contact");
 		assertEquals("contact", loader.getParamValue("page"));
-		String response = loader.sendRequest().getBodyText();
+		String response = loader.sendRequest().getBody();
 		assertTrue(response.contains("<h1>Contact"));
 	}
 
@@ -115,7 +132,7 @@ public class TestURLLoader {
 		loader.addParam("page", "contact");
 		loader.addParam("x", "y z");
 		assertEquals("http://www.colorize.nl?page=contact&x=y+z", loader.toString());
-		assertEquals("http://www.colorize.nl?page=contact&x=y+z", loader.toURL().toString());
+		assertEquals("http://www.colorize.nl?page=contact&x=y+z", loader.getURL().toString());
 	}
 	
 	@Test
@@ -124,7 +141,7 @@ public class TestURLLoader {
 		URL tempFileURL = LoadUtils.createTempFile(html, Charsets.UTF_8).toURI().toURL();
 		assertTrue(tempFileURL.toString().startsWith("file:/"));
 		URLLoader loader = new URLLoader(tempFileURL, Method.GET, Charsets.UTF_8);
-		assertEquals(html, loader.sendRequest().getBodyText());
+		assertEquals(html, loader.sendRequest().getBody());
 	}
 	
 	@Test(expected = ProtocolException.class)
@@ -144,7 +161,7 @@ public class TestURLLoader {
 	@Test
 	public void testHttps() throws Exception {
 		String response = URLLoader.get("https://www.bitbucket.org", Charsets.UTF_8)
-				.sendRequest().getBodyText();
+				.sendRequest().getBody();
 		assertTrue(response.contains("Bitbucket"));
 	}
 	
@@ -162,10 +179,10 @@ public class TestURLLoader {
 	@Test
 	public void testCharset() throws Exception {
 		assertEquals(Charsets.ISO_8859_1, toResponse(HttpStatus.OK, 
-				"text/html;charset=ISO-8859-1", "").getCharset(Charsets.UTF_8));
+				"text/html;charset=ISO-8859-1", "").getCharset());
 		assertEquals(Charsets.UTF_8, toResponse(HttpStatus.OK, 
-				"text/html", "").getCharset(Charsets.UTF_8));
-		assertEquals(Charsets.UTF_8, new HttpResponse(HttpStatus.OK).getCharset(Charsets.UTF_8));
+				"text/html", "").getCharset());
+		assertEquals(Charsets.UTF_8, new HttpResponse(HttpStatus.OK).getCharset());
 	}
 	
 	@Test
@@ -174,7 +191,7 @@ public class TestURLLoader {
 		HttpResponse response = new HttpResponse(HttpStatus.OK, headers);
 		assertEquals("test", response.getHeader("header-name"));
 		assertEquals("test", response.getHeader("Header-Name"));
-		assertEquals(ImmutableSet.of("header-name"), response.getHeaderNames());
+		assertEquals(ImmutableSet.of("header-name"), response.getHeaders().keySet());
 	}
 	
 	@Test(expected=NullPointerException.class)
@@ -184,14 +201,13 @@ public class TestURLLoader {
 	}
 	
 	@Test
-	@SuppressWarnings("deprecation")
 	public void testDownloadResponseHeaders() throws Exception {
 		URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
 		HttpResponse response = loader.sendRequest();
 		Map<String, String> responseHeaders = response.getHeaders();
 		assertEquals("HTTP/1.1 200 OK", responseHeaders.get(""));
 		assertEquals("text/html; charset=UTF-8", responseHeaders.get("Content-Type"));
-		assertEquals(12, response.getHeaderNames().size());
+		assertEquals(12, response.getHeaders().size());
 	}
 	
 	@Test
@@ -199,8 +215,8 @@ public class TestURLLoader {
 		HttpResponse response = URLLoader.get("http://www.dennisbijlsma.com/temp/test_https_redirect.php", 
 				Charsets.UTF_8).sendRequest();
 		assertEquals(HttpStatus.OK, response.getStatus());
-		assertEquals("SAMEORIGIN", response.getHeader("X-Frame-Options"));
-		assertTrue(response.getBodyText().contains("Bitbucket"));
+		assertEquals("Registered", response.getHeader("X-Magnolia-Registration"));
+		assertTrue(response.getBody().contains("Bitbucket"));
 	}
 	
 	@Test
@@ -214,14 +230,14 @@ public class TestURLLoader {
 	public void testMalformedCharset() throws Exception {
 		HttpResponse response = new HttpResponse(HttpStatus.OK, 
 				ImmutableMap.of(HttpHeaders.CONTENT_TYPE, "text/html;; charset=US-ASCII"),"");
-		assertEquals(Charsets.UTF_8, response.getCharset(Charsets.UTF_8));
+		assertEquals(Charsets.UTF_8, response.getCharset());
 	}
 	
 	@Test
 	public void testUnsupportedCharset() throws Exception {
 		HttpResponse response = new HttpResponse(HttpStatus.OK, 
 				ImmutableMap.of(HttpHeaders.CONTENT_TYPE, "text/html; charset=@$!"),"");
-		assertEquals(Charsets.UTF_8, response.getCharset(Charsets.UTF_8));
+		assertEquals(Charsets.UTF_8, response.getCharset());
 	}
 	
 	@Test
@@ -237,12 +253,6 @@ public class TestURLLoader {
 		HttpResponse response = URLLoader.get("https://www.linkedin.com", Charsets.UTF_8).sendRequest();
 		String cookies = response.getHeader(HttpHeaders.SET_COOKIE);
 		assertTrue(cookies.split("\n").length >= 3);
-	}
-	
-	@Test(expected=SSLHandshakeException.class)
-	@Ignore("Not supported by Shippable")
-	public void testBadHttpsCertificate() throws Exception {
-		URLLoader.get("https://html5.validator.nu", Charsets.UTF_8).sendRequest();
 	}
 	
 	@Test
@@ -266,7 +276,7 @@ public class TestURLLoader {
 		HttpStatus status = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
 				.sendRequest().getStatus();
 		assertEquals(HttpStatus.OK, status);
-		assertEquals(200, status.getStatusCode());
+		assertEquals(200, status.getCode());
 		assertEquals("200 OK", status.toString());
 		assertFalse(status.isClientError());
 		assertFalse(status.isServerError());
@@ -290,12 +300,12 @@ public class TestURLLoader {
 		HttpResponse getResponse = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
 				.sendRequest();
 		assertEquals(HttpStatus.OK, getResponse.getStatus());
-		assertFalse(getResponse.getBodyText().isEmpty());
+		assertFalse(getResponse.getBody().isEmpty());
 		
 		HttpResponse headResponse = new URLLoader("http://www.colorize.nl", Method.HEAD, Charsets.UTF_8)
 				.sendRequest();
 		assertEquals(HttpStatus.OK, headResponse.getStatus());
-		assertTrue(headResponse.getBodyText().isEmpty());
+		assertTrue(headResponse.getBody().isEmpty());
 	}
 	
 	@Test
@@ -356,7 +366,17 @@ public class TestURLLoader {
 		urlLoader.setRequestHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel " +
 				"Mac OS X 10_11_3) AppleWebKit/601.4.4 (KHTML, like Gecko) Version/9.0.3 Safari/601.4.4");
 		HttpResponse response = urlLoader.sendRequest();
-		assertFalse(response.getBodyText().isEmpty());
+		assertFalse(response.getBody().isEmpty());
+	}
+	
+	@Test
+	public void testParameterAlreadyPresentInURL() {
+		URLLoader urlLoader = URLLoader.get("http://www.colorize.nl?a=2", Charsets.UTF_8);
+		urlLoader.addParam("b", "3");
+		
+		assertEquals(2, urlLoader.getParams().size());
+		assertEquals(ImmutableMap.of("a", "2", "b", "3"), urlLoader.getParams());
+		assertEquals("http://www.colorize.nl?a=2&b=3", urlLoader.getURL().toString());
 	}
 	
 	private HttpResponse toResponse(HttpStatus status, String contentType, String body) {

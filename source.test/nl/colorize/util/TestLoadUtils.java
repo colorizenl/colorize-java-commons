@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -142,19 +142,6 @@ public class TestLoadUtils {
 				new File("C:\\Program Files\\test.txt"), windowsPath));
 		assertEquals("Bla\\test.txt", LoadUtils.getRelativePath(
 				new File("C:\\Program Files\\Bla\\test.txt"), windowsPath));
-	}
-	
-	@Test
-	public void testConcatFilePaths() {
-		assertEquals("a.txt", LoadUtils.concatFilePaths("", "a.txt"));
-		assertEquals("/a.txt", LoadUtils.concatFilePaths("/", "a.txt"));
-		assertEquals("a/b.txt", LoadUtils.concatFilePaths("", "a/b.txt"));
-		assertEquals("a/b.txt", LoadUtils.concatFilePaths("a", "b.txt"));
-		assertEquals("a/b/c.txt", LoadUtils.concatFilePaths("a", "b/c.txt"));
-		assertEquals("a/b/c/d.txt", LoadUtils.concatFilePaths("a/b/", "c/d.txt"));
-		
-		assertEquals("a/b/c/d.txt", LoadUtils.concatFilePaths("a/b/z.txt", "c/d.txt"));
-		assertEquals("b.xml", LoadUtils.concatFilePaths("a.xml", "b.xml"));
 	}
 	
 	@Test(expected = IllegalArgumentException.class)

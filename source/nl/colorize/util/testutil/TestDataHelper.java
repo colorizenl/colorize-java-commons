@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -59,10 +59,11 @@ public final class TestDataHelper {
 		logger.info("Platform:           " + Platform.getPlatformName());
 		logger.info("Java version:       " + Platform.getJavaVersion());
 		logger.info("Java vendor:        " + System.getProperty("java.vendor"));
-		logger.info("Working directory:  " + Platform.getWorkingDirectory());
-		logger.info("User home:          " + Platform.getUserHome().getAbsolutePath());
-		logger.info("Application data:   " + Platform.getApplicationDataDirectory(applicationName).getAbsolutePath());
-		logger.info("Temp dir:           " + Platform.getTempDirectory());
+		logger.info("Working directory:  " + Platform.getUserWorkingDirectory());
+		logger.info("User home:          " + Platform.getUserHomeDir().getAbsolutePath());
+		logger.info("Application data:   " + Platform.getApplicationData(applicationName, "temp.txt")
+				.getParentFile().getAbsolutePath());
+		logger.info("Temp dir:           " + Platform.getTempDir());
 		
 		logger.info("--- System properties ---");
 		TreeMap<Object,Object> systemProperties = new TreeMap<Object,Object>(System.getProperties());

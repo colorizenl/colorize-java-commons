@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ package nl.colorize.util.swing;
 import java.awt.BorderLayout;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -18,6 +19,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import com.google.common.collect.ImmutableList;
+
+import nl.colorize.util.LogHelper;
 
 /**
  * Utility class for working with pop-up windows. This class can be used instead
@@ -37,6 +40,7 @@ public final class Popups {
 	public static final int MESSAGE_WIDTH = 350;
 	private static final String DEFAULT_OK = "OK";
 	private static final String DEFAULT_CANCEL = "Cancel";
+	private static final Logger LOGGER = LogHelper.getLogger(Popups.class);
 
 	private Popups() {
 	}
@@ -51,9 +55,7 @@ public final class Popups {
 	 * @throws IllegalArgumentException if no buttons were supplied.
 	 */
 	public static int message(JFrame parent, String title, JComponent panel, List<String> buttons) {
-		if (buttons.isEmpty()) {
-			throw new IllegalArgumentException("Invalid number of buttons: " + buttons.size());
-		}
+		checkDialogProperties(title, buttons);
 		
 		// Wrap the panel inside another panel so that it will be displayed
 		// at its intended size.
@@ -71,6 +73,16 @@ public final class Popups {
 		dialog.dispose();
 		
 		return getSelectedPopupButton(pane, buttons);
+	}
+
+	private static void checkDialogProperties(String title, List<String> buttons) {
+		if (buttons.isEmpty()) {
+			throw new IllegalArgumentException("Invalid number of buttons: " + buttons.size());
+		}
+		
+		if (title == null || title.isEmpty()) {
+			LOGGER.warning("Pop-up window has no title, which is against UI guidelines");
+		}
 	}
 
 	private static int getSelectedPopupButton(JOptionPane pane, List<String> buttons) {
@@ -134,10 +146,7 @@ public final class Popups {
 	/**
 	 * Shows a simple pop-up window that displays a component and contains a
 	 * default "OK" button.
-	 * @deprecated Pop-up windows should not rely on generic button labels.
-	 *             Use {@link #message(JFrame, String, JComponent, List)} instead.
 	 */
-	@Deprecated
 	public static void message(JFrame parent, String title, JComponent message) {
 		List<String> buttons = Arrays.asList(DEFAULT_OK);
 		message(parent, title, message, buttons);

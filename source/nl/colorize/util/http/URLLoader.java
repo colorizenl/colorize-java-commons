@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -35,6 +35,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509TrustManager;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 
@@ -63,6 +64,7 @@ public class URLLoader {
 	private String requestBody;
 	private boolean certificateVerification;
 	
+	private static final Splitter URL_PARAMETER_SPLITTER = Splitter.on('&').omitEmptyStrings();
 	private static final Joiner MULTIPLE_HEADER_JOINER = Joiner.on('\n');
 	private static final Logger LOGGER = LogHelper.getLogger(URLLoader.class);
 	
@@ -73,11 +75,15 @@ public class URLLoader {
 	 * @param requestCharset Character encoding for request parameters.
 	 */
 	public URLLoader(URL url, Method method, Charset requestCharset) {
+		//TODO deprecate using this class for non-HTTP URLs. In practice
+		//     this depends on too many features (POST requests, request
+		//     headers) that only apply to HTTP and HTTPS, and not to
+		//     some "generic" URL handler like "file://".
 		this.url = url;
 		this.method = method;
 		this.requestCharset = requestCharset;
-		this.params = new LinkedHashMap<String, String>();
-		this.requestHeaders = new ArrayList<Tuple<String, String>>();
+		this.params = new LinkedHashMap<>();
+		this.requestHeaders = new ArrayList<>();
 		this.requestBody = "";
 		this.certificateVerification = true;
 		
@@ -87,6 +93,11 @@ public class URLLoader {
 			setRequestHeader(HttpHeaders.CONTENT_TYPE, 
 					"application/x-www-form-urlencoded;charset=" + requestCharset.displayName());
 		}
+		
+		// Strips out any URL parameters that might be present in the URL,
+		// to prevent confusion between parameters in the URL and parameters
+		// in the parameters map.
+		stripParametersFromURL();
 	}
 	
 	/**
@@ -100,14 +111,28 @@ public class URLLoader {
 		this(LoadUtils.toURL(url), method, requestCharset);
 	}
 	
+	private void stripParametersFromURL() {
+		String urlString = url.toString();
+		if (urlString.indexOf('?') != -1) {
+			url = LoadUtils.toURL(urlString.substring(0, urlString.indexOf('?')));
+			String queryString = urlString.substring(urlString.indexOf('?') + 1);
+			for (String param : URL_PARAMETER_SPLITTER.split(queryString)) {
+				if (param.indexOf('=') != -1) {
+					addParam(param.substring(0, param.indexOf('=')), 
+							param.substring(param.indexOf('=') + 1));
+				} else {
+					addParam(param, "");
+				}
+			}
+		}
+	}
+	
 	/**
-	 * Returns the URL, excluding URL parameters, that the request will be sent to.
-	 * @deprecated This method did not make clear that it does not include the query
-	 *             string in the returned URL. Use {@link #toURL()} instead.
+	 * Returns the URL that requests will be sent to. Depending on the request
+	 * method, added parameters might end up in the URL's query string.
 	 */
-	@Deprecated
 	public URL getURL() {
-		return url;
+		return LoadUtils.toURL(toString());
 	}
 	
 	public Method getMethod() {
@@ -122,6 +147,8 @@ public class URLLoader {
 	 * Adds a request parameter. If the request method is POST this parameter will
 	 * be sent as POST data, for other request methods the parameter is appended to
 	 * the URL's query string. In both cases parameter values are sent URL-encoded.
+	 * If the request already contains a parameter with the same name its value
+	 * is replaced.
 	 * @throws NullPointerException if parameter name and/or value are null.
 	 * @return This, for method chaining.
 	 */
@@ -155,16 +182,7 @@ public class URLLoader {
 	}
 	
 	private String encodeRequestParameters() {
-		StringBuilder buffer = new StringBuilder();
-		for (Map.Entry<String,String> entry : params.entrySet()) {
-			if (buffer.length() > 0) {
-				buffer.append('&');
-			}
-			buffer.append(Escape.urlEncode(entry.getKey(), requestCharset));
-			buffer.append('=');
-			buffer.append(Escape.urlEncode(entry.getValue(), requestCharset));
-		}
-		return buffer.toString();
+		return Escape.formEncode(params, requestCharset);
 	}
 	
 	/**
@@ -296,14 +314,6 @@ public class URLLoader {
 	}
 	
 	/**
-	 * Returns the URL that requests will be sent to. Depending on the request
-	 * method, added parameters might end up in the URL's query string.
-	 */
-	public URL toURL() {
-		return LoadUtils.toURL(toString());
-	}
-	
-	/**
 	 * Sends a request to the URL and reads the response. Depending on the request
 	 * method, the request parameters will be sent in the query string or in the
 	 * request body using a Content-Type of application/x-www-form-urlencoded.
@@ -326,8 +336,8 @@ public class URLLoader {
 	 * @throws ProtocolException if the URL's protocol does not accept the request 
 	 *         method or request parameters.
 	 */
-	protected URLConnection openConnection() throws IOException {
-		return openConnection(toURL());
+	public URLConnection openConnection() throws IOException {
+		return openConnection(getURL());
 	}
 	
 	/**
@@ -346,7 +356,7 @@ public class URLLoader {
 		HttpStatus status = readHttpStatus(connection);
 		if (status.isClientError() || status.isServerError()) {
 			throw new IOException(String.format("HTTP status %d for URL %s", 
-					status.getStatusCode(), toString()));
+					status.getCode(), toString()));
 		} else if (status.isRedirection()) {
 			return followRedirect(status, connection);
 		} else {
@@ -447,7 +457,7 @@ public class URLLoader {
 	 * @return {@code HttpResponse} containing the downloaded response.
 	 * @throws IOException if an I/O error occurs while downloading the response.
 	 */
-	protected HttpResponse readResponse(URLConnection connection) throws IOException {
+	public HttpResponse readResponse(URLConnection connection) throws IOException {
 		HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 		Map<String, String> headers = Collections.emptyMap();
 		byte[] body = new byte[0];
@@ -473,7 +483,7 @@ public class URLLoader {
 	 * Downloads the HTTP status from the specified connection.
 	 * @throws IOException if an I/O error occurs while downloading the response.
 	 */
-	protected HttpStatus readHttpStatus(URLConnection connection) throws IOException {
+	private HttpStatus readHttpStatus(URLConnection connection) throws IOException {
 		try {
 			if (connection instanceof HttpURLConnection) {
 				HttpURLConnection httpConnection  = (HttpURLConnection) connection;
@@ -491,7 +501,7 @@ public class URLLoader {
 			// HttpURLConnection throws a RuntimeException when the HTTP headers 
 			// contain a redirect to a malformed URL.
 			// See http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6536522
-			throw new IOException("Malformed URL in response header");
+			throw new IOException("Malformed URL in response header", e);
 		}
 	}
 	
@@ -500,7 +510,7 @@ public class URLLoader {
 	 * returns them as a map. If the same header is set multiple times the 
 	 * map's value will contain all values, separated by newlines.
 	 */
-	protected Map<String, String> readResponseHeaders(URLConnection connection) {
+	private Map<String, String> readResponseHeaders(URLConnection connection) {
 		Map<String, String> responseHeaders = new LinkedHashMap<String, String>();
 		for (Map.Entry<String, List<String>> entry : connection.getHeaderFields().entrySet()) {
 			String header = entry.getKey() != null ? entry.getKey() : "";

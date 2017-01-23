@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -266,6 +266,9 @@ public final class MacIntegration {
 	 */
 	public static void showNotification(String title, String message) {
 		if (supportsNotificationCenter()) {
+			title = title.replace("\"", "'");
+			message = message.replace("\"", "'");
+			
 			try {
 				CommandRunner commandRunner = new CommandRunner("osascript", "-e", 
 						String.format("display notification \"%s\" with title \"%s\"", message, title));

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
@@ -61,7 +62,7 @@ public class FormPanel extends JPanel {
 		
 		// Platform-dependent layout options.
 		int horizontalMargin = 10;
-		int verticalMargin = Platform.isMac() ? 2 : 5;
+		int verticalMargin = Platform.isMac() ? 4 : 4;
 		boolean rightAlignLabels = Platform.isMac();
 		
 		FormLayout layoutManager = new FormLayout(horizontalMargin, verticalMargin, rightAlignLabels);
@@ -73,7 +74,7 @@ public class FormPanel extends JPanel {
 	
 	/**
 	 * Adds an empty row.
-	 * @deprecated Use the more clearly titled {@link #addEmptyRow()} instead.
+	 * @deprecated Use the more clearly named {@link #addEmptyRow()} instead.
 	 */
 	@Deprecated
 	public void addRow() {
@@ -217,8 +218,18 @@ public class FormPanel extends JPanel {
 	 * Adds a row that only consists of a single text label that spans the
 	 * entire width of the row. 
 	 */
-	public void addRow(String label) {
-		addRow(new JLabel(label));
+	public void addRow(String labelText) {
+		addRow(new JLabel(labelText));
+	}
+	
+	/**
+	 * Adds a row that only consists of a single text label with a bold font 
+	 * that spans the entire width of the row. 
+	 */
+	public void addBoldRow(String labelText) {
+		JLabel label = new JLabel(labelText);
+		label.setFont(label.getFont().deriveFont(Font.BOLD));
+		addRow(label);
 	}
 	
 	/**

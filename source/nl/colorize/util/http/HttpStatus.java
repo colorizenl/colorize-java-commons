@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -70,14 +70,16 @@ public enum HttpStatus {
 	}
 
 	/**
-	 * Returns the numerical HTTP response status code that is represented by
-	 * this instance.
+	 * Returns the numerical status code for this HTTP status (e.g. 200).
 	 */
-	public int getStatusCode() {
+	public int getCode() {
 		return statusCode;
 	}
 	
-	private String getDescription() {
+	/**
+	 * Returns the textual description for this HTTP status (e.g. "OK").
+	 */
+	public String getDescription() {
 		if (name().length() <= 2) {
 			return name();
 		}
@@ -116,7 +118,7 @@ public enum HttpStatus {
 	 */
 	public static HttpStatus parse(int statusCode) {
 		for (HttpStatus httpStatus : values()) {
-			if (httpStatus.getStatusCode() == statusCode) {
+			if (httpStatus.getCode() == statusCode) {
 				return httpStatus;
 			}
 		}

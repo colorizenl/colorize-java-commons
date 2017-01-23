@@ -1,10 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.rest;
+
+import static org.junit.Assert.*;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -12,20 +14,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
-import com.google.common.net.MediaType;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.HttpStatus;
 import nl.colorize.util.http.Method;
 import nl.colorize.util.testutil.MockHttpServletRequest;
 import nl.colorize.util.testutil.MockHttpServletResponse;
-
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * Unit tests for all classes in the REST API framework.
@@ -51,11 +50,6 @@ public class TestRestServlet {
 				return authorizedRoles.isEmpty() || 
 						request.getOptionalParameter("authenticated", "").equals("true");
 			}
-			
-			@Override
-			protected List<MediaType> getAcceptableContentTypes() {
-				return ImmutableList.of(MediaType.parse("text/plain"));
-			}
 		};
 		servlet.init();
 	}
@@ -67,7 +61,7 @@ public class TestRestServlet {
 		
 		assertEquals(HttpStatus.OK, response.getStatus());
 		assertEquals("text/plain", response.getContentType(null).withoutParameters().toString());
-		assertEquals("OK", response.getBodyText());
+		assertEquals("OK", response.getBody());
 	}
 	
 	@Test
@@ -84,7 +78,7 @@ public class TestRestServlet {
 		HttpResponse response = servlet.dispatchRequest(request);
 		
 		assertEquals(HttpStatus.NOT_FOUND, response.getStatus());
-		assertEquals("", response.getBodyText());
+		assertEquals("", response.getBody());
 	}
 	
 	@Test
@@ -92,7 +86,7 @@ public class TestRestServlet {
 		RestRequest request = createMockRequest("GET", "/second", "test", "testvalue");
 		HttpResponse response = servlet.dispatchRequest(request);
 		
-		assertEquals("OK: testvalue", response.getBodyText());
+		assertEquals("OK: testvalue", response.getBody());
 	}
 	
 	@Test
@@ -101,7 +95,7 @@ public class TestRestServlet {
 		HttpResponse response = servlet.dispatchRequest(request);
 		
 		assertEquals(HttpStatus.BAD_REQUEST, response.getStatus());
-		assertEquals("", response.getBodyText());
+		assertEquals("", response.getBody());
 	}
 	
 	@Test
@@ -110,7 +104,7 @@ public class TestRestServlet {
 		HttpResponse response = servlet.dispatchRequest(request);
 		
 		assertEquals(HttpStatus.OK, response.getStatus());
-		assertEquals("OK: 123", response.getBodyText());
+		assertEquals("OK: 123", response.getBody());
 	}
 	
 	@Test
@@ -119,7 +113,7 @@ public class TestRestServlet {
 		HttpResponse response = servlet.dispatchRequest(request);
 		
 		assertEquals(HttpStatus.OK, response.getStatus());
-		assertEquals("OK: 456/7", response.getBodyText());
+		assertEquals("OK: 456/7", response.getBody());
 	}
 	
 	@Test
@@ -142,7 +136,7 @@ public class TestRestServlet {
 		HttpResponse response = servlet.dispatchRequest(request);
 		
 		assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatus());
-		assertEquals("", response.getBodyText());
+		assertEquals("", response.getBody());
 	}
 	
 	@Test
@@ -150,12 +144,12 @@ public class TestRestServlet {
 		RestRequest request = createMockRequest("POST", "/fourth", "authenticated", "false");
 		HttpResponse response = servlet.dispatchRequest(request);
 		assertEquals(HttpStatus.UNAUTHORIZED, response.getStatus());
-		assertEquals("", response.getBodyText());
+		assertEquals("", response.getBody());
 		
 		request = createMockRequest("POST", "/fourth", "authenticated", "true");
 		response = servlet.dispatchRequest(request);
 		assertEquals(HttpStatus.CREATED, response.getStatus());
-		assertEquals("OK", response.getBodyText());
+		assertEquals("OK", response.getBody());
 	}
 	
 	@Test
@@ -163,7 +157,7 @@ public class TestRestServlet {
 		RestRequest request = createMockRequest("POST", "/third/a1%242");
 		HttpResponse response = servlet.dispatchRequest(request);
 		
-		assertEquals("OK: a1$2", response.getBodyText());
+		assertEquals("OK: a1$2", response.getBody());
 	}
 	
 	@Test
@@ -173,10 +167,10 @@ public class TestRestServlet {
 		servlet.registerServiceMethod(this, noOp, createMockAnnotation("/overlapping/2", "GET"));
 		
 		RestRequest request = createMockRequest("GET", "/overlapping");
-		assertEquals("GET /overlapping", servlet.dispatchRequest(request).getBodyText());
+		assertEquals("GET /overlapping", servlet.dispatchRequest(request).getBody());
 		
 		request = createMockRequest("GET", "/overlapping/2");
-		assertEquals("GET /overlapping/2", servlet.dispatchRequest(request).getBodyText());
+		assertEquals("GET /overlapping/2", servlet.dispatchRequest(request).getBody());
 	}
 	
 	@Test
@@ -186,10 +180,10 @@ public class TestRestServlet {
 		servlet.registerServiceMethod(this, noOp, createMockAnnotation("/same", "POST"));
 		
 		RestRequest request = createMockRequest("GET", "/same");
-		assertEquals("GET /same", servlet.dispatchRequest(request).getBodyText());
+		assertEquals("GET /same", servlet.dispatchRequest(request).getBody());
 		
 		request = createMockRequest("POST", "/same");
-		assertEquals("POST /same", servlet.dispatchRequest(request).getBodyText());
+		assertEquals("POST /same", servlet.dispatchRequest(request).getBody());
 	}
 	
 	@Test(expected=IllegalStateException.class)
@@ -222,7 +216,8 @@ public class TestRestServlet {
 		servlet.registerServiceMethod(this, noOp, mockService);
 		
 		RestRequest request = createMockRequest("GET", "/person/123");
-		request.bindPathParameters(servlet.parsePathParameters(request, mockService));
+		request.bindPathParameters(new RestRequestDispatcher(null, ImmutableMap.<String, String>of())
+				.parsePathParameters(request, mockService));
 		
 		assertEquals("123", request.getPathParameter(1));
 		assertEquals("123", request.getPathParameter("id"));
@@ -307,12 +302,12 @@ public class TestRestServlet {
 	}
 	
 	@Test
-	public void testParsePostData() throws Exception {
+	public void testParsePostData() {
 		MockHttpServletRequest mockRequest = new MockHttpServletRequest("POST", "/test");
 		mockRequest.setHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
 		mockRequest.setParameter("a", "2");
 		mockRequest.setParameter("b", "3");
-		Map<String, String> params = servlet.parseRequestParameters(mockRequest);
+		Map<String, String> params = servlet.parseRequestBody(mockRequest, "a=2&b=3");
 		
 		assertEquals(2, params.size());
 		assertEquals("2", params.get("a"));
@@ -320,11 +315,11 @@ public class TestRestServlet {
 	}
 	
 	@Test
-	public void testParseJsonRequestBody() throws Exception {
+	public void testParseJsonRequestBody() {
 		MockHttpServletRequest mockRequest = new MockHttpServletRequest("POST", "/test");
 		mockRequest.setHeader(HttpHeaders.CONTENT_TYPE, "application/json");
 		mockRequest.setBody("{\"a\":2,\"b\":3}");
-		Map<String, String> params = servlet.parseRequestParameters(mockRequest);
+		Map<String, String> params = servlet.parseRequestBody(mockRequest, "{\"a\":2,\"b\":3}");
 		
 		assertEquals(2, params.size());
 		assertEquals("2", params.get("a"));
@@ -332,35 +327,14 @@ public class TestRestServlet {
 	}
 	
 	@Test
-	public void testGetMappingByPath() {
-		assertEquals("OK", servlet.mapping(Method.GET, "/first").apply(null).getBodyText());
-		assertNull("OK: 3", servlet.mapping(Method.GET, "/third/3"));
-		assertEquals("OK: 3", servlet.mapping(Method.POST, "/third/3").apply(
-				createMockRequest("POST", "/third/3")).getBodyText());
-		assertNull(servlet.mapping(Method.GET, "/nothing"));
-	}
-	
-	@Test
-	public void testAcceptHeader() {
-		RestRequest request = createMockRequest("GET", "/first");
-		MockHttpServletRequest httpRequest = (MockHttpServletRequest) request.getHttpRequest();
+	public void testParseUrlParameters() {
+		MockHttpServletRequest mockRequest = new MockHttpServletRequest("POST", "/test?a=2&b=");
+		mockRequest.setQueryString("?a=2&b=");
+		RestRequest restRequest = servlet.parseRequest(mockRequest);
 		
-		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
-		
-		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/plain");
-		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
-		
-		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/plain;charset=UTF-8");
-		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
-		
-		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml, text/plain");
-		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
-		
-		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml, */*");
-		assertEquals(HttpStatus.OK, servlet.dispatchRequest(request).getStatus());
-		
-		httpRequest.setHeader(HttpHeaders.ACCEPT, "text/xml");
-		assertEquals(HttpStatus.NOT_ACCEPTABLE, servlet.dispatchRequest(request).getStatus());
+		assertEquals("2", restRequest.getOptionalUrlParameter("a", ""));
+		assertEquals("", restRequest.getOptionalUrlParameter("b", ""));
+		assertEquals("", restRequest.getOptionalUrlParameter("c", ""));
 	}
 	
 	private RestRequest createMockRequest(final String method, String path, String... params) {

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -28,7 +28,8 @@ public @interface Rest {
 	/**
 	 * The HTTP request method accepted by this service. Calling this service
 	 * using the wrong request method will result in HTTP status 405 (method 
-	 * not allowed).
+	 * not allowed). A value of {@code null} indicates that all requests to this
+	 * service's path should be accepted, regardless of the request method.
 	 */
 	public Method method();
 

@@ -1,10 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
+
+import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -12,13 +14,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.ResourceFile;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * Unit test for the {@code ResourceFile} class.
@@ -94,5 +93,11 @@ public class TestResourceFile {
 	public void testReadText() throws Exception {
 		ResourceFile file = new ResourceFile(LoadUtils.createTempFile("Test\ntest", Charsets.UTF_8));
 		assertEquals("Test\ntest", file.read(Charsets.UTF_8));
+	}
+	
+	@Test
+	public void testReadLines() throws Exception {
+		ResourceFile file = new ResourceFile(LoadUtils.createTempFile("Test\ntest", Charsets.UTF_8));
+		assertEquals(ImmutableList.of("Test", "test"), file.readLines(Charsets.UTF_8));
 	}
 }

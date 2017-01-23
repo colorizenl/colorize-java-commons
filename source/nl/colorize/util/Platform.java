@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -11,42 +11,62 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.jar.Manifest;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 
 /**
- * Provides access to platform-specific information. This information includes
- * the platform's name, family, and the version of the JVM. This information can
- * also be obtained from system properties, but manually parsing these properties 
- * is mistake-prone, and does not take inconsistenties between platforms into account 
- * (for example, the {@code java.version} system property is always "0" on Android). 
+ * Provides access to the underlying platform. This includes information such 
+ * as the platform's name and the location for storing application data.
  * <p>
- * Different platforms also have different conventions for storing application
- * data and user data. The {@code java.util.prefs} API can be used to store and 
- * read user preferences, but this does not cover all types of application data
- * (such as storing files). This class therefore provides methods for storing
- * application data in the appropriate location for the current platform.
+ * Most of this information can also be obtained from system properties, 
+ * environment variables, or the {@link java.lang.System} class. However,
+ * working directly with these properties is error prone, since the properties
+ * are scattered across various locations, need to be parsed by applications,
+ * and do not always behave consistently across different platforms.In addition
+ * to that, the standard APIs have not always been updated to reflect modern
+ * best practices for each platform. For example, the {@code java.util.prefs}
+ * API for storing application preferences was never updated for the introduction
+ * of the Mac App Store in 2010, or Mac App Store sandboxing in 2014. This class 
+ * therefore provides methods for storing application data, user data, and
+ * application preferences in the recommended location for each platform.
  * <p>
- * {@code PlatformAccessProvider}s can be registered and are used as an extension
- * mechanism to introduce or improve support for additional platforms. 
+ * By default, this class supports a number of desktop, server, cloud, and mobile
+ * platforms:
+ * <ul>
+ *   <li>Windows (desktop, server)</li>
+ *   <li>macOS (desktop, formerly known as OS X)</li>
+ *   <li>Linux (desktop, server)</li>
+ *   <li>Google Cloud Platform (cloud)</li>
+ *   <li>Android (mobile)</li>
+ * </ul>
+ * <p>
+ * Note that the above list refers to platform <em>families</em>, not individual
+ * platform versions. For example, "Windows" includes support from Windows XP to
+ * Windows Server 2008 to Windows 10.
+ * <p>
+ * If a platform is not explicitly supported this class can still be used, but
+ * the platform's conventions might not be followed.
+ * <p>
+ * Support for additional platforms can be added by applications. A new platform
+ * can be registered by calling {@link #register(String, Platform)}. Be aware
+ * that any calls made <em>before</em> the new platform is registered will not
+ * actually make use of this support. In other words: make sure you call this
+ * methods before using any functionality from this class.
  */
-public final class Platform {
+public abstract class Platform {
 	
-	private static List<PlatformAccessProvider> accessProviders = Lists.newCopyOnWriteArrayList(
-			ImmutableList.<PlatformAccessProvider>of(new StandardPlatformAccessProvider()));
+	private static Map<String, Platform> supportedPlatforms = new ConcurrentHashMap<>();
+	static {
+		supportedPlatforms.put("Windows", new WindowsPlatform());
+		supportedPlatforms.put("macOS", new MacPlatform());
+		supportedPlatforms.put("OS X", new MacPlatform());
+		supportedPlatforms.put("Linux", new LinuxPlatform());
+		supportedPlatforms.put("Google App Engine", new GoogleCloudPlatform());
+	}
 	
 	private static final Map<String, String> MACOS_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
 			.put("10.4", "Tiger")
@@ -62,27 +82,101 @@ public final class Platform {
 	
 	private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.6.0");
 	private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
-	private static final Pattern GRADLE_VERSION_PATTERN = Pattern.compile(
-			"\\s*(version|def appVersion)\\s*[=]\\s*['\"](\\S+?)['\"]");
 	private static final Logger LOGGER = LogHelper.getLogger(Platform.class);
 	
-	private Platform() {
+	/**
+	 * Creates a new platform implementation. Applications should use the static
+	 * methods in this class to access platform-specific information, this
+	 * constructor only exists to create subclasses to support additional
+	 * platforms. 
+	 */
+	protected Platform() {
 	}
 	
 	/**
-	 * Returns the platform's name. Examples of returned values are "Windows 8"
-	 * and "macOS Sierra".
-	 * <p>
-	 * Also see {@link #getPlatformFamily()} to obtain the platform's "family"
-	 * (i.e. Windows/macOS/Linux) and the {@code isX()} convenience methods for 
-	 * testing against a specific platform (e.g. {@link #isWindows()}).
+	 * Opens the resource file located at the specified path.
+	 * @throws IOException if the file cannot be located.
+	 */
+	protected InputStream openResourceFile(String path) throws IOException {
+		InputStream inClassPath = Platform.class.getClassLoader().getResourceAsStream(path);
+		if (inClassPath != null) {
+			return inClassPath;
+		}
+		
+		File inFileSystem = new File(path);
+		if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
+			return new FileInputStream(inFileSystem);
+		}
+		
+		throw new FileNotFoundException("Resource file not found: " + path);
+	}
+	
+	/**
+	 * Returns the platform's directory for storing application data, for the
+	 * application with the specified name.
+	 * @throws IllegalArgumentException If the application name cannot be used
+	 *         as a directory name.
+	 * @throws UnsupportedOperationException if the platform does not allow
+	 *         application data (e.g. Google App Engine).
+	 */
+	protected abstract File getApplicationDataDirectory(String app);
+	
+	/**
+	 * Returns the platform's standard directory for storing user data (e.g. "My
+	 * Documents" on Windows). 
+	 * @throws UnsupportedOperationException if the platform does not allow access
+	 *         to user files (e.g. Google App Engine).
+	 */
+	protected abstract File getUserDataDirectory();
+	
+	/**
+	 * Registers support for a platform. The specified implementation will be
+	 * used if either the platform name (see {@link #getPlatformName()} or
+	 * the platform family (see {@link #getPlatformFamily()} matches the value
+	 * from {@code platformName}. The platform name is checked before the
+	 * platform family, so it is possible to have "generic" support for a
+	 * platform family and then override that for a particular version.
+	 */
+	public static void register(String platform, Platform impl) {
+		if (supportedPlatforms.containsKey(platform)) {
+			LOGGER.warning("Replacing platform support for " + platform);
+		}
+		supportedPlatforms.put(platform, impl);
+	}
+	
+	/**
+	 * Returns the implementation that should be used for the current platform.
+	 * This will first check for the specific platform version, then for the
+	 * platform family. If the current platform is not explicitly supported a
+	 * reasonable default implementation will be used.
+	 */
+	public static Platform getCurrentPlatform() {
+		Platform impl = supportedPlatforms.get(getPlatformName());
+		if (impl == null) {
+			impl = supportedPlatforms.get(getPlatformFamily());
+			if (impl == null) {
+				// The "default implementation" assumes a Linux-based
+				// platform. In reality almost all non-desktop platforms
+				// except Windows use basically the same conventions.
+				LOGGER.warning("No explicit support for platform " + getPlatformName() + 
+						", using default support");
+				impl = new LinuxPlatform();
+			}
+		}
+		return impl;
+	}
+	
+	/**
+	 * Returns the platform's human-readable name, such as "Windows 10" or
+	 * "macOS Sierra". Note this returns the <em>full</em> platform name, use
+	 * {@link #getPlatformFamily()} for the platform family name (e.g. "Windows"
+	 * or "macOS").
 	 */
 	public static String getPlatformName() {	
 		String os = System.getProperty("os.name");
 		String vendor = System.getProperty("java.vendor");
 		
 		String platformName = os;
-		
 		// Handle cases where the os.name system property does not return
 		// the commonly used name of the OS. For example, on Android the
 		// value of this system property is "Linux", which is technically
@@ -126,25 +220,19 @@ public final class Platform {
 	}
 	
 	/**
-	 * Returns the platform's "family" name. For example, Windows XP, Windows 7,
-	 * and Windows 8 will all return "Windows" as their platform family.
-	 * <p>
-	 * Also see {@link #getPlatformName()} to obtain the platform's full name,
-	 * and the {@code isX()} convenience methods for testing against a specific
-	 * platform (e.g. {@link #isWindows()}).
+	 * Returns the platform's "family" name, such as "Windows" or "macOS". Note
+	 * this family name does not include the specific version of the platform
+	 * (e.g. Windows XP, macOS Sierra), for that use {@link #getPlatformName()}. 
+	 * If the platform is not part of any known platform family this method
+	 * will return the platform name instead.
 	 */
 	public static String getPlatformFamily() {
-		if (isWindows()) {
-			return "Windows";
-		} else if (isMac()) {
-			return "macOS";
-		} else if (isLinux()) {
-			return "Linux";
-		} else if (isGoogleAppEngine()) {
-			return "Google App Engine";
-		} else {
-			return "Unknown";
-		}
+		if (isWindows()) return "Windows";
+		if (isMac()) return "macOS";
+		if (isLinux()) return "Linux";
+		if (isGoogleAppEngine()) return "Google App Engine";
+		if (isAndroid()) return "Android";
+		return getPlatformName();
 	}
 	
 	public static boolean isWindows() {
@@ -152,19 +240,19 @@ public final class Platform {
 	}
 	
 	public static boolean isMac() {
-		return getPlatformName().contains("macOS");
+		return getPlatformName().startsWith("macOS");
 	}
 	
 	public static boolean isLinux() {
 		return getPlatformName().startsWith("Linux");
 	}
 	
-	public static boolean isAndroid() {
-		return getPlatformName().startsWith("Android");
-	}
-	
 	public static boolean isGoogleAppEngine() {
 		return getPlatformName().startsWith("Google App Engine");
+	}
+	
+	public static boolean isAndroid() {
+		return getPlatformName().startsWith("Android");
 	}
 	
 	/**
@@ -182,15 +270,16 @@ public final class Platform {
 	/**
 	 * Returns true if the application is running inside of the Mac app sandbox.
 	 * When running inside of the sandbox access to system resources is limited 
-	 * to the entitlements specified when signing the app.
+	 * to the entitlements specified when signing the app. Using the sandbox is
+	 * mandatory for apps distributed through the Mac App Store, but optional
+	 * for those distributed outside of the App Store with Developer ID.
 	 */
 	public static boolean isMacAppSandboxEnabled() {
-		if (!isMac()) {
-			return false;
-		}
-		
-		String sandboxContainer = System.getenv("APP_SANDBOX_CONTAINER_ID");
-		return sandboxContainer != null && !sandboxContainer.isEmpty();
+		//TOOD Developer ID applications can also use the sandbox, although
+		//     this is not mandatory. AppBundler sets the SandboxEnabled
+		//     system property, but this does not appear to work for Developer
+		//     ID applications.
+		return isMacAppStore();
 	}
 	
 	/**
@@ -199,7 +288,8 @@ public final class Platform {
 	 * {@link isMacAppSandboxEnabled()} for more information).
 	 */
 	public static boolean isMacAppStore() {
-		return isMacAppSandboxEnabled();
+		String sandboxContainer = System.getenv("APP_SANDBOX_CONTAINER_ID");
+		return isMac() && sandboxContainer != null && !sandboxContainer.isEmpty();
 	}
 	
 	/**
@@ -213,13 +303,15 @@ public final class Platform {
 	/**
 	 * Returns the system's processor architecture as described by the "os.arch"
 	 * system property.
+	 * @deprecated Applications should not depend on processor architecture.
 	 */
+	@Deprecated
 	public static String getSystemArchitecture() {
 		return System.getProperty("os.arch");
 	}
 	
 	/**
-	 * Returns the amount of heap memory that is currently being used by the JVM
+	 * Returns the amount of heap memory that is currently being used by the JVM,
 	 * in bytes.
 	 */
 	public static long getUsedHeapMemory() {
@@ -267,7 +359,7 @@ public final class Platform {
 	 * @throws UnsupportedOperationException on platforms that do not have the
 	 *         concept of a working directory.
 	 */
-	public static File getWorkingDirectory() {
+	public static File getUserWorkingDirectory() {
 		String workingDirectory = System.getProperty("user.dir");
 		if (workingDirectory == null || workingDirectory.length() == 0) {
 			throw new UnsupportedOperationException("Platform does not support working directory");
@@ -293,54 +385,23 @@ public final class Platform {
 	 * @throws UnsupportedOperationException on platforms that do not support
 	 *         user accounts. Examples are Android and Google App Engine.
 	 */
-	public static File getUserHome() {
+	public static File getUserHomeDir() {
 		String userHome = System.getProperty("user.home");
 		if (userHome == null || userHome.isEmpty()) {
 			throw new UnsupportedOperationException("Platform does not support user accounts");
 		}
 		return new File(userHome);
 	}
-	
-	/**
-	 * Opens a stream to a resource file (a file included with the application).
-	 * This will search both the classpath and the local file system. 
-	 * @param path Relative path of the resource file to open.
-	 * @throws IOException if an I/O error occurs while reading the file.
-	 * @throws FileNotFoundException if the resource file cannot be located.
-	 * @throws IllegalArgumentException if the path is empty.
-	 */
-	public static InputStream openResourceFile(String path) throws IOException {
-		if (path == null || path.isEmpty()) {
-			throw new IllegalArgumentException("Empty path");
-		}
-		
-		return getAccessProvider().openResourceFile(path);
-	}
-	
-	/**
-	 * Returns the platform's directory for storing application data, for the
-	 * application with the specified name. If the directory does not already
-	 * exist it will be created.
-	 * @param app Name of the application for which to create the directory.
-	 * @throws IllegalArgumentException if the application name is empty.
-	 * @throws UnsupportedOperationException if the platform does not allow
-	 *         application data (e.g. Google App Engine).
-	 */
-	public static File getApplicationDataDirectory(String app) {
-		if (app == null || app.trim().isEmpty()) {
-			throw new IllegalArgumentException("Invalid application name");
-		}
-		
-		return getAccessProvider().getApplicationDataDirectory(app);
-	}
 
 	/**
 	 * Returns a {@code File} handle that points to a file inside the the platform's
 	 * directory for storing application data, for the application with the specified
-	 * name.
+	 * name. If the application data directory does not already exist it will be
+	 * created.
 	 * @param app Name of the application for which to create the directory.
-	 * @throws IllegalArgumentException if the application name is empty, or if the
-	 *         path is absolote.
+	 * @throws IllegalArgumentException If the application name cannot be used
+	 *         as a directory name, if the path is empty, or if an absolute path
+	 *         is used instead of a relative path.
 	 * @throws UnsupportedOperationException if the platform does not allow
 	 *         application data (e.g. Google App Engine).
 	 */
@@ -349,23 +410,25 @@ public final class Platform {
 			throw new IllegalArgumentException("Invalid path: " + path);
 		}
 		
-		File dir = getApplicationDataDirectory(app);
-		return new File(dir.getAbsolutePath() + "/" + path);
+		File appDataDir = getCurrentPlatform().getApplicationDataDirectory(app);
+		try {
+			LoadUtils.mkdir(appDataDir);
+		} catch (IOException e) {
+			throw new UnsupportedOperationException("Cannot create application data directory", e);
+		}
+		
+		return new File(appDataDir.getAbsolutePath() + "/" + path);
 	}
 	
 	/**
 	 * Returns the platform's standard directory for storing user data (e.g. "My
-	 * Documents" on Windows). 
-	 * @throws UnsupportedOperationException if the platform does not allow access
-	 *         to user files (e.g. Google App Engine).
+	 * Documents" on Windows). This method is identical to 
+	 * {@link #getUserDataDirectory()} but allows for static access.
+	 * @throws UnsupportedOperationException if the platform does not allow 
+	 *         access to user files (e.g. Google App Engine).
 	 */
-	public static File getUserDataDirectory() {
-		File userDir = getAccessProvider().getUserDataDirectory();
-		if (userDir.exists() && userDir.isDirectory()) {
-			return userDir;
-		} else {
-			return getUserHome();
-		}
+	public static File getUserDataDir() {
+		return getCurrentPlatform().getUserDataDirectory();
 	}
 	
 	/**
@@ -380,8 +443,22 @@ public final class Platform {
 			throw new IllegalArgumentException("Invalid path: " + path);
 		}
 		
-		File dir = getUserDataDirectory();	
+		File dir = getCurrentPlatform().getUserDataDirectory();	
 		return new File(dir.getAbsolutePath() + "/" + path);
+	}
+	
+	/**
+	 * Returns the home directory of the Java runtime environment used to run
+	 * the application. In some environments this location is not available
+	 * due to security considerations, in these cases this method will return
+	 * {@code null}.
+	 */
+	public static File getJavaHome() {
+		String javaHome = System.getProperty("java.home");
+		if (javaHome == null || javaHome.isEmpty() || !new File(javaHome).exists()) {
+			return null;
+		}
+		return new File(javaHome);
 	}
 	
 	/**
@@ -389,7 +466,7 @@ public final class Platform {
 	 * @throws UnsupportedOperationException if the platform has no writable
 	 *         file system. An example is Google App Engine.
 	 */
-	public static File getTempDirectory() {
+	public static File getTempDir() {
 		String tempDirectory = System.getProperty("java.io.tmpdir");
 		if (tempDirectory == null || tempDirectory.isEmpty()) {
 			throw new UnsupportedOperationException("Platform does not support temp files");
@@ -402,156 +479,23 @@ public final class Platform {
 	 * "\r\n" on Windows and "\n" on nearly all other platforms.
 	 */
 	public static String getLineSeparator() {
-		return System.getProperty("line.separator");
-	}
-
-	/**
-	 * Returns the implementation version of the package containing the specified
-	 * class. The default {@code PlatformAccessProvider} will check a number of
-	 * locations, in the following order:
-	 *
-	 * <ul>
-	 *   <li>The {@code Implementation-Version} of the JAR file.</li>
-	 *   <li>A property file called {@code version.properties} in the classpath.</li>
-	 *   <li>The Gradle build file (for development environments).</li>
-	 * </ul>
-	 * 
-	 * If none of these locations contains a version number {@code null} is returned.
-	 * <p>
-	 * Changing this list or adding addtional locations can be done by registering
-	 * a new {@code PlatformAccessProvider}.
-	 */
-	public static Version getImplementationVersion(Class<?> classInJarFile) {
-		return getAccessProvider().getImplementationVersion(classInJarFile);
+		return System.lineSeparator();
 	}
 	
 	/**
-	 * Registers a {@code PlatformAccessProvider} to introduce or improve support
-	 * for additional platforms.
+	 * Support for Windows, including all desktop and server versions from
+	 * Windows XP to Windows 10, but not the mobile version of Windows 10.
 	 */
-	public static void registerAccessProvider(PlatformAccessProvider accessProvider) {
-		accessProviders.add(0, accessProvider);
-	}
-	
-	public static void unregisterAccessProvider(PlatformAccessProvider accessProvider) {
-		accessProviders.remove(accessProvider);
-	}
-	
-	/**
-	 * Returns the {@code PlatformAccessProvider} that is currently active. 
-	 * Additional providers can be registered by using 
-	 * {@link #registerAccessProvider(PlatformAccessProvider)}.
-	 * @throws IllegalStateException if all providers have been unregistered.
-	 */
-	public static PlatformAccessProvider getAccessProvider() {
-		for (PlatformAccessProvider accessProvider : accessProviders) {
-			if (accessProvider.supports()) {
-				return accessProvider;
-			}
-		}
-		throw new IllegalStateException("No providers registered");
-	}
-	
-	/**
-	 * Returns the default implementation of {@code PlatformAccessProvider} that
-	 * is always available, regardless of how many custom providers have been
-	 * registered.
-	 */
-	public static PlatformAccessProvider getDefaultAccessProvider() {
-		return accessProviders.get(accessProviders.size() - 1);
-	}
-	
-	/**
-	 * Exposes platform-specific information and resources. This is used as an
-	 * extension mechanim to introduce or improve support for additional platforms.
-	 * If the provider's {@link #supports()} returns true it will be used as 
-	 * implementation for the corresponding methods in {@link Platform}.
-	 */
-	public static interface PlatformAccessProvider {
+	private static class WindowsPlatform extends Platform {
 		
-		/**
-		 * Returns true if this provider supports this platform. If this returns
-		 * false the provider will not be used.
-		 */
-		public boolean supports();
-		
-		public InputStream openResourceFile(String path) throws IOException;
-		
-		public File getApplicationDataDirectory(String app);
-		
-		public File getUserDataDirectory();
-		
-		public Version getImplementationVersion(Class<?> classInJarFile);
-	}
-	
-	/**
-	 * Standard implementation of a {@code PlatformAccessProvider} that attempts to
-	 * support as many platforms as possible, using standard Java SE classes, system
-	 * properties, and environment variables. 
-	 */
-	private static class StandardPlatformAccessProvider implements PlatformAccessProvider {
-		
-		private static AtomicBoolean developmentEnvironmentWarningShown = new AtomicBoolean(false);
-
-		public boolean supports() {
-			return true;
+		@Override
+		protected File getApplicationDataDirectory(String app) {
+			File applicationDataRoot = new File(System.getenv("APPDATA"));
+			return new File(applicationDataRoot, app);
 		}
 		
-		public InputStream openResourceFile(String path) throws IOException {
-			InputStream inClassPath = Platform.class.getClassLoader().getResourceAsStream(path);
-			if (inClassPath != null) {
-				return inClassPath;
-			}
-			
-			File inFileSystem = new File(path);
-			if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
-				return new FileInputStream(inFileSystem);
-			}
-			
-			throw new FileNotFoundException("Resource file not found: " + path);
-		}
-		
-		public File getApplicationDataDirectory(String app) {
-			File appDir = null;
-			if (isWindows()) { 
-				File applicationData = new File(System.getenv("APPDATA"));
-				appDir = new File(applicationData, app);
-			} else if (isMac()) {
-				appDir = getMacApplicationDataDirectory(app);
-			} else {
-				appDir = new File(getUserHome(), "." + app);
-			}
-			
-			try {
-				LoadUtils.mkdir(appDir);
-			} catch (IOException e) {
-				throw new UnsupportedOperationException("Cannot create application data directory", e);
-			}
-			
-			return appDir;
-		}
-		
-		private File getMacApplicationDataDirectory(String app) {
-			if (isMacAppSandboxEnabled()) {
-				File sandboxContainer = new File(System.getenv("HOME"));
-				return sandboxContainer;				
-			} else {
-				File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
-				return new File(applicationSupport, app);
-			}
-		}
-		
-		public File getUserDataDirectory() {
-			if (isWindows()) { 
-				return getWindowsMyDocumentsDirectory();
-			} else if (isMac()) {
-				return getMacDocumentsDirectory();
-			} else {
-				return getUserHome();
-			}
-		}
-		
-		private File getWindowsMyDocumentsDirectory() {
+		@Override
+		protected File getUserDataDirectory() {
 			// There is no API for this other than using the Swing file dialog. 
 			// This has to be done through reflection since this class is also 
 			// used on Android and Google App Engine.
@@ -561,80 +505,76 @@ public final class Platform {
 				return (File) fileSystemView.getClass().getMethod("getDefaultDirectory").invoke(fileSystemView);
 			} catch (Exception e) {
 				LOGGER.log(Level.WARNING, "Attempt to locate My Documents failed", e);
-				return getUserHome();
+				return getUserHomeDir();
+			}
+		}
+	}
+	
+	/**
+	 * Support for all versions of macOS (formerly known as OS X). Behavior
+	 * will be different depending on how the application is distributed
+	 * (non-signed application, Developer ID, Mac App Store). 
+	 */
+	private static class MacPlatform extends Platform {
+		
+		@Override
+		protected File getApplicationDataDirectory(String app) {
+			if (isMacAppSandboxEnabled()) {
+				File sandboxContainer = new File(System.getenv("HOME"));
+				return sandboxContainer;				
+			} else {
+				// These directory names are always in English, regardless
+				// of the language of the user interface.
+				File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
+				return new File(applicationSupport, app);
 			}
 		}
 		
-		private File getMacDocumentsDirectory() {
+		@Override
+		protected File getUserDataDirectory() {
 			if (isMacAppSandboxEnabled()) {
-				// Mac App Store has a sandbox container per application.
-				return new File(System.getenv("HOME"));
+				File sandboxContainer = new File(System.getenv("HOME"));
+				return sandboxContainer;
 			} else {
 				// The "Documents" directory has the same name on non-English 
 				// versions of macOS, according to Apple's documentation.
 				return new File(System.getenv("HOME") + "/Documents");
 			}
 		}
+	}
+	
+	/**
+	 * Support for Linux. Because Linux is used as the foundation for a wide
+	 * variety of desktop, server, cloud, and mobile operating systems, this
+	 * class can only assume readonable default behavior. Subclasses should
+	 * be created to respect the conventions of specific platforms.  
+	 */
+	private static class LinuxPlatform extends Platform {
 		
-		public Version getImplementationVersion(Class<?> classInJarFile) {
-			String implementationVersion = readImplementationVersionFromManifest(classInJarFile);
-			if (implementationVersion == null) {
-				implementationVersion = readVersionFromPropertyFile();
-			}
-			if (implementationVersion == null) {
-				if (!developmentEnvironmentWarningShown.get()) {
-					developmentEnvironmentWarningShown.set(true);
-					LOGGER.warning("Using development environment");
-				}
-				implementationVersion = readVersionFromGradleBuildFile();
-			}
-			
-			if (implementationVersion != null) {
-				return Version.parse(implementationVersion);
-			} else {
-				return null;
-			}
-		}
-
-		private String readImplementationVersionFromManifest(Class<?> classInJarFile) {
-			try {
-				URL codeLocation = classInJarFile.getProtectionDomain().getCodeSource().getLocation();
-				URL manifestLocation = new URL("jar:" + codeLocation + "!/META-INF/MANIFEST.MF");
-				Manifest manifest = new Manifest(manifestLocation.openStream());
-				return manifest.getMainAttributes().getValue("Implementation-Version");
-			} catch (FileNotFoundException e) {
-				return null;
-			} catch (IOException e) {
-				LOGGER.log(Level.WARNING, "Cannot read Implementation-Version from manifest");
-				return null;
-			}
+		@Override
+		protected File getApplicationDataDirectory(String app) {
+			return new File(getUserHomeDir(), "." + app);
 		}
 		
-		private String readVersionFromPropertyFile() {
-			ResourceFile propertyFile = new ResourceFile("version.properties");
-			if (propertyFile.exists()) {
-				Properties props = LoadUtils.loadProperties(propertyFile, Charsets.UTF_8);
-				if (props.getProperty("version") != null) {
-					return props.getProperty("version");
-				}
-			}
-			return null;
+		@Override
+		protected File getUserDataDirectory() {
+			return getUserHomeDir();
 		}
-
-		private String readVersionFromGradleBuildFile() {
-			File gradleBuildFile = new File("build.gradle");
-			if (!gradleBuildFile.exists()) {
-				gradleBuildFile = new File("../build.gradle");
-			}
-			if (gradleBuildFile.exists()) {
-				try {
-					String contents = Files.toString(gradleBuildFile, Charsets.UTF_8);
-					return TextUtils.matchFirst(contents, GRADLE_VERSION_PATTERN, 2).orNull();
-				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "Cannot read version from Gradle", e);
-				}
-			}
-			return null;
+	}
+	
+	/**
+	 * Support for Google Cloud Platform (including Google App Engine).
+	 */
+	private static class GoogleCloudPlatform extends LinuxPlatform {
+		
+		@Override
+		protected File getApplicationDataDirectory(String app) {
+			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		protected File getUserDataDirectory() {
+			throw new UnsupportedOperationException();
 		}
 	}
 }

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ package nl.colorize.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -187,11 +186,13 @@ public class CommandRunner {
 		try {
 			// Read the process output using the platform's default 
 			// character encoding.
-			InputStream stdout = process.getInputStream();
-			outputReader = new BufferedReader(new InputStreamReader(stdout));
+			outputReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 			captureProcessOutput(outputReader);
 			
 			exitCode = process.waitFor();
+			if (exitCode != 0) {
+				throw new IOException("Command returned exit code " + exitCode);
+			}
 		} finally {
 			Closeables.close(outputReader, true);
 			process.destroy();
@@ -386,8 +387,10 @@ public class CommandRunner {
 	
 	@SuppressWarnings("deprecation")
 	private boolean isSandboxedEnvironment() {
-		return Platform.isGoogleAppEngine() || Platform.isMacAppSandboxEnabled() ||
-				Platform.isAndroid() || Platform.isWebstartEnabled();
+		return Platform.isGoogleAppEngine() || 
+				Platform.isMacAppSandboxEnabled() ||
+				Platform.isAndroid() || 
+				Platform.isWebstartEnabled();
 	}
 	
 	private boolean isUnixLikePlatform() {

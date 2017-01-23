@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -93,10 +93,18 @@ public class CopyrightUpdateTool {
 		dirWalker.setVisitHiddenFiles(false);
 		dirWalker.setFileFilter(new FilenameFilter() {
 			public boolean accept(File dir, String name) {
-				return SUPPORTED_FILE_EXTENSIONS.contains("." + Files.getFileExtension(name));
+				return shouldUpdateCopyright(new File(dir, name));
 			}
 		});
 		return dirWalker.walk(dir);
+	}
+	
+	private boolean shouldUpdateCopyright(File file) {
+		String path = file.getAbsolutePath();
+		String ext = Files.getFileExtension(file.getName());
+		
+		return SUPPORTED_FILE_EXTENSIONS.contains("." + ext) && 
+				!path.contains("/build/") && !path.contains("/lib/");
 	}
 	
 	private void updateCopyrightStatement(File file) throws IOException {

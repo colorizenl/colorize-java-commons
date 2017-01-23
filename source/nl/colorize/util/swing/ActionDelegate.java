@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -94,11 +94,7 @@ public class ActionDelegate implements ActionListener {
 	public void actionPerformed(ActionEvent event) {
 		try {
 			if (expectsArg()) {
-				if (eventArg != null) {
-					delegateMethod.invoke(owner, eventArg);
-				} else {
-					delegateMethod.invoke(owner, event.getSource());
-				}
+				delegateMethod.invoke(owner, getEventArgValue(event));
 			} else {
 				delegateMethod.invoke(owner);
 			}
@@ -108,8 +104,16 @@ public class ActionDelegate implements ActionListener {
 			throw new RuntimeException("Delegate method invocation caused exception", e);
 		}
 	}
-
+	
 	private boolean expectsArg() {
 		return delegateMethod.getParameterTypes().length > 0;
+	}
+	
+	private Object getEventArgValue(ActionEvent event) {
+		if (eventArg == null) {
+			return event.getSource();
+		} else {
+			return eventArg;
+		}
 	}
 }

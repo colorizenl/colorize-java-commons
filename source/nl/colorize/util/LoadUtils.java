@@ -1,12 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
@@ -14,7 +15,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
@@ -101,18 +101,6 @@ public final class LoadUtils {
 			Closeables.close(reader, true);
 		}
 		return result;
-	}
-	
-	/**
-	 * Reads all lines from the specified resource file.
-	 * @throws RuntimeException if an I/O error occurs while reading.
-	 */
-	public static List<String> readLines(ResourceFile file, Charset charset) {
-		try {
-			return readLines(file.openReader(charset));
-		} catch (IOException e) {
-			throw new RuntimeException("I/O error while reading file " + file, e);
-		}
 	}
 	
 	/**
@@ -325,52 +313,7 @@ public final class LoadUtils {
 		
 		return relativePath;
 	}
-	
-	/**
-	 * Concatenates a (absolute or relative) directory path to a relative file 
-	 * path. For example, the arguments "/a/b" and "c/d.txt" give "/a/b/c/d.txt".
-	 * <p>
-	 * This method operates on string level and should only be used when
-	 * path concatenation of {@link java.io.File} or {@link java.net.URL} cannot 
-	 * be used.
-	 */
-	public static String concatFilePaths(String dirPath, String relativePath) {
-		if (isAbsolutePath(dirPath, relativePath)) {
-			return relativePath;
-		} else {
-			return concatRelativeFilePaths(dirPath, relativePath);
-		}
-	}
-	
-	private static String concatRelativeFilePaths(String dirPath, String relativePath) {
-		String separator = System.getProperty("file.separator");
-		
-		if (relativePath.startsWith(separator)) {
-			relativePath = relativePath.substring(1);
-		}
-		
-		if (dirPath.contains(separator) && dirPath.indexOf('.') > dirPath.indexOf(separator)) {
-			dirPath = dirPath.substring(0, dirPath.lastIndexOf(separator));
-		} else if (dirPath.endsWith(separator)) {
-			dirPath = dirPath.substring(0, dirPath.length() - 1);
-		}
-		
-		return dirPath + separator + relativePath;
-	}
 
-	private static boolean isAbsolutePath(String dirPath, String relativePath) {
-		String separator = System.getProperty("file.separator");
-		return dirPath.isEmpty() || (!dirPath.contains(separator) && !guessIfDirectory(dirPath));
-	}
-
-	private static boolean guessIfDirectory(String name) {
-		if (!name.contains(".")) {
-			return true;
-		}
-		String[] parts = name.split("\\.");
-		return parts[parts.length - 1].length() != 3;
-	}
-	
 	/**
 	 * Returns a file filter that will only accept files that match one of the
 	 * specified file extensions. The file extension check is case-insensitive.
@@ -580,23 +523,29 @@ public final class LoadUtils {
 	 * Calls {@code Closeables.close()} and logs any {@code IOException}s it 
 	 * might throw.
 	 */
-	public static void closeQuietly(OutputStream stream) {
+	public static void closeQuietly(Closeable closeable) {
 		try {
-			Closeables.close(stream, true);
+			Closeables.close(closeable, true);
 		} catch (IOException e) {
 			throw new AssertionError(e);
 		}
 	}
 	
 	/**
-	 * Calls {@code Closeables.close()} and logs any {@code IOException}s it 
-	 * might throw.
+	 * Calls {@code Closeables.close()} and completely ignores any
+	 * {@code IOException}s it might throw. In most cases the similar
+	 * {@link #closeQuietly(Closeable)} should be preferred, so that
+	 * the exception is at least logged, but in some cases exceptions
+	 * might be so trivial that even having them in the log file is
+	 * not desirable.
 	 */
-	public static void closeQuietly(Writer writer) {
-		try {
-			Closeables.close(writer, true);
-		} catch (IOException e) {
-			throw new AssertionError(e);
+	public static void closeAndIgnore(Closeable closeable) {
+		if (closeable != null) {
+			try {
+				closeable.close();;
+			} catch (IOException e) {
+				// Ignore exception
+			}
 		}
 	}
 
@@ -628,7 +577,7 @@ public final class LoadUtils {
 	 *         directory for storing temporary files.
 	 */
 	public static File getTempFile(String extension) {
-		File tempDir = Platform.getTempDirectory();
+		File tempDir = Platform.getTempDir();
 		return getTempFile(tempDir, extension);
 	}
 	

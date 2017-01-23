@@ -1,18 +1,17 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
+import static org.junit.Assert.*;
 
-import nl.colorize.util.Escape;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Unit test for the {@code Escape} class.
@@ -20,9 +19,32 @@ import static org.junit.Assert.*;
 public class TestEscape {
 
 	@Test
-	public void testUrlEncodeAndDecode() {
+	public void testUrlEncode() {
 		assertEquals("a%3D%5B0%5D", Escape.urlEncode("a=[0]", Charsets.UTF_8));
+	}
+	
+	@Test
+	public void testUrlDecode() {
 		assertEquals("john doe", Escape.urlDecode("john%20doe", Charsets.UTF_8));
+	}
+	
+	@Test
+	public void testFormEncode() {
+		assertEquals("", Escape.formEncode(ImmutableMap.<String, String>of(), Charsets.UTF_8));
+		assertEquals("a=2", Escape.formEncode(ImmutableMap.of("a", "2"), Charsets.UTF_8));
+		assertEquals("a=2&b=3", Escape.formEncode(ImmutableMap.of("a", "2", "b", "3"), Charsets.UTF_8));
+		assertEquals("a=2&b=", Escape.formEncode(ImmutableMap.of("a", "2", "b", ""), Charsets.UTF_8));
+		assertEquals("a=3%3E4", Escape.formEncode(ImmutableMap.of("a", "3>4"), Charsets.UTF_8));
+	}
+	
+	@Test
+	public void testFormDecode() {
+		assertEquals(ImmutableMap.of(), Escape.formDecode("", Charsets.UTF_8));
+		assertEquals(ImmutableMap.of("a", "2"), Escape.formDecode("a=2", Charsets.UTF_8));
+		assertEquals(ImmutableMap.of("a", "", "b", "4"), Escape.formDecode("a=&b=4", Charsets.UTF_8));
+		assertEquals(ImmutableMap.of("a", "3>4"), Escape.formDecode("a=3%3E4", Charsets.UTF_8));
+		assertEquals(ImmutableMap.of(), Escape.formDecode("?", Charsets.UTF_8));
+		assertEquals(ImmutableMap.of("a", "7"), Escape.formDecode("?a=7", Charsets.UTF_8));
 	}
 	
 	@Test
@@ -63,10 +85,10 @@ public class TestEscape {
 	
 	@Test
 	public void testToHexString() {
-		assertEquals("", Escape.toHexString(new byte[0], Charsets.UTF_8));
-		assertEquals("61", Escape.toHexString(new byte[] {'a'}, Charsets.UTF_8));
-		assertEquals("61313233", Escape.toHexString(new byte[] {'a', '1', '2', '3'}, Charsets.UTF_8));
+		assertEquals("", Escape.toHexString(new byte[0]));
+		assertEquals("61", Escape.toHexString(new byte[] {'a'}));
+		assertEquals("61313233", Escape.toHexString(new byte[] {'a', '1', '2', '3'}));
 		assertEquals("6465616462656566", 
-				Escape.toHexString(new byte[] {'d', 'e', 'a', 'd', 'b', 'e', 'e', 'f'}, Charsets.UTF_8));
+				Escape.toHexString(new byte[] {'d', 'e', 'a', 'd', 'b', 'e', 'e', 'f'}));
 	}
 }

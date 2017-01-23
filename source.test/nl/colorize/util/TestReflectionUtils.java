@@ -1,20 +1,26 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
+import static org.junit.Assert.*;
+
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Function;
+
+import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * Unit tests for the {@code ReflectionUtils} class.
@@ -111,9 +117,61 @@ public class TestReflectionUtils {
 		assertEquals("secondMethod", methods.get(0).getName());
 	}
 	
+	@Test
+	public void testGetFieldsWithAnnotation() {
+		ReflectionSubject subject = new ReflectionSubject();
+		List<Field> fields = ReflectionUtils.getFieldsWithAnnotation(subject, Deprecated.class);
+		
+		assertEquals(1, fields.size());
+		assertEquals("secondProperty", fields.get(0).getName());
+	}
+	
+	@Test
+	public void testToMethodCallback() throws Exception {
+		ReflectionSubject subject = new ReflectionSubject();
+		AtomicInteger counter = new AtomicInteger();
+		Callback<AtomicInteger> callback = ReflectionUtils.toMethodCallback(subject, 
+				"incrementCounter", AtomicInteger.class);
+		subject.incrementCounter(counter);
+		callback.call(counter);
+		callback.call(counter);
+		
+		assertEquals(3, counter.get());
+		
+		Function<AtomicInteger, Integer> callbackFunction = ReflectionUtils.toMethodCallback(
+				subject, "incrementCounter", AtomicInteger.class, Integer.class);
+		Integer returnValue = callbackFunction.apply(counter);
+		
+		assertEquals(4, returnValue.intValue());
+		assertEquals(4, counter.get());
+		
+		Method method = ReflectionSubject.class.getMethod("incrementCounter", AtomicInteger.class);
+		callbackFunction = ReflectionUtils.toMethodCallback(subject, method, AtomicInteger.class, 
+				int.class);
+		returnValue = callbackFunction.apply(counter);
+		
+		assertEquals(5, returnValue.intValue());
+		assertEquals(5, counter.get());
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	@Ignore // Temporarily disabled for compatibility with Google App Engine
+	public void testMethodCallbackMustHaveCorrectArgumentType() throws Exception {
+		ReflectionSubject subject = new ReflectionSubject();
+		Method method = ReflectionSubject.class.getMethod("firstMethod");
+		ReflectionUtils.toMethodCallback(subject, method, String.class, String.class);
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testMethodCallbackMustHaveCorrectReturnType() throws Exception {
+		ReflectionSubject subject = new ReflectionSubject();
+		Method method = ReflectionSubject.class.getMethod("incrementCounter", AtomicInteger.class);
+		ReflectionUtils.toMethodCallback(subject, method, AtomicInteger.class, String.class);
+	}
+	
 	private static class ReflectionSubject {
 		public String firstProperty = "first";
-		private String secondProperty = "second";
+		@Deprecated private String secondProperty = "second";
 		public Object thirdProperty = new Object();
 		@SuppressWarnings("unused")
 		private static int staticProperty = 0; 
@@ -127,6 +185,11 @@ public class TestReflectionUtils {
 		@SuppressWarnings("unused")
 		public String secondMethod() {
 			return "second";
+		}
+		
+		public int incrementCounter(AtomicInteger counter) {
+			counter.set(counter.get() + 1);
+			return counter.get();
 		}
 	}
 }

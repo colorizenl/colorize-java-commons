@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -77,7 +77,8 @@ public final class LogHelper {
 		if (handlers.length >= 1) {
 			configureLogger(logger, handlers);
 		} else if (isColorizeLogger(logger)) {
-			configureColorizeLogger(logger);
+			// Make sure the root Colorize logger is configured.
+			getRootColorizeLogger();
 		}
 		
 		return logger;
@@ -107,11 +108,6 @@ public final class LogHelper {
 	
 	private static boolean isColorizeLogger(Logger logger) {
 		return logger.getName() != null && logger.getName().startsWith(ROOT_COLORIZE_LOGGER_NAME);
-	}
-	
-	private static void configureColorizeLogger(Logger logger) {
-		// Make sure the root Colorize logger is configured.
-		getRootColorizeLogger();
 	}
 	
 	/**

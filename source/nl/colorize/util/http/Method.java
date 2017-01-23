@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -15,14 +15,14 @@ import com.google.common.collect.ImmutableList;
  * (http://tools.ietf.org/html/rfc7231).
  */
 public enum Method {
-	GET(),
-	HEAD("RESPONSE_HEADERS_ONLY"),
+	GET("SAFE"),
+	HEAD("SAFE", "RESPONSE_HEADERS_ONLY"),
 	POST("REQUEST_BODY"),
 	PUT("REQUEST_BODY"),
 	DELETE(),
 	CONNECT(),
-	OPTIONS(),
-	TRACE();
+	OPTIONS("SAFE"),
+	TRACE("SAFE");
 	
 	private List<String> characteristics;
 	
@@ -46,6 +46,14 @@ public enum Method {
 	 */
 	public boolean isResponseHeadersOnly() {
 		return characteristics.contains("RESPONSE_HEADERS_ONLY");
+	}
+	
+	/**
+	 * Indicates that this request method is "safe" and intended for information
+	 * retrieval without changing the state of the server.
+	 */
+	public boolean isSafe() {
+		return characteristics.contains("SAFE");
 	}
 
 	/**

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -20,11 +20,13 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import com.google.common.math.Stats;
 import com.google.common.primitives.Doubles;
 
 /**
@@ -51,6 +53,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	private Map<K, DataPoint<K, D>> dataPoints;
 	
+	private static final Joiner NAME_JOINER = Joiner.on(", ");
 	private static final long serialVersionUID = 1;
 
 	public DataSet() {
@@ -78,7 +81,7 @@ public class DataSet<K, D> implements Serializable {
 	}
 	
 	private void addDataPoint(DataPoint<K, D> dataPoint) {
-		dataPoints.put(dataPoint.key, dataPoint);
+		dataPoints.put(dataPoint.rowKey, dataPoint);
 	}
 	
 	public void addMetadata(K key, Map<String, String> metadata) {
@@ -113,7 +116,7 @@ public class DataSet<K, D> implements Serializable {
 		dataPoints.clear();
 	}
 	
-	public List<K> getKeys() {
+	public List<K> getRows() {
 		return ImmutableList.copyOf(dataPoints.keySet());
 	}
 	
@@ -125,12 +128,25 @@ public class DataSet<K, D> implements Serializable {
 		return columns;
 	}
 	
-	public int getNumDataPoints() {
-		return dataPoints.size();
+	public boolean containsDataPoint(K row, D column) {
+		return getData(row, column) != null;
 	}
 	
-	public boolean hasDataPoint(K key) {
-		return dataPoints.containsKey(key);
+	public boolean containsRow(K row) {
+		return dataPoints.containsKey(row);
+	}
+	
+	public boolean containsColumn(D column) {
+		for (DataPoint<K, D> dataPoint : dataPoints.values()) {
+			if (dataPoint.data.containsKey(column)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public int getNumDataPoints() {
+		return dataPoints.size();
 	}
 	
 	public boolean isEmpty() {
@@ -181,10 +197,10 @@ public class DataSet<K, D> implements Serializable {
 	private Map<K, Number> select(D column, Predicate<K> keyFilter, Predicate<Number> valueFilter) {
 		Map<K, Number> selection = new LinkedHashMap<K, Number>();
 		for (DataPoint<K, D> dataPoint : dataPoints.values()) {
-			if (keyFilter.apply(dataPoint.key)) {
+			if (keyFilter.apply(dataPoint.rowKey)) {
 				Number value = dataPoint.data.get(column);
 				if (value != null && valueFilter.apply(value)) {
-					selection.put(dataPoint.key, value);
+					selection.put(dataPoint.rowKey, value);
 				}
 			}
 		}
@@ -217,7 +233,7 @@ public class DataSet<K, D> implements Serializable {
 	}
 	
 	public Tuple<K, Number> selectLast(D column, Predicate<K> filter) {
-		Map<K, Number> selection = select(column);
+		Map<K, Number> selection = select(column, filter);
 		if (selection.isEmpty()) {
 			return null;
 		}
@@ -262,7 +278,7 @@ public class DataSet<K, D> implements Serializable {
 		});
 	}
 	
-	private void checkCalculationPreconditions(Map<K, Number> selection) {
+	private void checkSelectionNotEmpty(Map<K, Number> selection) {
 		if (selection.isEmpty()) {
 			throw new IllegalStateException("Data set selection is empty");
 		}
@@ -274,7 +290,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Number calculate(D column, Predicate<K> filter, Function<Map<K, Number>, Number> func) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		return func.apply(selection);
 	}
 	
@@ -284,7 +300,6 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Number calculateSum(D column, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
 		
 		double sum = 0.0;
 		for (Map.Entry<K, Number> dataPoint : selection.entrySet()) {
@@ -299,7 +314,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Tuple<K, Number> calculateMin(D column, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		
 		double min = Double.MAX_VALUE;
 		K minKey = null;
@@ -313,7 +328,7 @@ public class DataSet<K, D> implements Serializable {
 	}
 	
 	private Tuple<K, Number> calculateMax(Map<K, Number> selection) {
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		
 		double max = Double.MIN_VALUE;
 		K maxKey = null;
@@ -332,7 +347,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Tuple<K, Number> calculateMax(D column, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		return calculateMax(selection);
 	}
 	
@@ -342,13 +357,8 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Number calculateAverage(D column, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
-		
-		double total = 0.0;
-		for (Map.Entry<K, Number> dataPoint : selection.entrySet()) {
-			total += dataPoint.getValue().doubleValue();
-		}
-		return total / selection.size();
+		checkSelectionNotEmpty(selection);
+		return Stats.meanOf(selection.values());
 	}
 	
 	public Number calculateMedian(D column) {
@@ -357,7 +367,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Number calculateMedian(D column, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		
 		double[] selectionValues = toValuesArray(selection);
 		Arrays.sort(selectionValues);
@@ -370,7 +380,7 @@ public class DataSet<K, D> implements Serializable {
 	
 	public Number calculateWeightedAverage(D column, D weightColumn, Predicate<K> filter) {
 		Map<K, Number> selection = select(column, filter);
-		checkCalculationPreconditions(selection);
+		checkSelectionNotEmpty(selection);
 		
 		double weightedSum = 0.0;
 		double weightedCount = 0.0;
@@ -379,7 +389,12 @@ public class DataSet<K, D> implements Serializable {
 			weightedSum += dataPoint.getValue().doubleValue() * weight;
 			weightedCount += weight;
 		}
-		return weightedSum / weightedCount;
+		
+		if (weightedCount > 0.0) {
+			return weightedSum / weightedCount;
+		} else {
+			return Stats.meanOf(selection.values());
+		}
 	}
 	
 	public void sort(final D column, final Comparator<Number> sortFunction) {
@@ -404,6 +419,28 @@ public class DataSet<K, D> implements Serializable {
 	
 	public void sortDescending(D column) {
 		sort(column, numericalComparator(true));
+	}
+	
+	/**
+	 * Inserts a value for the specified column. Any value already existing will
+	 * be replaced.
+	 */
+	public void fill(D column, Number value) {
+		for (DataPoint<K, D> dataPoint : dataPoints.values()) {
+			dataPoint.data.put(column, value);
+		}
+	}
+	
+	/**
+	 * Inserts a value for the specified column, but only for the rows that do
+	 * not yet have a value for this column.
+	 */
+	public void fillMissing(D column, Number value) {
+		for (DataPoint<K, D> dataPoint : dataPoints.values()) {
+			if (dataPoint.data.get(column) == null) {
+				dataPoint.data.put(column, value);
+			}
+		}
 	}
 	
 	private Predicate<K> noFilter() {
@@ -468,7 +505,7 @@ public class DataSet<K, D> implements Serializable {
 	public DataSet<K, D> copy() {
 		DataSet<K, D> copy = new DataSet<K, D>();
 		for (DataPoint<K, D> dataPoint : dataPoints.values()) {
-			DataPoint<K, D> dataPointCopy = new DataPoint<K, D>(dataPoint.key);
+			DataPoint<K, D> dataPointCopy = new DataPoint<K, D>(dataPoint.rowKey);
 			dataPointCopy.data.putAll(dataPoint.data);
 			dataPointCopy.metadata.putAll(dataPoint.metadata);
 			copy.addDataPoint(dataPointCopy);
@@ -476,19 +513,29 @@ public class DataSet<K, D> implements Serializable {
 		return copy;
 	}
 	
+	@Override
+	public String toString() {
+		StringBuilder buffer = new StringBuilder();
+		buffer.append("DataSet");
+		buffer.append("\n    Rows: ").append(NAME_JOINER.join(getRows()));
+		buffer.append("\n    Columns: ").append(NAME_JOINER.join(getColumns()));
+		buffer.append("\n");
+		return buffer.toString();
+	}
+	
 	/**
 	 * Stores all data, both numerical data and metadata, for a data point.
 	 */
 	private static class DataPoint<K, D> implements Serializable {
 		
-		private K key;
+		private K rowKey;
 		private Map<D, Number> data;
 		private Map<String, String> metadata;
 
 		private static final long serialVersionUID = 1;
 		
-		public DataPoint(K key) {
-			this.key = key;
+		public DataPoint(K rowKey) {
+			this.rowKey = rowKey;
 			this.data = new HashMap<>();
 			this.metadata = new HashMap<>();
 		}

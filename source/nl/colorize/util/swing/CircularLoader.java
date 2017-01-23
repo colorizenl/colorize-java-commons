@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -11,7 +11,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
@@ -26,13 +25,13 @@ import nl.colorize.util.animation.Animatable;
  */
 public class CircularLoader extends JPanel implements Animatable {
 
-	private Image[] frames;
+	private BufferedImage[] frames;
 	private int active;
+	private int size;
 	private Color lineColor;
 	private Stroke lineStroke;
 	
 	private static final int NUM_LINES = 12;
-	private static final int FRAMERATE = 10;
 	
 	/**
 	 * Creates a new {@code CircularLoader} of the specified size. If a size of 
@@ -49,17 +48,15 @@ public class CircularLoader extends JPanel implements Animatable {
 			setPreferredSize(new Dimension(size, size));
 		}
 		
+		this.size = size;
 		this.lineColor = Color.BLACK;
 		this.lineStroke = new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER);
 		
-		SwingAnimator animator = new SwingAnimator(FRAMERATE);
+		SwingAnimator animator = new SwingAnimator(framerate);
 		animator.play(this);
 		animator.start();
 	}
 	
-	/**
-	 * Repaints the component according to the current frame.
-	 */
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
@@ -71,12 +68,13 @@ public class CircularLoader extends JPanel implements Animatable {
 		}
 
 		if (frames == null) {
-			int size = Math.min(getWidth(), getHeight());
 			frames = createAnimation(size, lineColor, lineStroke);
 		}
 				
 		Graphics2D g2 = Utils2D.createGraphics(g, true, false);
-		g2.drawImage(frames[active], 0, 0, getWidth(), getHeight(), null);
+		g2.drawImage(frames[active], getWidth() / 2 - frames[active].getWidth() / 2, 
+				getHeight() / 2 - frames[active].getHeight() / 2, 
+				frames[active].getWidth(), frames[active].getHeight(), null);
 	}
 	
 	public void onFrame(float deltaTime) {
@@ -97,6 +95,10 @@ public class CircularLoader extends JPanel implements Animatable {
 
 	public void setLineStroke(Stroke lineStroke) {
 		this.lineStroke = lineStroke;
+	}
+	
+	public void setLineStroke(float strokeWidth) {
+		this.lineStroke = new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER);
 	}
 	
 	public Stroke getLineStroke() {

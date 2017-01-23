@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * Reference to a resource file (files included with the application). Resource
@@ -95,7 +96,7 @@ public final class ResourceFile {
 	 * @throws IOException if an I/O error occurs while reading the file.
 	 */
 	public InputStream openStream() throws IOException {
-		return Platform.openResourceFile(path);
+		return Platform.getCurrentPlatform().openResourceFile(path);
 	}
 	
 	/**
@@ -121,6 +122,15 @@ public final class ResourceFile {
 	 */
 	public String read(Charset charset) throws IOException {
 		return LoadUtils.readToString(openReader(charset));
+	}
+	
+	/**
+	 * Convenience method that reads in the textual contents of this resource file
+	 * and returns the contents as a list of lines.
+	 * @throws IOException if an I/O error occurs while reading the file.
+	 */
+	public List<String> readLines(Charset charset) throws IOException {
+		return LoadUtils.readLines(openReader(charset));
 	}
 	
 	/**

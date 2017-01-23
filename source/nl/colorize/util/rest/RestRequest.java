@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2016 Colorize
+// Copyright 2009-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -9,8 +9,6 @@ package nl.colorize.util.rest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -21,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
 import nl.colorize.util.Escape;
+import nl.colorize.util.http.HttpRequest;
 import nl.colorize.util.http.Method;
 
 /**
@@ -28,58 +27,40 @@ import nl.colorize.util.http.Method;
  * the service to which the request was made, as well as providing access to
  * the underlying {@link javax.servlet.http.HttpServletRequest}.
  */
-public class RestRequest {
+public class RestRequest extends HttpRequest {
 	
-	private HttpServletRequest httpRequest;
 	private List<String> pathComponents;
+	
 	private Map<String, String> pathParameters;
+	private Map<String, String> urlParameters;
 	private Map<String, String> parameters;
+	private Map<String, Object> infoMap;
 	
-	/**
-	 * Creates a {@code RestRequest} instance that wraps around an incoming
-	 * HTTP request.
-	 * <p>
-	 * Note that request parameters and path parameters are <em>not</em> directly
-	 * obtained from the HTTP request. Instead, they are passed in separately
-	 * using {@link #bindParameters(Map)} and {@link #bindPathParameters(Map)}.
-	 * This allows REST APIs to support multiple parameter formats. 
-	 */
-	protected RestRequest(HttpServletRequest httpRequest, List<String> pathComponents) {
-		this.httpRequest = httpRequest;
+	private static final Joiner PATH_JOINER = Joiner.on("/");
+	
+	protected RestRequest(Method method, List<String> pathComponents, Map<String, String> headers, 
+			String body) {
+		super(method, "/" + PATH_JOINER.join(pathComponents), headers, body);
+		
 		this.pathComponents = ImmutableList.copyOf(pathComponents);
+		
 		pathParameters = Collections.emptyMap();
+		urlParameters = Collections.emptyMap();
 		parameters = Collections.emptyMap();
-	}
-	
-	public HttpServletRequest getHttpRequest() {
-		return httpRequest;
-	}
-	
-	public Method getMethod() {
-		return Method.parse(httpRequest.getMethod());
+		infoMap = Collections.emptyMap();
 	}
 	
 	/**
-	 * Returns the path to which this request was made. The path is relative to
-	 * the REST API, and does not include the host name, servlet path, or query
-	 * string. The path always starts with a leading slash, requests to the "root"
-	 * of the REST API will have a path of "/".
+	 * Returns the path components for the path to which this request was
+	 * made. The path is relative to the REST API, and does not include the
+	 * host name, servlet path, or query string.
+	 * <p>
+	 * In most cases it is more common to use the path in textual form, as
+	 * returned by {@link #getPath()}, instead of using the path components
+	 * directly.
 	 */
-	public String getPath() {
-		return "/" + Joiner.on('/').join(getPathComponents());
-	}
-	
-	/**
-	 * Returns the path components for the path to which this request was made.
-	 * The path is relative to the REST API, and does not include the host name,
-	 * servlet path, or query string.
-	 */
-	protected List<String> getPathComponents() {
+	public List<String> getPathComponents() {
 		return pathComponents;
-	}
-	
-	protected void bindPathParameters(Map<String, String> pathParameters) {
-		this.pathParameters = ImmutableMap.copyOf(pathParameters);
 	}
 	
 	/**
@@ -110,23 +91,40 @@ public class RestRequest {
 	}
 	
 	/**
+	 * Returns the (URL-decoded) parameter from the request's query string with 
+	 * the specified name. 
+	 * @throws BadRequestException if no path parameter with that name exists.
+	 */
+	public String getRequiredUrlParameter(String name) {
+		String value = urlParameters.get(name);
+		if (value == null || value.isEmpty()) {
+			throw new BadRequestException("Missing required URL parameter: " + name);
+		}
+		return value;
+	}
+	
+	/**
+	 * Returns the (URL-decoded) parameter from the request's query string with 
+	 * the specified name, or {@code defaultValue} if no parameter with that name 
+	 * exists. 
+	 */
+	public String getOptionalUrlParameter(String name, String defaultValue) {
+		String value = urlParameters.get(name);
+		if (value == null || value.isEmpty()) {
+			return defaultValue;
+		}
+		return value;
+	}
+	
+	/**
 	 * Returns all parameters sent with the request.
 	 * @deprecated Use {@link #getRequiredParameter(String)} and/or
 	 *             {@link #getOptionalParameter(String, String)} instead.
 	 */
 	@Deprecated
 	@VisibleForTesting
-	protected Map<String, String> getParameters() {
+	public Map<String, String> getParameters() {
 		return parameters;
-	}
-	
-	protected void bindParameters(Map<String, String> parameters) {
-		// Filter out parameters with null values, which according to the
-		// HttpServletRequest documentation should be considered as if the
-		// parameter is not present. Parameters will null *keys* are invalid
-		// though, and will throw an exception when encountered.
-		Predicate<String> parameterFiler = Predicates.notNull();
-		this.parameters = ImmutableMap.copyOf(Maps.filterValues(parameters, parameterFiler));
 	}
 	
 	/**
@@ -154,15 +152,33 @@ public class RestRequest {
 	}
 	
 	/**
-	 * Reads in the request body, and returns it as a string. If the request
-	 * contains no body this will return an empty string.
+	 * Returns other information associated with this request. The contents
+	 * of the info map will depend on the current web app environment, which
+	 * means some of the information may not be available when the application
+	 * is used in another environment.
 	 */
-	public String getRequestBody() {
-		return ServletUtils.getRequestBody(httpRequest);
+	public Map<String, Object> getInfoMap() {
+		return infoMap;
 	}
 	
-	@Override
-	public String toString() {
-		return getMethod() + " " + getPath();
+	protected void bindPathParameters(Map<String, String> pathParameters) {
+		this.pathParameters = ImmutableMap.copyOf(pathParameters);
+	}
+	
+	protected void bindUrlParameters(Map<String, String> urlParameters) {
+		this.urlParameters = ImmutableMap.copyOf(urlParameters);
+	}
+	
+	protected void bindParameters(Map<String, String> parameters) {
+		// Filter out parameters with null values, which according to the
+		// HttpServletRequest documentation should be considered as if the
+		// parameter is not present. Parameters will null *keys* are invalid
+		// though, and will throw an exception when encountered.
+		Predicate<String> parameterFiler = Predicates.notNull();
+		this.parameters = ImmutableMap.copyOf(Maps.filterValues(parameters, parameterFiler));
+	}
+	
+	protected void bindInfoMap(Map<String, Object> infoMap) {
+		this.infoMap = ImmutableMap.copyOf(infoMap);
 	}
 }
