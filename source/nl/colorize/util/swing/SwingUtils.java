@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -44,7 +44,6 @@ import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -419,6 +418,15 @@ public final class SwingUtils {
 		}
 	}
 	
+	public static WindowListener toCloseDelegate(final Runnable action) {
+		return new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				action.run();
+			}
+		};
+	}
+	
+	@Deprecated
 	public static WindowListener toCloseDelegate(final ActionDelegate action) {
 		return new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -427,12 +435,21 @@ public final class SwingUtils {
 		};
 	}
 	
-	public static JScrollPane wrapInScrollPane(JComponent component) {
+	public static JScrollPane wrapInScrollPane(JComponent component, boolean flexibleScrollBars) {
 		JScrollPane scrollPane = new JScrollPane(component);
-		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		if (flexibleScrollBars) {
+			scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+			scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		} else {
+			scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		}
 		scrollPane.getVerticalScrollBar().setUnitIncrement(8);
 		return scrollPane;
+	}
+	
+	public static JScrollPane wrapInScrollPane(JComponent component) {
+		return wrapInScrollPane(component, false);
 	}
 	
 	public static JScrollPane wrapInScrollPane(JComponent component, int height) {
@@ -469,16 +486,6 @@ public final class SwingUtils {
 	public static int getAvailableHeight(Container parent) {
 		Insets insets = parent.getInsets();
 		return parent.getHeight() - insets.top - insets.bottom;
-	}
-	
-	@SuppressWarnings({"rawtypes", "unchecked"})
-	public static JComboBox createComboBox(String... items) {
-		return new JComboBox(items);
-	}
-	
-	@SuppressWarnings("rawtypes")
-	public static JComboBox createComboBox(List<String> items) {
-		return createComboBox(items.toArray(new String[0]));
 	}
 	
 	public static int getSelectedButton(List<? extends AbstractButton> radioButtons) {

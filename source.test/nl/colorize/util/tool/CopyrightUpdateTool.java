@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -36,34 +36,34 @@ import nl.colorize.util.Tuple;
  */
 public class CopyrightUpdateTool {
 	
-	private String oldYear;
-	private String newYear;
+	private String newCopyrightYear;
 	private boolean dryRun;
 
-	private static final Pattern COPYRIGHT_PATTERN = Pattern.compile("Copyright (20\\d+)(\\s*-\\s*20\\d+)?");
+	private static final Pattern COPYRIGHT_PATTERN = Pattern.compile(
+			"Copyright\\s+(20\\d+)(\\s*-\\s*20\\d+)?");
 	private static final List<String> SUPPORTED_FILE_EXTENSIONS = ImmutableList.of(
-			".java", ".js", ".php", ".md");
+			".java", ".js", ".ts", ".php", ".gradle", ".md");
+	private static final List<String> EXCLUDE_DIRS = ImmutableList.of(
+			"/build/", "/lib/", "/node_modules/", "/.git/", "/.gradle/");
 	private static final Charset FILE_CHARSET = Charsets.UTF_8;
 	private static final Logger LOGGER = LogHelper.getLogger(CopyrightUpdateTool.class);
 
 	public static void main(String[] args) {
-		if (args.length < 3) {
-			LOGGER.info("Usage: CopyrightUpdateTool <dir> <oldYear> <newYear> [dryRun]");
+		if (args.length < 2) {
+			LOGGER.info("Usage: CopyrightUpdateTool <dir> <newCopyrightYear> [dryRun]");
 			System.exit(1);
 		}
 		
 		File dir = new File(args[0]);
-		String oldYear = args[1];
-		String newYear = args[2];
-		boolean dryRun = args[3].equals("dryRun") || args[3].equals("true");
+		String newCopyrightYear = args[1];
+		boolean dryRun = args[2].equals("dryRun") || args[2].equals("true");
 		
-		CopyrightUpdateTool tool = new CopyrightUpdateTool(oldYear, newYear, dryRun);
+		CopyrightUpdateTool tool = new CopyrightUpdateTool(newCopyrightYear, dryRun);
 		tool.updateDirectory(dir);
 	}
 	
-	public CopyrightUpdateTool(String oldYear, String newYear, boolean dryRun) {
-		this.oldYear = oldYear;
-		this.newYear = newYear;
+	public CopyrightUpdateTool(String newCopyrightYear, boolean dryRun) {
+		this.newCopyrightYear = newCopyrightYear;
 		this.dryRun = dryRun;
 	}
 
@@ -100,13 +100,19 @@ public class CopyrightUpdateTool {
 	}
 	
 	private boolean shouldUpdateCopyright(File file) {
-		String path = file.getAbsolutePath();
-		String ext = Files.getFileExtension(file.getName());
-		
-		return SUPPORTED_FILE_EXTENSIONS.contains("." + ext) && 
-				!path.contains("/build/") && !path.contains("/lib/");
+		String ext = "." + Files.getFileExtension(file.getName());
+		return SUPPORTED_FILE_EXTENSIONS.contains(ext) && !isExcludedDir(file);
 	}
 	
+	private boolean isExcludedDir(File file) {
+		for (String excludedDir : EXCLUDE_DIRS) {
+			if (file.getAbsolutePath().contains(excludedDir)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void updateCopyrightStatement(File file) throws IOException {
 		List<String> originalLines = Files.readLines(file, FILE_CHARSET);
 		List<String> processedLines = new ArrayList<String>();
@@ -132,7 +138,11 @@ public class CopyrightUpdateTool {
 	private String processLine(String line) {
 		Matcher matcher = COPYRIGHT_PATTERN.matcher(line);
 		if (matcher.find()) {
-			return line.replaceFirst(oldYear, newYear);
+			if (matcher.group(2) == null || newCopyrightYear.indexOf('-') != -1) {
+				return matcher.replaceFirst("Copyright " + newCopyrightYear);
+			} else {
+				return matcher.replaceFirst("Copyright $1-" + newCopyrightYear);
+			}
 		} else {
 			return line;
 		}

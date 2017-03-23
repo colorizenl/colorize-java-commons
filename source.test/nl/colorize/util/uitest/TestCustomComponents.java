@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -137,9 +137,9 @@ public class TestCustomComponents {
 	private JPanel createSimpleTableTab() {
 		table = new SimpleTable<String>("Name", "Year of Birth");
 		table.setColumnWidth(1, 100);
-		table.addRow("D", "Dennis", "1984");
-		table.addRow("J", "Jasper", "1983");
-		table.addRow("N", "Nikki", "1984");
+		table.addRow("D", "Dave", "1984");
+		table.addRow("J", "Jim", "1983");
+		table.addRow("N", "Nick", "1984");
 		table.setRowTooltip("D", "This is a tooltip text for a row which is different from its cells"); 
 		table.addActionListener(new ActionDelegate(this, "tableSelectionChanged"));
 		table.addDoubleClickListener(new ActionDelegate(this, "tableDoubleClicked"));

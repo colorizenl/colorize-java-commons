@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -12,11 +12,14 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
@@ -24,6 +27,9 @@ import com.google.common.io.Files;
  * Miscellaneous utility and convenience versions for working with text.
  */
 public final class TextUtils {
+	
+	private static final CharMatcher TEXT_MATCHER = CharMatcher.javaLetterOrDigit().or(
+			CharMatcher.whitespace());
 
 	private TextUtils() {
 	}
@@ -206,5 +212,83 @@ public final class TextUtils {
 	 */
 	public static List<String> calculateLongestCommonPrefix(String[] a, String[] b) {
 		return calculateLongestCommonPrefix(ImmutableList.copyOf(a), ImmutableList.copyOf(b));
+	}
+	
+	/**
+	 * Calculates the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
+	 * Levenshtein distance</a> between two strings.
+	 */
+	public static int calculateLevenshteinDistance(String a, String b) {
+		a = normalizeText(a);
+		b = normalizeText(b);
+		
+		int[] cost = new int[a.length() + 1];
+		int[] newCost = new int[a.length() + 1];
+		for (int i = 0; i < cost.length; i++) {
+			cost[i] = i;
+		}
+		
+		for (int j = 1; j < b.length() + 1; j++) {
+			newCost[0] = j;
+			
+			for (int i = 1; i < a.length() + 1; i++) {
+				int match = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+				int replaceCost = cost[i - 1] + match;
+				int insertCost = cost[i] + 1;
+				int deleteCost = newCost[i - 1] + 1;
+				newCost[i] = Math.min(Math.min(insertCost, deleteCost), replaceCost);
+			}
+			
+			int[] swap = cost;
+			cost = newCost;
+			newCost = swap;
+		}
+		
+		return cost[a.length()];
+	}
+	
+	private static String normalizeText(String text) {
+		return TEXT_MATCHER.retainFrom(text).toLowerCase();
+	}
+	
+	/**
+	 * Calculates the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
+	 * Levenshtein distance</a> between two strings, but returns the result relative
+	 * to the length of the longest input string. The returned value is therefore
+	 * a score between 0.0 (strings are equal) and 1.0 (strings are completely
+	 * different).
+	 */
+	public static float calculateRelativeLevenshteinDistance(String a, String b) {
+		int distance = calculateLevenshteinDistance(a, b);
+		float relativeDistance = distance / (float) Math.max(a.length(), b.length());
+		relativeDistance = Math.max(relativeDistance, 0f);
+		relativeDistance = Math.min(relativeDistance, 1f);
+		return relativeDistance;
+	}
+	
+	/**
+	 * Returns all candidates that "fuzzy match" the specified string. Fuzzy matching
+	 * is done using the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
+	 * Levenshtein distance</a>, relative to the length of the string, against the
+	 * provided threshold.
+	 * @throws IllegalArgumentException if the threshold is outside the range between
+	 *         0.0 (strings must be equal) and 1.0 (any string is allowed).
+	 */
+	public static List<String> fuzzyMatch(String str, Collection<String> candidates, float threshold) {
+		Preconditions.checkArgument(threshold >= 0f && threshold <= 1f, 
+				"Threshold is outside range 0.0 - 1.0: " + threshold);
+		
+		List<String> fuzzyMatches = new ArrayList<>();
+		for (String candidate : candidates) {
+			if (isFuzzyMatch(str, candidate, threshold)) {
+				fuzzyMatches.add(candidate);
+			}
+		}
+		return fuzzyMatches;
+	}
+
+	private static boolean isFuzzyMatch(String str, String candidate, float threshold) {
+		float distance = calculateRelativeLevenshteinDistance(str, candidate);
+		return distance <= threshold;
 	}
 }

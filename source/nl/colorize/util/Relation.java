@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -186,7 +186,7 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Seria
 	public static <L, R> Relation<L, R> fromMap(Map<L, R> map) {
 		Relation<L, R> relation = Relation.of();
 		for (Map.Entry<L, R> entry : map.entrySet()) {
-			relation.add(Tuple.fromEntry(entry));
+			relation.add(Tuple.of(entry.getKey(), entry.getValue()));
 		}
 		return relation;
 	}

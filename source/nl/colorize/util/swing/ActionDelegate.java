@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -10,6 +10,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import nl.colorize.util.Callback;
 
 /**
  * Delegates a Swing action event to a method. This class can be used to reduce
@@ -30,8 +32,18 @@ import java.lang.reflect.Method;
  *         ...
  *     }
  * </pre>
+ * <p>
+ * <strong>Warning</strong>: The functionality provided by this class is no 
+ * longer needed in Java 8, as action handlers for Swing can be created much 
+ * more easily using lambda expressions and/or method references. The only
+ * reason this class is not deprecated is because this library still supports 
+ * environments in which Java 8 is not yet available.  
  */
-public class ActionDelegate implements ActionListener {
+public class ActionDelegate implements ActionListener, Callback<ActionEvent> {
+	
+	//TODO deprecate this class as soon as Java 8 becomes the
+	//     minimum requirement for this library. Refer to the
+	//     warning in the class documentation for details.
 
 	private Object owner;
 	private Method delegateMethod;
@@ -92,6 +104,10 @@ public class ActionDelegate implements ActionListener {
 	}
 	
 	public void actionPerformed(ActionEvent event) {
+		call(event);
+	}
+	
+	public void call(ActionEvent event) {
 		try {
 			if (expectsArg()) {
 				delegateMethod.invoke(owner, getEventArgValue(event));

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -11,8 +11,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -50,37 +50,31 @@ import com.google.common.collect.ImmutableMap;
  * <p>
  * If a platform is not explicitly supported this class can still be used, but
  * the platform's conventions might not be followed.
- * <p>
- * Support for additional platforms can be added by applications. A new platform
- * can be registered by calling {@link #register(String, Platform)}. Be aware
- * that any calls made <em>before</em> the new platform is registered will not
- * actually make use of this support. In other words: make sure you call this
- * methods before using any functionality from this class.
  */
 public abstract class Platform {
 	
-	private static Map<String, Platform> supportedPlatforms = new ConcurrentHashMap<>();
-	static {
-		supportedPlatforms.put("Windows", new WindowsPlatform());
-		supportedPlatforms.put("macOS", new MacPlatform());
-		supportedPlatforms.put("OS X", new MacPlatform());
-		supportedPlatforms.put("Linux", new LinuxPlatform());
-		supportedPlatforms.put("Google App Engine", new GoogleCloudPlatform());
-	}
+	private static Map<String, Platform> supportedPlatforms = new ImmutableMap.Builder<String, Platform>()
+		.put("Windows", new WindowsPlatform())
+		.put("macOS", new MacPlatform())
+		.put("OS X", new MacPlatform())
+		.put("Linux", new LinuxPlatform())
+		.put("Google App Engine", new GoogleCloudPlatform())
+		.put("Android", new AndroidPlatform())
+		.build();
 	
 	private static final Map<String, String> MACOS_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
-			.put("10.4", "Tiger")
-			.put("10.5", "Leopard")
-			.put("10.6", "Snow Leopard")
-			.put("10.7", "Lion")
-			.put("10.8", "Mountain Lion")
-			.put("10.9", "Mavericks")
-			.put("10.10", "Yosemite")
-			.put("10.11", "El Capitan")
-			.put("10.12", "Sierra")
-			.build();
+		.put("10.4", "Tiger")
+		.put("10.5", "Leopard")
+		.put("10.6", "Snow Leopard")
+		.put("10.7", "Lion")
+		.put("10.8", "Mountain Lion")
+		.put("10.9", "Mavericks")
+		.put("10.10", "Yosemite")
+		.put("10.11", "El Capitan")
+		.put("10.12", "Sierra")
+		.build();
 	
-	private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.6.0");
+	private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.7.0");
 	private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
 	private static final Logger LOGGER = LogHelper.getLogger(Platform.class);
 	
@@ -128,21 +122,6 @@ public abstract class Platform {
 	 *         to user files (e.g. Google App Engine).
 	 */
 	protected abstract File getUserDataDirectory();
-	
-	/**
-	 * Registers support for a platform. The specified implementation will be
-	 * used if either the platform name (see {@link #getPlatformName()} or
-	 * the platform family (see {@link #getPlatformFamily()} matches the value
-	 * from {@code platformName}. The platform name is checked before the
-	 * platform family, so it is possible to have "generic" support for a
-	 * platform family and then override that for a particular version.
-	 */
-	public static void register(String platform, Platform impl) {
-		if (supportedPlatforms.containsKey(platform)) {
-			LOGGER.warning("Replacing platform support for " + platform);
-		}
-		supportedPlatforms.put(platform, impl);
-	}
 	
 	/**
 	 * Returns the implementation that should be used for the current platform.
@@ -502,7 +481,8 @@ public abstract class Platform {
 			try {
 				Class<?> fileSystemViewClass = Class.forName("javax.swing.filechooser.FileSystemView");
 				Object fileSystemView = fileSystemViewClass.getMethod("getFileSystemView").invoke(null);
-				return (File) fileSystemView.getClass().getMethod("getDefaultDirectory").invoke(fileSystemView);
+				return (File) fileSystemView.getClass().getMethod("getDefaultDirectory")
+					.invoke(fileSystemView);
 			} catch (Exception e) {
 				LOGGER.log(Level.WARNING, "Attempt to locate My Documents failed", e);
 				return getUserHomeDir();
@@ -575,6 +555,69 @@ public abstract class Platform {
 		@Override
 		protected File getUserDataDirectory() {
 			throw new UnsupportedOperationException();
+		}
+	}
+	
+	/**
+	 * Support for Android. The Android SDK is accessed using reflection, so that
+	 * this library does not require the Android SDK as a compile-time dependency.
+	 * <p>
+	 * Unlike other platforms, accessing information such as resources files or
+	 * application data requires a "context", usually represented by the current
+	 * activity. Attempting to access the context before it is abailable will
+	 * result in a {@code IllegalStateException}.
+	 */
+	private static class AndroidPlatform extends Platform {
+		
+		private Object cachedContext;
+		
+		private Object getContext() {
+			if (cachedContext == null) {
+				try {
+					Class<?> appGlobalsClass = Class.forName("android.app.AppGlobals");
+					Method getCurrentApp = appGlobalsClass.getMethod("getInitialApplication");
+					cachedContext = getCurrentApp.invoke(null);
+				} catch (Exception e) {
+					throw new UnsupportedOperationException("Cannot access Android context", e);
+				}
+			}
+			
+			if (cachedContext == null) {
+				throw new UnsupportedOperationException("Android app context not available");	
+			}
+			
+			return cachedContext;
+		}
+			
+		@SuppressWarnings("unused")
+		public Version getAppVersion() {
+			Object context = getContext();
+			try {
+				Object packageName = context.getClass().getMethod("getPackageName").invoke(context);
+				Object packageManager = context.getClass().getMethod("getPackageManager").invoke(context);
+				Object packageInfo = packageManager.getClass().getMethod("getPackageInfo", 
+					String.class, int.class).invoke(packageManager, packageName, 0);
+				Object appVersion = packageInfo.getClass().getField("versionName").get(packageInfo);
+				return Version.parse(appVersion.toString());
+			} catch (Exception e) {
+				throw new UnsupportedOperationException("Cannot access Android app version", e);
+			}
+		}
+
+		@Override
+		protected File getApplicationDataDirectory(String app) {
+			Object context = getContext();
+			try {
+				Method getFilesDir = context.getClass().getMethod("getFilesDir");
+				return (File) getFilesDir.invoke(context);
+			} catch (Exception e) {
+				throw new UnsupportedOperationException("Cannot access Android context", e);
+			}
+		}
+
+		@Override
+		protected File getUserDataDirectory() {
+			throw new UnsupportedOperationException("Android does not support shared user data");
 		}
 	}
 }

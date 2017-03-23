@@ -1,28 +1,27 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import java.io.Serializable;
-import java.util.Map;
 
 import com.google.common.base.Objects;
 
 /**
- * Data structure that consists of two ordered values. The two values can have
- * different types. Tuples are immutable and may contain {@code null} values. 
+ * Data structure that consists of two ordered values, sometimes also referred
+ * to as a pair. Tuples are immutable and may contain {@code null} values. 
  * @param <L> Type of the first (left) element.
  * @param <R> Type of the second (right) element.
  */
-public final class Tuple<L, R> implements Serializable {
+public class Tuple<L, R> implements Serializable {
 	
 	private L left;
 	private R right;
 	
-	private static final long serialVersionUID = 5;
+	private static final long serialVersionUID = 6;
 
 	public Tuple(L left, R right) {
 		this.left = left;
@@ -75,8 +74,9 @@ public final class Tuple<L, R> implements Serializable {
 		if (o instanceof Tuple) {
 			Tuple<?, ?> other = (Tuple<?, ?>) o;
 			return Objects.equal(left, other.left) && Objects.equal(right, other.right);
+		} else {
+			return false;
 		}
-		return false;
 	}
 	
 	@Override
@@ -86,26 +86,15 @@ public final class Tuple<L, R> implements Serializable {
 	
 	/**
 	 * Returns the string representation of this tuple. The returned string is
-	 * in the format "&lt;X,Y&gt;", where X and Y are determined by the string
+	 * in the format "(X, Y)", where X and Y are determined by the string
 	 * representation of the elements of this tuple.
 	 */
 	@Override
 	public String toString() {
-		return String.format("<%s, %s>", left, right);
+		return String.format("(%s, %s)", left, right);
 	}
 	
-	/**
-	 * Factory method for creating tuples that prevents having to type the generic 
-	 * types twice pre-Java 7.
-	 */
 	public static <L, R> Tuple<L, R> of(L left, R right) {
 		return new Tuple<L, R>(left, right);
-	}
-	
-	/**
-	 * Factory method for creating a tuple from an entry in a map.
-	 */
-	public static <L, R> Tuple<L, R> fromEntry(Map.Entry<L, R> entry) {
-		return new Tuple<L, R>(entry.getKey(), entry.getValue());
 	}
 }

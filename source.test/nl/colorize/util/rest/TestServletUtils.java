@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -77,17 +77,5 @@ public class TestServletUtils {
 		assertEquals("application/json; charset=utf-8", mockResponse.getHeader(HttpHeaders.CONTENT_TYPE));
 		assertEquals("UTF-8", mockResponse.getCharacterEncoding());
 		assertEquals("application/json; charset=utf-8", mockResponse.getContentType());
-	}
-	
-	@Test
-	public void testForwardRequest() throws Exception {
-		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/");
-		request.setParameter("a", "2");
-		MockHttpServletResponse response = new MockHttpServletResponse();
-		
-		ServletUtils.forwardRequest(request, "http://www.dennisbijlsma.com/temp/test_post.php", response);
-		
-		assertEquals(200, response.getStatus().getCode());
-		assertEquals("2", response.getBuffer());
 	}
 }

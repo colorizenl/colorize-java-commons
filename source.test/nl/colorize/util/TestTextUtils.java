@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -66,5 +66,30 @@ public class TestTextUtils {
 		assertEquals("test ", TextUtils.calculateLongestCommonPrefix("test first", "test second"));
 		assertEquals(Arrays.asList("a", "b"), TextUtils.calculateLongestCommonPrefix(
 				Arrays.asList("a", "b", "c"), Arrays.asList("a", "b", "z")));
+	}
+	
+	@Test
+	public void testCalculateLevenshteinDistance() {
+		assertEquals(0, TextUtils.calculateLevenshteinDistance("", ""));
+		assertEquals(0, TextUtils.calculateLevenshteinDistance("test", "test"));
+		assertEquals(3, TextUtils.calculateLevenshteinDistance("kitten", "sitting"));
+		
+		assertEquals(0.0f, TextUtils.calculateRelativeLevenshteinDistance("test", "test"), 0.01f);
+		assertEquals(0.43f, TextUtils.calculateRelativeLevenshteinDistance("kitten", "sitting"), 0.01f);
+		assertEquals(0.0f, TextUtils.calculateRelativeLevenshteinDistance("te-st", "test"), 0.01f);
+		assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("", "test"), 0.01f);
+		assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("test", ""), 0.01f);
+	}
+	
+	@Test
+	public void testFuzzyMatch() {
+		assertEquals(Arrays.asList("john smith", "john smit"), TextUtils.fuzzyMatch("john smith", 
+				Arrays.asList("john smith", "john smit", "john", "pete"), 0.2f));
+		assertEquals(Arrays.asList(), TextUtils.fuzzyMatch("john smith", Arrays.<String>asList(), 0.1f));
+		assertEquals(Arrays.asList("aaa", "aab"), TextUtils.fuzzyMatch("aaa", 
+				Arrays.asList("aaa", "aab", "abb"), 0.35f));
+		assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", 
+				Arrays.asList("aaa", "aab", "abb"), 0.1f));
+		assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", Arrays.asList("aaa"), 0f));
 	}
 }

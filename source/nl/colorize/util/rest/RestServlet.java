@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ public abstract class RestServlet extends HttpServlet implements AuthorizationCh
 		if (contentType != null && contentType.contains("application/json")) {
 			return parseJsonRequestParameters(requestBody);
 		} else {
-			return ServletUtils.getParameterMap(request, REQUEST_CHARSET);
+			return Escape.formDecode(requestBody, REQUEST_CHARSET);
 		}
 	}
 

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2009-2017 Colorize
+// Copyright 2007-2017 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -212,11 +212,9 @@ public class TestURLLoader {
 	
 	@Test
 	public void testHttpToHttpsRedirect() throws Exception {
-		HttpResponse response = URLLoader.get("http://www.dennisbijlsma.com/temp/test_https_redirect.php", 
-				Charsets.UTF_8).sendRequest();
+		HttpResponse response = URLLoader.get("http://www.twitter.com", Charsets.UTF_8).sendRequest();
 		assertEquals(HttpStatus.OK, response.getStatus());
-		assertEquals("Registered", response.getHeader("X-Magnolia-Registration"));
-		assertTrue(response.getBody().contains("Bitbucket"));
+		assertTrue(response.getHeaders().containsKey("strict-transport-security"));
 	}
 	
 	@Test
