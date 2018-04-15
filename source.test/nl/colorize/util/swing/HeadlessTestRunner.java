@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -18,19 +18,19 @@ import org.junit.runners.model.InitializationError;
  */
 public class HeadlessTestRunner extends BlockJUnit4ClassRunner {
 
-	public HeadlessTestRunner(Class<?> testClass) throws InitializationError {
-		super(testClass);
-	}
-	
-	/**
-	 * Ignores all tests when used in a headless environment.
-	 */
-	@Override
+    public HeadlessTestRunner(Class<?> testClass) throws InitializationError {
+        super(testClass);
+    }
+    
+    /**
+     * Ignores all tests when used in a headless environment.
+     */
+    @Override
     protected boolean isIgnored(FrameworkMethod child) {
-		if (SwingUtils.isHeadlessEnvironment()) {
-			return true;
-		} else {
-			return super.isIgnored(child);
-		}
-	}
+        if (SwingUtils.isHeadlessEnvironment()) {
+            return true;
+        } else {
+            return super.isIgnored(child);
+        }
+    }
 }

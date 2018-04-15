@@ -19,8 +19,31 @@ App Engine), desktop applications (Windows/macOS/Linux), mobile applications (An
 line tools, REST APIs, and other libraries. In order to support these different environments the 
 source code has to be extremely portable. 
 
-Build
+Because the library is mostly used for web-based applications, both client-side and server-side,
+a lot of the functionality is related to HTTP communication between components or systems. The
+library has a dependency on the Servlet API, but also supports environments in which Servlets are
+not available or supported.
+
+Usage
 -----
+
+The library is available from the Maven Central repository. To use it in a Maven project, add it 
+to the dependencies section in `pom.xml`:
+
+    <dependency>
+        <groupId>nl.colorize</groupId>
+        <artifactId>colorize-java-commons</artifactId>
+        <version>2018.3</version>
+    </dependency>  
+    
+The library can also be used in Gradle projects:
+
+    dependencies {
+        compile 'nl.colorize:colorize-java-commons:2018.3'
+    }
+
+Build instructions
+------------------
 
 The build is cross-platform and supports Windows, macOS, and Linux, but requires the following 
 software to be available:
@@ -38,7 +61,7 @@ The following Gradle build tasks are available:
 License
 -------
 
-Copyright 2007-2017 Colorize
+Copyright 2007-2018 Colorize
 
 The source code is licensed under the Apache License 2.0, meaning you can use it free of charge 
 in commercial and non-commercial projects as long as you mention the original copyright.

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -14,19 +14,20 @@ package nl.colorize.util.swing;
  */
 public interface ApplicationMenuListener {
 
-	/**
-	 * Called when the "Quit" application menu item is clicked.
-	 */
-	public void onQuit();
-	
-	/**
-	 * Called when the "About" application menu item is clicked.
-	 */
-	public void onAbout();
-	
-	/**
-	 * Called when the "Preferences" application menu item (if available) is
-	 * clicked.
-	 */
-	public void onPreferences();
+    /**
+     * Called when the "Quit" application menu item is clicked.
+     */
+    public void onQuit();
+    
+    /**
+     * Called when the "About" application menu item is clicked.
+     */
+    public void onAbout();
+    
+    /**
+     * Called when the "Preferences" application menu item (if available) is
+     * clicked.
+     */
+    default void onPreferences() {
+    }
 }

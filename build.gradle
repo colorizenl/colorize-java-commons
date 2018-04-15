@@ -1,31 +1,29 @@
 apply plugin: 'java'
 apply plugin: 'jacoco'
-apply plugin: 'eclipse'
 
 group = 'nl.colorize'
-version = '2017.3.1'
-sourceCompatibility = '1.7'
-targetCompatibility = '1.7'
+version = '2018.3'
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 compileJava.options.encoding = 'UTF-8'
 sourceSets.main.java.srcDirs = ['source']
 sourceSets.main.resources.srcDirs = ['resources']
 sourceSets.test.java.srcDirs = ['source.test']
-jar.archiveName = 'colorize-java-commons.jar'
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	compile 'com.google.guava:guava:20.0'
-	compile 'org.jdom:jdom2:2.0.6'
-	compile 'jaxen:jaxen:1.1.6'
-	compile 'com.google.code.gson:gson:2.8.0'
-	compileOnly 'javax.servlet:servlet-api:2.5'
-	testCompile 'junit:junit:4.12'
-	testCompile 'javax.servlet:servlet-api:2.5'
+    compile 'com.google.guava:guava:24.1-jre'
+    compile 'org.jdom:jdom2:2.0.6'
+    compile 'jaxen:jaxen:1.1.6'
+    compile 'com.google.code.gson:gson:2.8.2'
+    compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
+    testCompile 'junit:junit:4.12'
+    testCompile 'javax.servlet:javax.servlet-api:3.1.0'
 }
 
 test.doLast {
-	tasks.jacocoTestReport.execute()
+    tasks.jacocoTestReport.execute()
 }

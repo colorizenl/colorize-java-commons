@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -12,11 +12,11 @@ package nl.colorize.util.rest;
  */
 public class InternalServerException extends RuntimeException {
 
-	public InternalServerException(String message) {
-		super(message);
-	}
-	
-	public InternalServerException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public InternalServerException(String message) {
+        super(message);
+    }
+    
+    public InternalServerException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

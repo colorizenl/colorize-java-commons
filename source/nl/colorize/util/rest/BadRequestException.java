@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -13,11 +13,11 @@ package nl.colorize.util.rest;
  */
 public class BadRequestException extends RuntimeException {
 
-	public BadRequestException(String message) {
-		super(message);
-	}
-	
-	public BadRequestException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public BadRequestException(String message) {
+        super(message);
+    }
+    
+    public BadRequestException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

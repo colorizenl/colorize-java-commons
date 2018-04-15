@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -24,34 +24,34 @@ import nl.colorize.util.http.Method;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Rest {
-	
-	/**
-	 * The HTTP request method accepted by this service. Calling this service
-	 * using the wrong request method will result in HTTP status 405 (method 
-	 * not allowed). A value of {@code null} indicates that all requests to this
-	 * service's path should be accepted, regardless of the request method.
-	 */
-	public Method method();
+    
+    /**
+     * The HTTP request method accepted by this service. Calling this service
+     * using the wrong request method will result in HTTP status 405 (method 
+     * not allowed). A value of {@code null} indicates that all requests to this
+     * service's path should be accepted, regardless of the request method.
+     */
+    public Method method();
 
-	/**
-	 * Path that this service is mapped to. The path should start with a leading
-	 * slash, and is relative to the base URL of the REST API. The path can
-	 * contain named parameters, indicated by one of the following notations:
-	 * 
-	 * <ul>
-	 *   <li>Surrounded by curly brackets: <pre>/test/person/{id}</pre></li>
-	 *   <li>By a colon: <pre>/test/person/:id</pre></li>
-	 *   <li>By an at sign: <pre>/test/person/@id</pre></li>
-	 * </ul>
-	 */
-	public String path();
-	
-	/**
-	 * Describes the role(s) that are authorized for this service. The
-	 * authorization check is performed by the {@link RestServlet}, in
-	 * {@link RestServlet#isRequestAuthorized(RestRequest, String)}. Calling
-	 * this service without the required role will result in HTTP status 401 
-	 * (unauthorized).
-	 */
-	public String authorized() default "";
+    /**
+     * Path that this service is mapped to. The path should start with a leading
+     * slash, and is relative to the base URL of the REST API. The path can
+     * contain named parameters, indicated by one of the following notations:
+     * 
+     * <ul>
+     *   <li>Surrounded by curly brackets: <pre>/test/person/{id}</pre></li>
+     *   <li>By a colon: <pre>/test/person/:id</pre></li>
+     *   <li>By an at sign: <pre>/test/person/@id</pre></li>
+     * </ul>
+     */
+    public String path();
+    
+    /**
+     * Describes the role(s) that are authorized for this service. The
+     * authorization check is performed by the {@link RestServlet}, in
+     * {@link RestServlet#isRequestAuthorized(RestRequest, String)}. Calling
+     * this service without the required role will result in HTTP status 401 
+     * (unauthorized).
+     */
+    public String authorized() default "";
 }

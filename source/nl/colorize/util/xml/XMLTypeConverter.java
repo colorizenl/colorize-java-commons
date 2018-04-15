@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2017 Colorize
+// Copyright 2007-2018 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -15,10 +15,10 @@ import org.jdom2.Element;
  */
 public interface XMLTypeConverter<T> {
 
-	/**
-	 * Converts the specified to an XML element. The element's text, attributes,
-	 * and child elements are all determined during the conversion.
-	 * @param elementName Will be used as element name for the created element.
-	 */
-	public Element convertObject(T obj, String elementName);
+    /**
+     * Converts the specified to an XML element. The element's text, attributes,
+     * and child elements are all determined during the conversion.
+     * @param elementName Will be used as element name for the created element.
+     */
+    public Element convertObject(T obj, String elementName);
 }
