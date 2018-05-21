@@ -9,12 +9,6 @@ package nl.colorize.util.rest;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
-import com.google.common.net.MediaType;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
-import nl.colorize.util.Escape;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.TextUtils;
@@ -44,8 +38,7 @@ public class RestRequestDispatcher {
     private List<MappedService> mappedServices;
     private AuthorizationCheck authorizationCheck;
     private Map<String, String> defaultResponseHeaders;
-    private boolean parseBodyEnabled;
-    
+
     private static final Splitter PATH_SPLITTER = Splitter.on('/').omitEmptyStrings();
     private static final Logger LOGGER = LogHelper.getLogger(RestServlet.class);
     
@@ -58,16 +51,12 @@ public class RestRequestDispatcher {
      * @param defaultResponseHeaders HTTP headers that will be added to each 
      *        response. If the service itself also sets one of these headers, 
      *        the header value set by the service overrules the default value.
-     * @param parseBodyEnabled If true, the request body will be parsed to
-     *        extract parameters, using the approach described in the class
-     *        documentation. Set this to false to disable this functionality.
      */
     public RestRequestDispatcher(AuthorizationCheck authorizationCheck, 
-            Map<String, String> defaultResponseHeaders, boolean parseBodyEnabled) {
+            Map<String, String> defaultResponseHeaders) {
         this.mappedServices = new CopyOnWriteArrayList<>();
         this.authorizationCheck = authorizationCheck;
         this.defaultResponseHeaders = ImmutableMap.copyOf(defaultResponseHeaders);
-        this.parseBodyEnabled = parseBodyEnabled;
     }
     
     public void registerServices(Object serviceObject) {
@@ -151,51 +140,8 @@ public class RestRequestDispatcher {
     protected void bindRequest(RestRequest request, Rest config) {
         List<String> pathComponents = extractPathComponents(request.getPath());
         Map<String, String> pathParameters = parsePathParameters(request, config);
-        Map<String, String> bodyParameters = parseBody(request);
-        
-        request.bind(pathComponents, pathParameters, bodyParameters);
-    }
-    
-    private Map<String, String> parseBody(RestRequest request) {
-        if (!parseBodyEnabled) {
-            return Collections.emptyMap();
-        }
-        
-        MediaType contentType = request.getContentType(null);
-        if (contentType == null || contentType.toString().contains("application/x-www-form-urlencoded")) {
-            return parsePostData(request);
-        } else if (contentType.toString().contains("application/json")) {
-            return parseJsonPostData(request);
-        } else {
-            LOGGER.warning("Unknown Content-Type: " + contentType);
-            return Collections.emptyMap();
-        }
-    }
 
-    private Map<String, String> parsePostData(RestRequest request) {
-        return Escape.formDecode(request.getBody(), request.getCharset());
-    }
-    
-    private Map<String, String> parseJsonPostData(RestRequest request) {
-        JsonParser jsonParser = new JsonParser();
-        JsonElement json = jsonParser.parse(request.getBody());
-        
-        Map<String, String> data = new HashMap<>();
-        
-        if (json instanceof JsonObject) {
-            for (Map.Entry<String, JsonElement> entry : ((JsonObject) json).entrySet()) {
-                if (entry.getValue() instanceof JsonPrimitive) {
-                    data.put(entry.getKey(), entry.getValue().getAsString());
-                } else {
-                    data.put(entry.getKey(), entry.getValue().toString());
-                }
-            }
-        } else {
-            LOGGER.warning("Complex JSON structures cannot be represented by POST data: " + 
-                    request.getBody());
-        }
-        
-        return data;
+        request.bindPath(pathComponents, pathParameters);
     }
 
     private HttpResponse callService(RestRequest boundRequest, MappedService mappedService) {

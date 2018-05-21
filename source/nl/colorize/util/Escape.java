@@ -6,24 +6,21 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
+import nl.colorize.util.rest.PostData;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Splitter;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 
 /**
  * Contains utility methods for encoding strings to and decoding them from a 
@@ -38,8 +35,6 @@ public final class Escape {
         }
     };
     
-    private static final Splitter FORM_DATA_SPLITTER = Splitter.on("&");
-
     private Escape() {
     }
     
@@ -68,47 +63,40 @@ public final class Escape {
     /**
      * Encodes a number of key/value pairs using URL encoding, as used in the
      * {@code application/x-www-form-urlencoded} media type.
+     * @deprecated Use {@code PostData.encode(...)} instead.
      */
+    @Deprecated
     public static String formEncode(Map<String, String> data, Charset charset) {
-        StringBuilder buffer = new StringBuilder();
-        for (Map.Entry<String,String> entry : data.entrySet()) {
-            if (buffer.length() > 0) {
-                buffer.append('&');
-            }
-            buffer.append(Escape.urlEncode(entry.getKey(), charset));
-            buffer.append('=');
-            buffer.append(Escape.urlEncode(entry.getValue(), charset));
-        }
-        return buffer.toString();
+        return PostData.create(data).encode(charset);
     }
     
     /**
      * Decodes a URL encoded collection of key/value pairs, as used in the
      * {@code application/x-www-form-urlencoded} media type.
+     * @deprecated Use {@code PostData.parse(...)} instead.
      */
+    @Deprecated
     public static Map<String, String> formDecode(String encoded, Charset charset) {
-        if (encoded.startsWith("?")) {
-            encoded = encoded.substring(1);
-        }
-        
-        if (encoded.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        
-        Map<String, String> data = new HashMap<>();
-        for (String param : FORM_DATA_SPLITTER.split(encoded)) {
-            String paramName = param.substring(0, param.indexOf('='));
-            String paramValue = param.substring(param.indexOf('=') + 1);
-            data.put(Escape.urlDecode(paramName, charset), Escape.urlDecode(paramValue, charset));
-        }
-        return data;
+        return PostData.parse(encoded, charset).getData();
     }
-    
+
+    /**
+     * Returns a BASE64-encoded version of the original string.
+     * @deprecated This method is obsolete since Java 8, use {@link java.util.Base64}
+     *             instead.
+     */
+    @Deprecated
     public static String base64Encode(String str, Charset charset) {
         // Redirects to Google Guava, but adds convenience for String -> String encoding.
         return BaseEncoding.base64Url().encode(str.getBytes(charset));
     }
-    
+
+    /**
+     * Converts a BASE64-encoded string back to the original.
+     * @deprecated This method is obsolete since Java 8, use {@link java.util.Base64}
+     *             instead.
+     */
+    @Deprecated
     public static String base64Decode(String str, Charset charset) {
         // Redirects to Google Guava, but adds convenience for String -> String decoding.
         return new String(BaseEncoding.base64Url().decode(str), charset);

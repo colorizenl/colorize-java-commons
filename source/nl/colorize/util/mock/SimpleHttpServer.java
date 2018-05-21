@@ -39,9 +39,7 @@ import nl.colorize.util.rest.RestRequest;
 /**
  * Simple implementation of an embedded HTTP server that can be used for testing.
  * When running, the server will open a socket on the requested port and will 
- * listen for requests. In addition to its primary use in unit tests, this class 
- * also contains a {@code main} method so that it can run as a standalone process 
- * during end-to-end tests and manual testing.
+ * listen for requests.
  * <p>
  * This server is purely intended for testing and lacks support for 
  * several features that can be expected from real HTTP servers beyond simple
@@ -63,16 +61,7 @@ public class SimpleHttpServer {
     private static final int READ_TIMEOUT = 5000;
     private static final long INTERVAL = 100;
     private static final Logger LOGGER = LogHelper.getLogger(SimpleHttpServer.class);
-    
-    public static void main(String[] args) {
-        if (args.length == 1) {
-            SimpleHttpServer server = new SimpleHttpServer();
-            server.start(Integer.parseInt(args[0]));
-        } else {
-            LOGGER.info("Usage: SimpleHttpServer <port>");
-        }
-    }
-    
+
     public SimpleHttpServer() {
         running = new AtomicBoolean(false);
         expected = new ConcurrentHashMap<>();

@@ -6,10 +6,8 @@
 
 package nl.colorize.util.rest;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.net.HttpHeaders;
-import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.http.HttpResponse;
 
 import javax.servlet.ServletException;
@@ -44,9 +42,8 @@ public abstract class RestServlet extends HttpServlet implements AuthorizationCh
      *         the same path and method, or when no services were registered.
      */
     @Override
-    public void init() throws ServletException {
-        requestDispatcher = new RestRequestDispatcher(this, getDefaultResponseHeaders(),
-                isParseRequestBodyEnabled());
+    public void init() {
+        requestDispatcher = new RestRequestDispatcher(this, getDefaultResponseHeaders());
         for (Object serviceObject : getServiceObjects()) {
             requestDispatcher.registerServices(serviceObject);
         }
@@ -61,12 +58,6 @@ public abstract class RestServlet extends HttpServlet implements AuthorizationCh
      * and are assumed to be stateless and thread-safe.
      */
     protected abstract List<?> getServiceObjects();
-    
-    @VisibleForTesting
-    protected void registerServiceMethod(Object subject, java.lang.reflect.Method service, Rest config) {
-        requestDispatcher.registerService(ReflectionUtils.toMethodCallback(
-                subject, service, RestRequest.class, HttpResponse.class), config);
-    }
 
     @Override
     protected final void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -141,9 +132,5 @@ public abstract class RestServlet extends HttpServlet implements AuthorizationCh
         headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Accept");
         return headers;
-    }
-    
-    protected boolean isParseRequestBodyEnabled() {
-        return true;
     }
 }

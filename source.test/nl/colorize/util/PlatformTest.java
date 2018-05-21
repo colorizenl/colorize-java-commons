@@ -28,16 +28,6 @@ public class PlatformTest {
             assertTrue(platformImplClass.getName().contains("LinuxPlatform"));
         }
     }
-    
-    @Test
-    public void testJavaVersion() {
-        Version version = Platform.getJavaVersion();
-        String versionString = System.getProperty("java.version");
-        assertEquals(versionString, version.toString());
-        assertEquals(1, version.getDigit(0));
-        assertEquals(8, version.getDigit(1));
-        assertEquals(0, version.getDigit(2));
-    }
 
     @Test
     public void testLineSeparator() {

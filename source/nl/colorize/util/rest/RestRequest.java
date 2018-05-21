@@ -28,12 +28,11 @@ import java.util.Map;
  * request is made with the path "/person/jim", the bound request will contain a
  * path parameter "name" with the value "jim".
  * <p>
- * If the request body has the {@code application/x-www-form-urlencoded} content
- * type, body parameters can be accessed using {@link #getRequiredParameter(String)}
- * and {@link #getOptionalParameter(String, String)}. The same applies to simple
- * JSON objects in JSON request bodies sent using the {@code application/json}
- * content type. Other request body types need to be parsed manually, the body can
- * be accessed using {@link #getBody()}. 
+ * The request body can be accessed using {@link #getBody()}. A convenience method
+ * ((@link {@link #getPostData()}}) is provided to parse the request body as POST
+ * data. Parsing other types of request body (e.g. XML, JSON) is not supported
+ * directly by this class, due to the large variation in standardization for such
+ * content types, and must be done manually.
  */
 public class RestRequest implements HttpMessageFragment {
     
@@ -43,7 +42,6 @@ public class RestRequest implements HttpMessageFragment {
 
     private List<String> pathComponents;
     private Map<String, String> pathParameters;
-    private Map<String, String> bodyParameters;
 
     protected RestRequest(HttpServletRequest request) {
         this(request, ServletUtils.getRequestPath(request), ServletUtils.getRequestBody(request));
@@ -56,14 +54,11 @@ public class RestRequest implements HttpMessageFragment {
 
         pathComponents = Collections.emptyList();
         pathParameters = Collections.emptyMap();
-        bodyParameters = Collections.emptyMap();
     }
     
-    protected void bind(List<String> pathComponents, Map<String, String> pathParameters,
-            Map<String, String> bodyParameters) {
+    protected void bindPath(List<String> pathComponents, Map<String, String> pathParameters) {
         this.pathComponents = ImmutableList.copyOf(pathComponents);
         this.pathParameters = ImmutableMap.copyOf(pathParameters);
-        this.bodyParameters = ImmutableMap.copyOf(bodyParameters);
     }
 
     public Method getMethod() {
@@ -123,30 +118,17 @@ public class RestRequest implements HttpMessageFragment {
     public String getBody() {
         return body;
     }
-    
+
     /**
-     * Returns the value of the request parameter with the specified name.
-     * @throws BadRequestException if no parameter with that name exists.
+     * Parses the request body as POST data, encoded using the
+     * {@code application/x-www-form-urlencoded} content type. This will return
+     * an empty {@link PostData} object if the request does not contain a body,
+     * or if it cannot be parsed as POST data. Note that this method does not
+     * require the correct Content-Type header. This behavior is intentionally
+     * lenient to support the widespread practice of incomplete HTTP requests.
      */
-    public String getRequiredParameter(String name) {
-        String value = bodyParameters.get(name);
-        if (value == null || value.isEmpty()) {
-            throw new BadRequestException("Missing parameter: " + name);
-        }
-        return value;
-    }
-    
-    /**
-     * Returns either the value of the request parameter with the specified
-     * name, or {@code defaultValue} if no parameter with that name exists.
-     */
-    public String getOptionalParameter(String name, String defaultValue) {
-        String value = bodyParameters.get(name);
-        if (value == null || value.isEmpty()) {
-            return defaultValue;
-        } else {
-            return value;
-        }
+    public PostData getPostData() {
+        return PostData.parse(getBody(), getCharset());
     }
 
     public HttpServletRequest getHttpRequest() {

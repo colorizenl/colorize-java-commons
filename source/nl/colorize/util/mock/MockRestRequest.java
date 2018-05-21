@@ -12,6 +12,7 @@ import nl.colorize.util.rest.RestRequest;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +23,7 @@ public class MockRestRequest extends RestRequest {
 
     private Method method;
     private Map<String, String> headers;
+    private String body;
 
     private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
 
@@ -30,8 +32,9 @@ public class MockRestRequest extends RestRequest {
 
         this.method = method;
         this.headers = new LinkedHashMap<>();
+        this.body = body;
 
-        bind(PATH_SPLITTER.splitToList(path), Collections.emptyMap(), Collections.emptyMap());
+        bindPath(PATH_SPLITTER.splitToList(path), Collections.emptyMap());
     }
 
     @Override
@@ -43,6 +46,10 @@ public class MockRestRequest extends RestRequest {
         headers.put(name, value);
     }
 
+    public void addHeaders(Map<String, String> headers) {
+        this.headers.putAll(headers);
+    }
+
     @Override
     public String getHeader(String name) {
         return headers.get(name);
@@ -51,5 +58,19 @@ public class MockRestRequest extends RestRequest {
     @Override
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+
+    @Override
+    public String getBody() {
+        return body;
+    }
+
+    @Override
+    public void bindPath(List<String> pathComponents, Map<String, String> pathParameters) {
+        super.bindPath(pathComponents, pathParameters);
     }
 }

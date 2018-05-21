@@ -23,6 +23,12 @@ public interface HttpMessageFragment {
     public static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
     public static final Logger LOGGER = LogHelper.getLogger(HttpMessageFragment.class);
 
+    /**
+     * Returns the value of the HTTP header with the specified name. Note that
+     * header names are not case sensitive. Returns {@code null} if no such
+     * header is present. If the header is present multiple times, the value
+     * of the first occurrence is returned.
+     */
     public String getHeader(String name);
 
     /**

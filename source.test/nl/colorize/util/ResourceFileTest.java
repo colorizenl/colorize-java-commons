@@ -70,7 +70,7 @@ public class ResourceFileTest {
         File localFile = new File("nl/colorize/util/TestResourceFile.class");
         assertFalse(localFile.exists());
         
-        ResourceFile resourceFile = new ResourceFile("nl/colorize/util/TestResourceFile.class");
+        ResourceFile resourceFile = new ResourceFile("nl/colorize/util/ResourceFileTest.class");
         assertNotNull(resourceFile.openStream());
     }
     

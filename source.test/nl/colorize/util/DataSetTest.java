@@ -193,7 +193,17 @@ public class DataSetTest {
         
         assertEquals(1f, dataSet.calculateAverage("a"), EPSILON);
     }
-    
+
+    @Test
+    public void testAverageWithMultipleIdenticalValues() {
+        DataSet<String, String> dataSet = new DataSet<>();
+        dataSet.add("first", "a", 1);
+        dataSet.add("second", "a", 2);
+        dataSet.add("third", "a", 2);
+
+        assertEquals(1.667f, dataSet.calculateAverage("a"), EPSILON);
+    }
+
     @Test
     public void testCalculateMedian() {
         DataSet<String, String> dataSet = new DataSet<>();

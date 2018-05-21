@@ -116,6 +116,6 @@ public class LogHelperTest {
     public void testGetStackTrace() {
         String stackTrace = LogHelper.getStackTrace(new Exception());
         assertTrue(stackTrace.startsWith("java.lang.Exception\n" +
-                "\tat nl.colorize.util.TestLogHelper.testGetStackTrace"));
+                "\tat nl.colorize.util.LogHelperTest.testGetStackTrace"));
     }
 }

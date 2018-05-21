@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import com.google.common.math.Stats;
 import com.google.common.primitives.Doubles;
 
 /**
@@ -237,7 +239,8 @@ public final class DataSet<R, C> implements Serializable {
     }
     
     private Map<R, Number> select(C column, Predicate<R> keyFilter, Predicate<Number> valueFilter) {
-        Map<R, Number> selection = new LinkedHashMap<R, Number>();
+        Map<R, Number> selection = new LinkedHashMap<>();
+
         for (DataPoint<R, C> dataPoint : dataPoints.values()) {
             if (keyFilter.test(dataPoint.rowKey)) {
                 Number value = dataPoint.data.get(column);
@@ -246,6 +249,7 @@ public final class DataSet<R, C> implements Serializable {
                 }
             }
         }
+
         return selection;
     }
     
@@ -316,31 +320,14 @@ public final class DataSet<R, C> implements Serializable {
         }
     }
 
-    /**
-     * Performs a formula on all values in the specified column.
-     */
-    public double calculate(C column, Formula formula) {
-        return calculate(column, noFilter(), formula);
-    }
-
-    /**
-     * Performs a formula on the values in the specified column that match the
-     * selection criteria.
-     */
-    public double calculate(C column, Predicate<R> filter, Formula formula) {
-        List<Double> selection = select(column, filter).values().stream()
-            .map(value -> value.doubleValue())
-            .collect(Collectors.toList());
-
-        return formula.calculate(selection);
-    }
-    
     public double calculateSum(C column) {
         return calculateSum(column, noFilter());
     }
     
     public double calculateSum(C column, Predicate<R> filter) {
-        return calculate(column, filter, Formula.SUM);
+        return select(column, filter).values().stream()
+            .mapToDouble(value -> value.doubleValue())
+            .sum();
     }
     
     public Tuple<R, Number> calculateMin(C column) {
@@ -353,13 +340,15 @@ public final class DataSet<R, C> implements Serializable {
         
         double min = Double.MAX_VALUE;
         R minKey = null;
+
         for (Map.Entry<R, Number> dataPoint : selection.entrySet()) {
             if (dataPoint.getValue().doubleValue() < min) {
                 min = dataPoint.getValue().doubleValue();
                 minKey = dataPoint.getKey();
             }
         }
-        return Tuple.of(minKey, (Number) min);
+
+        return Tuple.of(minKey, min);
     }
     
     private Tuple<R, Number> calculateMax(Map<R, Number> selection) {
@@ -367,13 +356,15 @@ public final class DataSet<R, C> implements Serializable {
         
         double max = Double.MIN_VALUE;
         R maxKey = null;
+
         for (Map.Entry<R, Number> dataPoint : selection.entrySet()) {
             if (dataPoint.getValue().doubleValue() > max) {
                 max = dataPoint.getValue().doubleValue();
                 maxKey = dataPoint.getKey();
             }
         }
-        return Tuple.of(maxKey, (Number) max);
+
+        return Tuple.of(maxKey, max);
     }
     
     public Tuple<R, Number> calculateMax(C column) {
@@ -391,7 +382,11 @@ public final class DataSet<R, C> implements Serializable {
     }
     
     public double calculateAverage(C column, Predicate<R> filter) {
-        return calculate(column, filter, Formula.AVERAGE);
+        Map<R, Number> selection = select(column, filter);
+        if (selection.isEmpty()) {
+            return 0.0;
+        }
+        return Stats.meanOf(selection.values());
     }
     
     public double calculateMedian(C column) {
@@ -399,7 +394,16 @@ public final class DataSet<R, C> implements Serializable {
     }
     
     public double calculateMedian(C column, Predicate<R> filter) {
-        return calculate(column, filter, Formula.MEDIAN);
+        List<Double> sortedValues = select(column, filter).values().stream()
+            .map(value -> value.doubleValue())
+            .sorted()
+            .collect(Collectors.toList());
+
+        if (sortedValues.isEmpty()) {
+            return 0.0;
+        }
+
+        return sortedValues.get(sortedValues.size() / 2);
     }
     
     public double calculateWeightedAverage(C column, C weightColumn) {
@@ -415,7 +419,18 @@ public final class DataSet<R, C> implements Serializable {
             weights.add(get(entry.getKey(), weightColumn).doubleValue());
         }
 
-        return Formula.WEIGHTED_AVERAGE.calculate(values, weights);
+        double weightedSum = 0.0;
+        double weightedCount = 0.0;
+        for (int i = 0; i < values.size(); i++) {
+            weightedSum += values.get(i) * weights.get(i);
+            weightedCount += weights.get(i);
+        }
+
+        if (weightedSum == 0.0) {
+            return 0.0;
+        }
+
+        return weightedSum / weightedCount;
     }
     
     public Map<R, Number> calculatePercentiles(C column) {

@@ -9,7 +9,6 @@ package nl.colorize.util.rest;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HttpHeaders;
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.HttpStatus;
 import nl.colorize.util.http.Method;
@@ -33,8 +32,7 @@ public class RestRequestDispatcherTest {
     
     @Test
     public void testExtractPathComponents() {
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
         
         assertEquals(ImmutableList.of(), requestDispatcher.extractPathComponents(""));
         assertEquals(ImmutableList.of(), requestDispatcher.extractPathComponents("/"));
@@ -51,7 +49,7 @@ public class RestRequestDispatcherTest {
     @Test
     public void testDefaultResponseHeaders() {
         RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                ImmutableMap.of("Test-1", "test1", "Test-2", "test2"), true);
+                ImmutableMap.of("Test-1", "test1", "Test-2", "test2"));
         registerService(requestDispatcher, Method.POST, "/", HttpStatus.OK, 
                 ImmutableMap.of("Test-2", "something else", "Test-3", "test3"), "");
         HttpResponse response = requestDispatcher.dispatch(createPostRequest("/", ""));
@@ -68,8 +66,7 @@ public class RestRequestDispatcherTest {
         MockRestRequest optionsRequest = new MockRestRequest(Method.OPTIONS, "/", "");
         MockRestRequest getRequest = new MockRestRequest(Method.GET, "/", "");
         
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
         registerService(requestDispatcher, Method.POST, "/", HttpStatus.OK, NO_HEADERS, "");
         HttpResponse optionsResponse = requestDispatcher.dispatch(optionsRequest);
         HttpResponse getResponse = requestDispatcher.dispatch(getRequest);
@@ -80,8 +77,7 @@ public class RestRequestDispatcherTest {
     
     @Test
     public void testRequireCorrectRequestMethod() {
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
         registerService(requestDispatcher, Method.GET, "/", HttpStatus.OK, NO_HEADERS, "");
         HttpResponse getResponse = requestDispatcher.dispatch(createRequest(Method.GET, "/", ""));
         HttpResponse postResponse = requestDispatcher.dispatch(createRequest(Method.POST, "/", ""));
@@ -92,57 +88,13 @@ public class RestRequestDispatcherTest {
     
     @Test
     public void testWildcardRequestMethod() {
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
         registerService(requestDispatcher, null, "/", HttpStatus.OK, NO_HEADERS, "");
         HttpResponse response = requestDispatcher.dispatch(createRequest(Method.POST, "/", ""));
         
         assertEquals(HttpStatus.OK, response.getStatus());
     }
-    
-    @Test
-    public void testParseBodyAsPostData() {
-        MockRestRequest request = createRequest(Method.POST, "/", "a=2&b=3%244");
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
-        requestDispatcher.bindRequest(request, createEmptyConfig());
-        
-        assertEquals("2", request.getRequiredParameter("a"));
-        assertEquals("3$4", request.getRequiredParameter("b"));
-    }
-    
-    @Test
-    public void testParseBodyJsonAsPostData() {
-        MockRestRequest request = new MockRestRequest(Method.POST, "/", "{\"a\":2,\"b\":\"3$4\"}");
-        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
-        requestDispatcher.bindRequest(request, createEmptyConfig());
-        
-        assertEquals("2", request.getRequiredParameter("a"));
-        assertEquals("3$4", request.getRequiredParameter("b"));
-    }
-    
-    @Test(expected=BadRequestException.class)
-    public void testCannotParseJsonNonObjectAsPostData() {
-        MockRestRequest request = new MockRestRequest(Method.POST, "/", "[\"a\", \"b\"]");
-        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC,
-                NO_HEADERS, true);
-        requestDispatcher.bindRequest(request, createEmptyConfig());
-        request.getRequiredParameter("a");
-    }
-    
-    @Test
-    public void testDisableParseRequestBody() {
-        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, 
-                NO_HEADERS, false);
-        MockRestRequest request = new MockRestRequest(Method.POST, "/", "a=2");
-        requestDispatcher.bindRequest(request, createEmptyConfig());
-        
-        assertEquals("", request.getOptionalParameter("a", ""));
-    }
-    
+
     private MockRestRequest createRequest(Method method, String path, String body) {
         return new MockRestRequest(method, path, body);
     }
