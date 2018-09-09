@@ -73,6 +73,7 @@ public abstract class Platform {
         .put("10.11", "El Capitan")
         .put("10.12", "Sierra")
         .put("10.13", "High Sierra")
+        .put("10.14", "Mojave")
         .build();
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.7.0");
@@ -589,14 +590,13 @@ public abstract class Platform {
             
             return cachedContext;
         }
-            
-        @SuppressWarnings("unused")
+
         public Version getAppVersion() {
             Object context = getContext();
             try {
                 Object packageName = context.getClass().getMethod("getPackageName").invoke(context);
                 Object packageManager = context.getClass().getMethod("getPackageManager").invoke(context);
-                Object packageInfo = packageManager.getClass().getMethod("getPackageInfo", 
+                Object packageInfo = packageManager.getClass().getMethod("getPackageInfo",
                     String.class, int.class).invoke(packageManager, packageName, 0);
                 Object appVersion = packageInfo.getClass().getField("versionName").get(packageInfo);
                 return Version.parse(appVersion.toString());

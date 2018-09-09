@@ -9,6 +9,7 @@ package nl.colorize.util.rest;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.net.HttpHeaders;
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.HttpStatus;
 import nl.colorize.util.http.Method;
@@ -93,6 +94,28 @@ public class RestRequestDispatcherTest {
         HttpResponse response = requestDispatcher.dispatch(createRequest(Method.POST, "/", ""));
         
         assertEquals(HttpStatus.OK, response.getStatus());
+    }
+
+    @Test
+    public void testSendPostData() {
+        MockRestRequest request = createPostRequest("/test", "a=2&b=3");
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
+        requestDispatcher.bindRequest(request, createEmptyConfig());
+
+        assertEquals("2", request.getPostData().getRequiredParameter("a"));
+        assertEquals("3", request.getPostData().getRequiredParameter("b"));
+    }
+
+    @Test
+    public void testConsiderJsonObjectAsPostData() {
+        MockRestRequest request = createPostRequest("/test", "{a:2,b:\"3\", c=[3,4]}");
+        request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        RestRequestDispatcher requestDispatcher = new RestRequestDispatcher(AuthorizationCheck.PUBLIC, NO_HEADERS);
+        requestDispatcher.bindRequest(request, createEmptyConfig());
+
+        assertEquals("2", request.getPostData().getRequiredParameter("a"));
+        assertEquals("3", request.getPostData().getRequiredParameter("b"));
+        assertEquals("[3,4]", request.getPostData().getRequiredParameter("c"));
     }
 
     private MockRestRequest createRequest(Method method, String path, String body) {

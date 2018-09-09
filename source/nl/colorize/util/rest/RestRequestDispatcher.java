@@ -9,6 +9,10 @@ package nl.colorize.util.rest;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.TextUtils;
@@ -142,6 +146,56 @@ public class RestRequestDispatcher {
         Map<String, String> pathParameters = parsePathParameters(request, config);
 
         request.bindPath(pathComponents, pathParameters);
+        request.bindPostData(parsePostData(request));
+    }
+
+    /**
+     * Attempts to parse the request body as POST data encoded using the
+     * {@code application/x-www-form-urlencoded} content type. This will return
+     * an empty {@link PostData} object if the request does not contain a body,
+     * or if the body cannot be parsed as POST data. Note that this method does
+     * not require the correct Content-Type header. This behavior is intentionally
+     * lenient to support the widespread practice of incomplete HTTP requests.
+     * <p>
+     * This method also provides limited support to treat a JSON request body as
+     * POST data. If the request's content type is "application/json" and the
+     * request body is a JSON object, the keys and values of the JSON object will
+     * be used as POST data names and values. Other types of JSON request body
+     * are not supported.
+     */
+    private PostData parsePostData(RestRequest request) {
+        String body = request.getBody();
+        if (body == null || body.isEmpty()) {
+            return PostData.empty();
+        }
+
+        String contentType = request.getHeader(HttpHeaders.CONTENT_TYPE);
+        if (contentType != null && contentType.startsWith("application/json")) {
+            return PostData.create(parseJsonRequestBody(body));
+        } else {
+            return PostData.parse(body, request.getCharset());
+        }
+    }
+
+    private Map<String,String> parseJsonRequestBody(String body) {
+        JsonParser jsonParser = new JsonParser();
+        JsonElement json = jsonParser.parse(body);
+
+        if (!(json instanceof JsonObject)) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, String> data = new HashMap<>();
+
+        for (Map.Entry<String, JsonElement> entry : ((JsonObject) json).entrySet()) {
+            if (entry.getValue() instanceof JsonPrimitive) {
+                data.put(entry.getKey(), entry.getValue().getAsString());
+            } else {
+                data.put(entry.getKey(), entry.getValue().toString());
+            }
+        }
+
+        return data;
     }
 
     private HttpResponse callService(RestRequest boundRequest, MappedService mappedService) {
@@ -192,7 +246,7 @@ public class RestRequestDispatcher {
     
     private boolean isCausedByInvalidParameters(Exception thrown) {
         Exception cause = thrown;
-        while (cause != null && cause instanceof Exception) {
+        while (cause != null && cause.getCause() instanceof Exception) {
             cause = (Exception) cause.getCause();
             if (cause instanceof BadRequestException) {
                 return true;

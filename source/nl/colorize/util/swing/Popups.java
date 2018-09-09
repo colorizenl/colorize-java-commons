@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 
 import com.google.common.collect.ImmutableList;
 
+import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.LogHelper;
 
 /**
@@ -38,8 +39,9 @@ import nl.colorize.util.LogHelper;
 public final class Popups {
     
     public static final int MESSAGE_WIDTH = 350;
-    private static final String DEFAULT_OK = "OK";
-    private static final String DEFAULT_CANCEL = "Cancel";
+    private static final DynamicResourceBundle BUNDLE = SwingUtils.getCustomComponentsBundle();
+    private static final String DEFAULT_OK = BUNDLE.getString("Popups.ok");
+    private static final String DEFAULT_CANCEL = BUNDLE.getString("Popups.cancel");
     private static final Logger LOGGER = LogHelper.getLogger(Popups.class);
 
     private Popups() {

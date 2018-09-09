@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import nl.colorize.util.swing.SwingUtils;
 
 /**
  * Miscellaneous utility functions for creating formatted strings out of data.
@@ -41,7 +42,7 @@ public final class Formatting {
     private static final Pattern WORD_SEPARATOR_PATTERN = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR_PATTERN).omitEmptyStrings();
 
-    private static final DynamicResourceBundle DURATIONS_BUNDLE = initDurationsBundle();
+    private static final DynamicResourceBundle DURATIONS_BUNDLE = SwingUtils.getCustomComponentsBundle();
     private static final long MILLIS_IN_HOUR = 3600000L;
     private static final long MILLIS_IN_DAY = 24L * MILLIS_IN_HOUR;
     // Number of milliseconds in each time unit. Note that these values are an
@@ -60,20 +61,7 @@ public final class Formatting {
 
     private Formatting() {
     }
-    
-    private static DynamicResourceBundle initDurationsBundle() {
-        Properties texts = new Properties();
-        texts.setProperty("SECOND", "seconds ago");
-        texts.setProperty("MINUTE", "{0} minutes ago");
-        texts.setProperty("HOUR", "{0} hours ago");
-        texts.setProperty("DAY", "{0} days ago");
-        texts.setProperty("WEEK", "{0} weeks ago");
-        texts.setProperty("MONTH", "{0} months ago");
-        texts.setProperty("YEAR", "{0} years ago");
-        
-        return new DynamicResourceBundle(texts);
-    }
-    
+
     /**
      * Formats a number with a set amount of decimal places.
      * @throws IllegalArgumentException for less than one decimal places.

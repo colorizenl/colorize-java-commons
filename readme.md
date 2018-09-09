@@ -33,13 +33,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2018.5</version>
+        <version>2018.6</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile 'nl.colorize:colorize-java-commons:2018.5'
+        compile 'nl.colorize:colorize-java-commons:2018.6'
     }
 
 Build instructions

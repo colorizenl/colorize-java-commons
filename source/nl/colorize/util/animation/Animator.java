@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * <p>
  * Animations receive frame updates through the {@link Animatable} interface.
  * All animations are played using the same framerate. In practice, the actual
- * framerate may deviate from the target framerate, depending on the amount of
+ * framerate may deviate from the targeted framerate, depending on the amount of
  * work that is performed during frame updates and the performance of the
  * underlying platform. For this reason, all animations receive the exact delta
  * time since the last frame updates, so that animations can look consistent
@@ -32,18 +32,14 @@ public abstract class Animator {
 
     private List<Animatable> currentlyPlaying;
     private Multimap<Animatable, MulticastAnimationObserver> observers;
-    private int framerate;
-    
+
     /**
      * Creates a new animator, but will not start playing animations until
      * {@link #start()} is called.
      */
-    public Animator(int framerate) {
-        Preconditions.checkArgument(framerate >= 1, "Invalid framerate: " + framerate);
-
+    public Animator() {
         this.currentlyPlaying = new ArrayList<>();
         this.observers = ArrayListMultimap.create();
-        this.framerate = framerate;
     }
     
     /**
@@ -57,14 +53,14 @@ public abstract class Animator {
      * be cancelled.
      */
     public abstract void stop();
-    
+
     /**
      * Performs a frame update for all animations that are currently playing.
      * Subclasses should call this method once per frame while the animator
      * is running.
      * @param deltaTime Time since the last frame upate, in seconds.
      */
-    protected final void performFrameUpdate(float deltaTime) {
+    protected void performFrameUpdate(float deltaTime) {
         List<Animatable> snapshot = ImmutableList.copyOf(currentlyPlaying);
 
         for (Animatable anim : snapshot) {
@@ -136,14 +132,6 @@ public abstract class Animator {
 
     public List<AnimationObserver> getObservers(Animatable anim) {
         return ImmutableList.copyOf(observers.get(anim));
-    }
-
-    public int getFramerate() {
-        return framerate;
-    }
-
-    public float getFrameTime() {
-        return 1f / framerate;
     }
 
     /**

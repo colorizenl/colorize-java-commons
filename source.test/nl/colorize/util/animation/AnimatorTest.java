@@ -137,15 +137,38 @@ public class AnimatorTest {
         assertEquals(1, received.size());
     }
 
+    @Test
+    public void testRemoveAnimationDuringPlayback() {
+        Animator animator = new ManualAnimator();
+
+        Animatable anim1 = deltaTime -> {};
+        Animatable anim2 = deltaTime -> animator.cancel(anim1);
+
+        animator.play(anim1);
+        animator.play(anim2);
+        animator.performFrameUpdate(1f);
+
+        assertEquals(1, animator.getCurrentlyPlaying().size());
+        assertEquals(anim2, animator.getCurrentlyPlaying().get(0));
+    }
+
+    @Test
+    public void testTimedAnimation() {
+        Animator animator = new ManualAnimator();
+        animator.start();
+        animator.play(TimedAnimation.from(deltaTime -> {}, 2f));
+        animator.performFrameUpdate(1f);
+        animator.performFrameUpdate(1f);
+        animator.performFrameUpdate(1f);
+
+        assertEquals(0, animator.getCurrentlyPlaying().size());
+    }
+
     /**
      * Implementation of an {@code Animator} for testing purposes.
      */
     private static class ManualAnimator extends Animator {
 
-        public ManualAnimator() {
-            super(1);
-        }
-        
         @Override
         public void start() {
         }

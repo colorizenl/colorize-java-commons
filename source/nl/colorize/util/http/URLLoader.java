@@ -396,8 +396,7 @@ public class URLLoader {
         
         HttpStatus status = readHttpStatus(connection);
         if (status.isClientError() || status.isServerError()) {
-            throw new IOException(String.format("HTTP status %d for URL %s", 
-                    status.getCode(), toString()));
+            throw new IOException(String.format("HTTP status %d for URL %s", status.getCode(), toString()));
         } else if (status.isRedirection()) {
             return followRedirect(status, connection);
         } else {
@@ -428,11 +427,7 @@ public class URLLoader {
             sslContext.init(null, new X509TrustManager[] { getNoOpTrustMaster() }, new SecureRandom());
             
             connection.setSSLSocketFactory(sslContext.getSocketFactory());
-            connection.setHostnameVerifier(new HostnameVerifier() {
-                public boolean verify(String host, SSLSession session) {
-                    return true;
-                }
-            });
+            connection.setHostnameVerifier((host, session) -> true);
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Cannot disable HTTPS certificate verification", e);
         }
@@ -440,10 +435,10 @@ public class URLLoader {
 
     private X509TrustManager getNoOpTrustMaster() {
         return new X509TrustManager() {
-            public void checkClientTrusted(X509Certificate[] chain, String auth) throws CertificateException {
+            public void checkClientTrusted(X509Certificate[] chain, String auth) {
             }
 
-            public void checkServerTrusted(X509Certificate[] chain, String auth) throws CertificateException {
+            public void checkServerTrusted(X509Certificate[] chain, String auth) {
             }
 
             public X509Certificate[] getAcceptedIssuers() {

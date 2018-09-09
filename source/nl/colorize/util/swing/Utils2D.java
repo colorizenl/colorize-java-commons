@@ -6,6 +6,16 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
+import com.google.common.io.Closeables;
+import nl.colorize.util.ResourceFile;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Composite;
@@ -31,18 +41,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
-
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
-
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Splitter;
-import com.google.common.io.Closeables;
-
-import nl.colorize.util.ResourceFile;
 
 /**
  * Utility methods for Java 2D, mainly focused on image manipulation. 
@@ -81,10 +79,13 @@ public final class Utils2D {
     /**
      * Loads an image from a resource file. The image can be of any type supported
      * by ImageIO.
-     * @throws IOException if an I/O error occurs while reading the file.
      */
-    public static BufferedImage loadImage(ResourceFile file) throws IOException {
-        return loadImage(file.openStream());
+    public static BufferedImage loadImage(ResourceFile file) {
+        try {
+            return loadImage(file.openStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot load image from resource file", e);
+        }
     }
     
     /**

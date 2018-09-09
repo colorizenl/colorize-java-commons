@@ -29,6 +29,7 @@ import javax.swing.JTextField;
 
 import com.google.common.base.Suppliers;
 
+import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.swing.AccordionPanel;
@@ -37,6 +38,7 @@ import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.FormPanel;
 import nl.colorize.util.swing.MultiLabel;
 import nl.colorize.util.swing.Popups;
+import nl.colorize.util.swing.PropertyEditor;
 import nl.colorize.util.swing.Table;
 import nl.colorize.util.swing.SwingAnimator;
 import nl.colorize.util.swing.SwingUtils;
@@ -67,6 +69,7 @@ public class CustomComponentsTest {
         tabs.addTab("SimpleTable", createSimpleTableTab());
         tabs.addTab("Dialogs", createDialogsTab());
         tabs.addTab("Accordion", createAccordionTab());
+        tabs.addTab("PropertyEditor", createPropertyEditorTab());
         tabs.addTab("Animation", createAnimationTab());
         tabs.setSelectedIndex(1);
         
@@ -75,7 +78,7 @@ public class CustomComponentsTest {
         contentPanel.add(tabs, BorderLayout.CENTER);
         
         frame = new JFrame("Test Custom Components");
-        frame.setSize(700, 500);
+        frame.setSize(900, 500);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(0, 20));
@@ -183,6 +186,16 @@ public class CustomComponentsTest {
         }
         return accordion;
     }
+
+    private JPanel createPropertyEditorTab() {
+        PropertyEditor propertyEditor = new PropertyEditor();
+        propertyEditor.setProperties(ImmutableMap.of("a", "1", "b", "2", "c", "3"));
+        SwingUtils.setPreferredHeight(propertyEditor, 200);
+
+        JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        tab.add(propertyEditor);
+        return tab;
+    }
     
     private JPanel createAnimationTab() {
         JPanel target = new JPanel();
@@ -212,6 +225,8 @@ public class CustomComponentsTest {
                 "This is a message that spans multiple  lines and word wraps across multiple lines.",
                 Arrays.asList("One", "Two"));
         LOGGER.info("Selected button: " + button);
+
+        Popups.message(frame, "Simple message with default button.");
     }
     
     public void showFileDialogs() {

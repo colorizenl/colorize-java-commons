@@ -31,6 +31,7 @@ import nl.colorize.util.animation.Timeline;
 public class SwingAnimator extends Animator {
 
     private Timer swingTimer;
+    private int framerate;
 
     public static final int DEFAULT_FRAMERATE = 30;
 
@@ -38,7 +39,8 @@ public class SwingAnimator extends Animator {
      * Creates a {@code SwingAnimator} that will operate at the specified framerate.
      */
     public SwingAnimator(int framerate) {
-        super(framerate);
+        Preconditions.checkArgument(framerate >= 1, "Invalid framerate: " + framerate);
+        this.framerate = framerate;
     }
     
     /**
@@ -51,7 +53,7 @@ public class SwingAnimator extends Animator {
 
     @Override
     public void start() {
-        final float frameTimeInSeconds = getFrameTime();
+        final float frameTimeInSeconds = 1f / framerate;
         final int frameTimeInMilliseconds = Math.round(frameTimeInSeconds * 1000);
 
         swingTimer = new Timer(frameTimeInMilliseconds, e -> performFrameUpdate(frameTimeInSeconds));

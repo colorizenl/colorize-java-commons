@@ -8,6 +8,7 @@ package nl.colorize.util.mock;
 
 import com.google.common.base.Splitter;
 import nl.colorize.util.http.Method;
+import nl.colorize.util.rest.PostData;
 import nl.colorize.util.rest.RestRequest;
 
 import java.util.Collections;
@@ -72,5 +73,10 @@ public class MockRestRequest extends RestRequest {
     @Override
     public void bindPath(List<String> pathComponents, Map<String, String> pathParameters) {
         super.bindPath(pathComponents, pathParameters);
+    }
+
+    @Override
+    public void bindPostData(PostData postData) {
+        super.bindPostData(postData);
     }
 }

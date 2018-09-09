@@ -42,6 +42,7 @@ public class RestRequest implements HttpMessageFragment {
 
     private List<String> pathComponents;
     private Map<String, String> pathParameters;
+    private PostData postData;
 
     protected RestRequest(HttpServletRequest request) {
         this(request, ServletUtils.getRequestPath(request), ServletUtils.getRequestBody(request));
@@ -54,11 +55,16 @@ public class RestRequest implements HttpMessageFragment {
 
         pathComponents = Collections.emptyList();
         pathParameters = Collections.emptyMap();
+        postData = PostData.empty();
     }
     
     protected void bindPath(List<String> pathComponents, Map<String, String> pathParameters) {
         this.pathComponents = ImmutableList.copyOf(pathComponents);
         this.pathParameters = ImmutableMap.copyOf(pathParameters);
+    }
+
+    protected void bindPostData(PostData postData) {
+        this.postData = postData;
     }
 
     public Method getMethod() {
@@ -119,16 +125,8 @@ public class RestRequest implements HttpMessageFragment {
         return body;
     }
 
-    /**
-     * Parses the request body as POST data, encoded using the
-     * {@code application/x-www-form-urlencoded} content type. This will return
-     * an empty {@link PostData} object if the request does not contain a body,
-     * or if it cannot be parsed as POST data. Note that this method does not
-     * require the correct Content-Type header. This behavior is intentionally
-     * lenient to support the widespread practice of incomplete HTTP requests.
-     */
     public PostData getPostData() {
-        return PostData.parse(getBody(), getCharset());
+        return postData;
     }
 
     public HttpServletRequest getHttpRequest() {

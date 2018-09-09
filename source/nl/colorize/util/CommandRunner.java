@@ -385,12 +385,10 @@ public class CommandRunner {
         return isUnixLikePlatform();
     }
     
-    @SuppressWarnings("deprecation")
     private boolean isSandboxedEnvironment() {
         return Platform.isGoogleAppEngine() || 
                 Platform.isMacAppSandboxEnabled() ||
-                Platform.isAndroid() || 
-                Platform.isWebstartEnabled();
+                Platform.isAndroid();
     }
     
     private boolean isUnixLikePlatform() {

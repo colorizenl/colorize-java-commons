@@ -56,7 +56,7 @@ public class ComboFileDialog {
         setStartDirectory(start);
         filter = null;
         
-        bundle = createDefaultResourceBundle();
+        bundle = SwingUtils.getCustomComponentsBundle();
     }
     
     /**
@@ -66,18 +66,7 @@ public class ComboFileDialog {
     public ComboFileDialog() {
         this(null, new File(""));
     }
-    
-    private DynamicResourceBundle createDefaultResourceBundle() {
-        Properties defaults = LoadUtils.toProperties(
-                "defaultOpenTitle", "Open File...",
-                "defaultSaveTitle", "Save File...",
-                "noName", "No file name was entered.",
-                "illegalChars", "The file name contains characters that are not allowed.",
-                "invalidExt", "Please select a file with one of the following extensions: {0}.",
-                "overwrite", "The file '{0}' already exists.\nDo you want to overwrite it?");
-        return new DynamicResourceBundle(defaults);
-    }
-    
+
     /**
      * Returns whether file dialogs are created using Swing (if this returns true)
      * or AWT (if this returns false). 
@@ -99,7 +88,7 @@ public class ComboFileDialog {
         }
         
         if (!hasValidExtension(selected)) {
-            Popups.message(parent, bundle.getString("invalidExt",
+            Popups.message(parent, bundle.getString("ComboFileDialog.invalidExt",
                     filter.extensions.toString().replaceAll("\\[(.+)\\]", "$1")));
             return showOpenDialog(parent);
         }
@@ -142,7 +131,7 @@ public class ComboFileDialog {
         }
         
         if (!hasValidFileName(selected)) {
-            Popups.message(null, bundle.getString("illegalChars"));
+            Popups.message(null, bundle.getString("ComboFileDialog.illegalChars"));
             return showSaveDialog(parent, extension);
         }
         
@@ -179,7 +168,7 @@ public class ComboFileDialog {
     }
     
     private File showOverrideFileDialog(JFrame parent, File selected) {
-        if (Popups.confirmMessage(parent, bundle.getString("overwrite", selected.getName()))) {
+        if (Popups.confirmMessage(parent, bundle.getString("ComboFileDialog.overwrite", selected.getName()))) {
             return selected;
         } else {
             return null;
@@ -211,9 +200,9 @@ public class ComboFileDialog {
             return title;
         } else {
             if (saveMode) {
-                return bundle.getString("defaultSaveTitle");
+                return bundle.getString("ComboFileDialog.defaultSaveTitle");
             } else {
-                return bundle.getString("defaultOpenTitle");
+                return bundle.getString("ComboFileDialog.defaultOpenTitle");
             }
         }
     }

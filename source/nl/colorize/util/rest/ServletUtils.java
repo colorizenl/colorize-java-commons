@@ -25,7 +25,6 @@ import com.google.common.io.CharStreams;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 
-import com.sun.deploy.net.HttpRequest;
 import nl.colorize.util.Escape;
 import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.Method;

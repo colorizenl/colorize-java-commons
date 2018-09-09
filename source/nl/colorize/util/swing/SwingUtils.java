@@ -6,6 +6,36 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Supplier;
+import com.google.common.io.Closeables;
+import nl.colorize.util.DynamicResourceBundle;
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.Platform;
+import nl.colorize.util.ResourceFile;
+
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.JTree;
+import javax.swing.KeyStroke;
+import javax.swing.ListCellRenderer;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.border.Border;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeCellRenderer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -36,39 +66,13 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-
-import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JList;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTree;
-import javax.swing.KeyStroke;
-import javax.swing.ListCellRenderer;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.border.Border;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeCellRenderer;
-
-import com.google.common.base.Supplier;
-import com.google.common.io.Closeables;
-
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.Platform;
-import nl.colorize.util.ResourceFile;
+import java.util.stream.Collectors;
 
 /**
  * Miscelleaneous utility and convenience methods for working with Swing. 
@@ -76,7 +80,12 @@ import nl.colorize.util.ResourceFile;
 public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
-    
+
+    private static final ResourceFile CUSTOM_COMPONENTS_BUNDLE_FILE =
+        new ResourceFile("custom-swing-components.properties");
+    private static final DynamicResourceBundle CUSTOM_COMPONENTS_BUNDLE =
+        new DynamicResourceBundle(CUSTOM_COMPONENTS_BUNDLE_FILE, Charsets.UTF_8);
+
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);
     private static final Color YOSEMITE_ROW_COLOR = new Color(245, 245, 245);
@@ -129,6 +138,15 @@ public final class SwingUtils {
         } catch (Exception e) {
             throw new RuntimeException("Cannot initialize Swing look-and-feel", e);
         }
+    }
+
+    /**
+     * Returns the resource bundle containing the user interface text for all
+     * custom Swing components provided by this library. This bundle can be
+     * used to change and/or translate the text.
+     */
+    public static DynamicResourceBundle getCustomComponentsBundle() {
+        return CUSTOM_COMPONENTS_BUNDLE;
     }
 
     /**
@@ -200,11 +218,7 @@ public final class SwingUtils {
      * @throws RuntimeException if no icon could be created from the file's contents.
      */
     public static ImageIcon loadIcon(ResourceFile source) {
-        try {
-            return new ImageIcon(Utils2D.loadImage(source));
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create icon from file " + source);
-        }
+        return new ImageIcon(Utils2D.loadImage(source));
     }
     
     /**
@@ -213,11 +227,7 @@ public final class SwingUtils {
      * @throws RuntimeException if no icon could be created from the file's contents.
      */
     public static Image loadIconImage(ResourceFile source) {
-        try {
-            return Utils2D.loadImage(source);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create icon from file " + source);
-        }
+        return Utils2D.loadImage(source);
     }
     
     /**
@@ -699,6 +709,41 @@ public final class SwingUtils {
         return outlineButton;
     }
 
+    public static <T> JComboBox<String> createComboBox(Collection<T> items, T selected) {
+        String[] names = items.stream()
+            .map(item -> item.toString())
+            .sorted()
+            .collect(Collectors.toList())
+            .toArray(new String[0]);
+
+        JComboBox<String> field = new JComboBox<>(names);
+
+        if (selected != null) {
+            field.setSelectedItem(selected.toString());
+        }
+
+        return field;
+    }
+
+    /**
+     * Returns a text field that always returns a valid number when its
+     * {@code getText()} method is called. If the value that was actually
+     * entered is not a number it will return 0 instead.
+     */
+    public static JTextField createNumericTextField(int initialValue) {
+        return new JTextField(String.valueOf(initialValue)) {
+            @Override
+            public String getText() {
+                String text = super.getText();
+                try {
+                    return String.valueOf(Integer.parseInt(text));
+                } catch (NumberFormatException e) {
+                    return "0";
+                }
+            }
+        };
+    }
+
     static Color getStripedRowColor(int row) {
         if (row % 2 == 0) {
             return STANDARD_ROW_COLOR;
@@ -731,7 +776,7 @@ public final class SwingUtils {
     public static <E> JList<E> createStripedList(List<E> elements) {
         return new StripedList<E>(elements); 
     }
-    
+
     private static class StripedList<E> extends JList<E> implements ListCellRenderer<E> {
         
         private ListCellRenderer<? super E> renderer;

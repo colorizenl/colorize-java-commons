@@ -117,4 +117,8 @@ public class PostData {
 
         return new PostData(data);
     }
+
+    public static PostData empty() {
+        return new PostData(Collections.emptyMap());
+    }
 }
