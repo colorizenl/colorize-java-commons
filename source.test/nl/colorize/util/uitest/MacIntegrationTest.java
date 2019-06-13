@@ -1,33 +1,33 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.uitest;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Graphics2D;
-import java.awt.PopupMenu;
-import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
-import java.io.File;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
+import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.swing.ApplicationMenuListener;
 import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.MacIntegration;
 import nl.colorize.util.swing.SwingUtils;
 import nl.colorize.util.swing.Utils2D;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Graphics2D;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.logging.Logger;
 
 /**
  * Graphical test for the {@code MacIntegration} class, which provides access to
@@ -39,6 +39,8 @@ public class MacIntegrationTest implements ApplicationMenuListener {
     private JFrame window;
     private JLabel message;
     private JLabel iconLabel;
+
+    private static final Logger LOGGER = LogHelper.getLogger(MacIntegrationTest.class);
 
     public static void main(String[] args) {
         if (!Platform.isMac()) {
@@ -65,7 +67,6 @@ public class MacIntegrationTest implements ApplicationMenuListener {
         contentPanel.add(createButton("Change dock icon", e -> setDockIcon()));
         contentPanel.add(createButton("Change dock badge", e -> setDockBadge()));
         contentPanel.add(createButton("Bounce dock icon", e -> bounceDockIcon()));
-        contentPanel.add(createButton("Toggle fullscreen", e -> toggleFullscreen()));
         contentPanel.add(createButton("Show notification",  e -> showNotification()));
         contentPanel.add(createButton("Open browser", e -> openURL()));
         contentPanel.add(createButton("Open file",  e -> openFile()));
@@ -79,17 +80,8 @@ public class MacIntegrationTest implements ApplicationMenuListener {
         window.setLayout(new BorderLayout());
         window.add(contentPanel, BorderLayout.CENTER);
         MacIntegration.setApplicationMenuListener(this, true);
-        MacIntegration.setFullscreenEnabled(window, true);
         window.setVisible(true);
-        
-        PopupMenu menu = new PopupMenu();
-        menu.add("Item 1");
-        menu.add("Item 2");
-        menu.addSeparator();
-        menu.add("Item 3");
-        window.add(menu);
-        MacIntegration.setDockMenu(menu);
-        
+
         return window;
     }
     
@@ -99,15 +91,18 @@ public class MacIntegrationTest implements ApplicationMenuListener {
         SwingUtils.setPreferredWidth(button, 200);
         return button;
     }
-    
+
+    @Override
     public void onAbout() { 
         message.setText("About"); 
     }
-    
-    public void onQuit() { 
-        message.setText("Quit");
+
+    @Override
+    public void onQuit() {
+        LOGGER.info("Application quit requested");
     }
-    
+
+    @Override
     public void onPreferences() {
         message.setText("Preferences");
     }
@@ -135,11 +130,7 @@ public class MacIntegrationTest implements ApplicationMenuListener {
             throw new AssertionError(e);
         }
     }
-    
-    private void toggleFullscreen() {
-        MacIntegration.toggleFullscreen(window);
-    }
-    
+
     private void showNotification() {
         MacIntegration.showNotification("Test", "This is a notification");
     }

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -377,6 +377,14 @@ public final class Utils2D {
         }
         
         return currentY - startY;
+    }
+
+    /**
+     * Convenience method for drawing a circle from its center, rather than from
+     * its top left corner.
+     */
+    public static void drawCircle(Graphics2D g2, int centerX, int centerY, int radius) {
+        g2.fillOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
     }
     
     /**

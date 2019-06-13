@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -74,6 +74,7 @@ public abstract class Platform {
         .put("10.12", "Sierra")
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
+        .put("10.15", "Catalina")
         .build();
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.7.0");
@@ -257,16 +258,14 @@ public abstract class Platform {
      */
     public static boolean isMacAppSandboxEnabled() {
         //TOOD Developer ID applications can also use the sandbox, although
-        //     this is not mandatory. AppBundler sets the SandboxEnabled
-        //     system property, but this does not appear to work for Developer
-        //     ID applications.
+        //     this is not mandatory.
         return isMacAppStore();
     }
     
     /**
      * Returns true if the application was downloaded from the Mac App Store.
      * Note that App Store applications are always sandboxed (see
-     * {@link isMacAppSandboxEnabled()} for more information).
+     * {@link #isMacAppSandboxEnabled()} for more information).
      */
     public static boolean isMacAppStore() {
         String sandboxContainer = System.getenv("APP_SANDBOX_CONTAINER_ID");

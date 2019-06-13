@@ -1,16 +1,21 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import nl.colorize.util.CommandRunner;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Platform;
+import nl.colorize.util.Version;
+
+import javax.swing.UIDefaults;
+import javax.swing.UIManager;
 import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.Image;
-import java.awt.PopupMenu;
-import java.awt.Window;
 import java.io.File;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -21,15 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import javax.swing.JFrame;
-import javax.swing.UIDefaults;
-import javax.swing.UIManager;
-
-import nl.colorize.util.CommandRunner;
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.Platform;
-import nl.colorize.util.Version;
 
 /**
  * Utility class for making macOS specific behavior available to Swing applications.
@@ -53,11 +49,9 @@ public final class MacIntegration {
     
     protected static final Version MACOS_LION = Version.parse("10.7");
     protected static final Version MACOS_MOUNTAIN_LION = Version.parse("10.8");
-    protected static final Version MACOS_MAVERICKS = Version.parse("10.9");
     protected static final Version MACOS_YOSEMITE = Version.parse("10.10");
     protected static final Version MACOS_EL_CAPITAN = Version.parse("10.11");
-    protected static final Version MACOS_SIERRA = Version.parse("10.12");
-        
+
     // Apple-specific system properties
     protected static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
     
@@ -76,9 +70,13 @@ public final class MacIntegration {
     public static final String AQUA_VALUE_MIDDLE = "middle";
     public static final String AQUA_VALUE_LAST = "last";
 
+    // Note: the logger should go first, in case something goes wrong in one
+    // of the initialisers that rely on reflection.
+    private static final Logger LOGGER = LogHelper.getLogger(MacIntegration.class);
+
     private static final AppleJavaExtensionsProxy APPLE_PROXY = new AppleJavaExtensionsProxy();
     private static final DesktopProxy DESKTOP_PROXY = new DesktopProxy();
-    private static final Logger LOGGER = LogHelper.getLogger(MacIntegration.class);
+    private static final TaskBarProxy TASKBAR_PROXY = new TaskBarProxy();
 
     private MacIntegration() {
     }
@@ -115,11 +113,16 @@ public final class MacIntegration {
         Version jre = Platform.getJavaVersion();
         return !jre.isAtLeast(Version.parse("1.9")) && jre.isAtLeast(Version.parse("1.6"));
     }
-    
-    private static boolean supportsFullscreen() {
-        return Platform.isMac() && supportsAppleJavaExtensions() && isAtLeast(MACOS_LION);
+
+    /**
+     * Returns true if the used JRE supports the enhanced desktop API that was
+     * introduced in Java 9.
+     */
+    private static boolean supportsEnhancedDesktop() {
+        Version jre = Platform.getJavaVersion();
+        return Platform.isMac() && jre.isAtLeast(Version.parse("11"));
     }
-    
+
     private static boolean supportsNotificationCenter() {
         return Platform.isMac() && isAtLeast(MACOS_MOUNTAIN_LION);
     }
@@ -135,18 +138,7 @@ public final class MacIntegration {
             System.setProperty(MacIntegration.SYSTEM_PROPERTY_MENUBAR, "true");
         }
     }
-    
-    /**
-     * Registers a listener that will be notified every time a menu item in the 
-     * macOS application menu is clicked.
-     * @param showPreferences Indicates whether the "preferences" menu item should
-     *        be shown as part of the application menu. 
-     */
-    public static void setApplicationMenuListener(ApplicationMenuListener listener, 
-            boolean showPreferences) {
-        APPLE_PROXY.setApplicationMenuListener(listener, showPreferences);
-    }
-    
+
     /**
      * Changes the default Swing look-and-feel to look more like native macOS
      * applications. This includes different look-and-feels for different versions
@@ -183,6 +175,21 @@ public final class MacIntegration {
     }
 
     /**
+     * Registers a listener that will be notified every time a menu item in the
+     * macOS application menu is clicked.
+     * @param showPreferences Indicates whether the "preferences" menu item should
+     *        be shown as part of the application menu.
+     */
+    public static void setApplicationMenuListener(ApplicationMenuListener listener,
+                                                  boolean showPreferences) {
+        if (supportsEnhancedDesktop()) {
+            DESKTOP_PROXY.applicationMenu = listener;
+        } else {
+            APPLE_PROXY.setApplicationMenuListener(listener, showPreferences);
+        }
+    }
+
+    /**
      * Changes the application's dock icon to the specified image.
      * @deprecated Applications should not change their dock icon at runtime.
      *             Instead, rely on the application icon specified in the
@@ -192,6 +199,8 @@ public final class MacIntegration {
     public static void setDockIcon(Image icon) {
         if (supportsAppleJavaExtensions()) {
             APPLE_PROXY.invokeApplication("setDockIconImage", Image.class, icon);
+        } else if (supportsEnhancedDesktop()) {
+            TASKBAR_PROXY.call("setIconImage", new Class[] {Image.class}, new Object[] {icon});
         }
     }
 
@@ -202,6 +211,8 @@ public final class MacIntegration {
     public static void setDockBadge(String badge) {
         if (supportsAppleJavaExtensions()) {
             APPLE_PROXY.invokeApplication("setDockIconBadge", String.class, badge);
+        } else if (supportsEnhancedDesktop()) {
+            TASKBAR_PROXY.call("setIconBadge", new Class[] {String.class}, new Object[] {badge});
         }
     }
     
@@ -212,51 +223,12 @@ public final class MacIntegration {
     public static void bounceDockIcon(boolean important) {
         if (supportsAppleJavaExtensions()) {
             APPLE_PROXY.invokeApplication("requestUserAttention", boolean.class, important);
+        } else if (supportsEnhancedDesktop()) {
+            TASKBAR_PROXY.call("requestUserAttention", new Class[] {boolean.class, boolean.class},
+                new Object[] {true, true});
         }
     }
-    
-    /**
-     * Replaces the default dock menu with a custom one. 
-     */
-    public static void setDockMenu(PopupMenu menu) {
-        if (supportsAppleJavaExtensions()) {
-            APPLE_PROXY.invokeApplication("setDockMenu", PopupMenu.class, menu);
-        }
-    }
-    
-    /**
-     * Enables or disables fullscreen mode for the specified window. If fullscreen
-     * mode is enabled a button for entering/exiting fullscreen will be added to
-     * the window's title bar.
-     * <p>
-     * Note that calling this method will not actually make the window fullscreen,
-     * it only enables the option for the user to do so. Entering fullscreen mode
-     * programmatically can be done using {@link #toggleFullscreen(JFrame)}.
-     */
-    public static void setFullscreenEnabled(JFrame window, boolean enabled) {
-        if (supportsFullscreen()) {
-            try {
-                Class<?> fullscreenClass = Class.forName("com.apple.eawt.FullScreenUtilities");
-                Method setFullscreen = fullscreenClass.getMethod("setWindowCanFullScreen", 
-                        Window.class, boolean.class);
-                setFullscreen.invoke(null, window, enabled);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Fullscreen mode failed", e);
-            }
-        }
-    }
-    
-    /**
-     * Activates fullscreen mode programatically for the specified window. If 
-     * the window is already in fullscreen mode this will return it to regular 
-     * (non-fullscreen) mode.
-     */
-    public static void toggleFullscreen(JFrame window) {
-        if (supportsFullscreen()) {
-            APPLE_PROXY.invokeApplication("requestToggleFullScreen", Window.class, window);
-        }
-    }
-    
+
     /**
      * Sends a notification to the macOS Notification Center.
      * <p>
@@ -303,11 +275,11 @@ public final class MacIntegration {
      * versions of the JRE on macOS.
      */
     private static class AppleJavaExtensionsProxy implements InvocationHandler {
-        
+
         private Object application;
         private boolean applicationMenuInitialized;
         private ApplicationMenuListener applicationMenuListener;
-        
+
         public AppleJavaExtensionsProxy() {
             if (supportsAppleJavaExtensions()) {
                 try {
@@ -317,28 +289,28 @@ public final class MacIntegration {
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, "Error while initializing Apple Java extensions", e);
                 }
-                
+
                 applicationMenuInitialized = false;
             }
         }
-        
+
         private void setApplicationMenuListener(ApplicationMenuListener listener, boolean showPreferences) {
             this.applicationMenuListener = listener;
-        
+
             if (application != null && !applicationMenuInitialized) {
                 applicationMenuInitialized = true;
                 registerApplicationMenuHandlers(showPreferences);
             }
         }
-        
+
         private void registerApplicationMenuHandlers(boolean showPreferences) {
             try {
                 Class<?> quitHandlerClass = Class.forName("com.apple.eawt.QuitHandler");
                 invokeApplication("setQuitHandler", quitHandlerClass, proxy(quitHandlerClass));
-                
+
                 Class<?> aboutHandlerClass = Class.forName("com.apple.eawt.AboutHandler");
                 invokeApplication("setAboutHandler", aboutHandlerClass, proxy(aboutHandlerClass));
-                
+
                 if (showPreferences) {
                     Class<?> prefsHandlerClass = Class.forName("com.apple.eawt.PreferencesHandler");
                     invokeApplication("setPreferencesHandler", prefsHandlerClass, proxy(prefsHandlerClass));
@@ -347,13 +319,15 @@ public final class MacIntegration {
                 LOGGER.log(Level.WARNING, "Error while registering application menu listener", e);
             }
         }
-        
+
         private Object proxy(Class<?> target) {
             return Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {target}, this);
         }
-        
+
+        @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String name = method.getName();
+
             if (name.equals("handleQuit") || name.equals("handleQuitRequestWith")) {
                 applicationMenuListener.onQuit();
                 Object quitResponse = args[1];
@@ -363,10 +337,10 @@ public final class MacIntegration {
             } else if (name.equals("handlePreferences")) {
                 applicationMenuListener.onPreferences();
             }
-            
+
             return null;
         }
-        
+
         public Object invokeApplication(String methodName, Class<?>[] argTypes, Object[] argValues) {
             try {
                 Method appMethod = application.getClass().getMethod(methodName, argTypes);
@@ -376,7 +350,7 @@ public final class MacIntegration {
                 return null;
             }
         }
-        
+
         public Object invokeApplication(String methodName, Class<?> argType, Object argValue) {
             return invokeApplication(methodName, new Class[] { argType }, new Object[] { argValue });
         }
@@ -387,16 +361,32 @@ public final class MacIntegration {
      * this API is called using reflection as it is only available on certain
      * versions of the JRE.
      */
-    private static class DesktopProxy {
+    private static class DesktopProxy implements InvocationHandler {
         
         private Desktop desktop;
+        private ApplicationMenuListener applicationMenu;
         
         public DesktopProxy() {
             try {
                 desktop = Desktop.getDesktop();
+
+                if (supportsEnhancedDesktop()) {
+                    Class<?> aboutHandler = Class.forName("java.awt.desktop.AboutHandler");
+                    call("setAboutHandler", aboutHandler, proxy(aboutHandler));
+
+                    Class<?> prefsHandler = Class.forName("java.awt.desktop.PreferencesHandler");
+                    call("setPreferencesHandler", prefsHandler, proxy(prefsHandler));
+
+                    Class<?> quitHandler = Class.forName("java.awt.desktop.QuitHandler");
+                    call("setQuitHandler", quitHandler, proxy(quitHandler));
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Cannot access AWT desktop API", e);
             }
+        }
+
+        private Object proxy(Class<?> target) {
+            return Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {target}, this);
         }
         
         public void call(String methodName, Class<?>[] argTypes, Object[] args) {
@@ -410,6 +400,56 @@ public final class MacIntegration {
         
         public void call(String methodName, Class<?> argType, Object arg) {
             call(methodName, new Class<?>[] { argType }, new Object[] { arg });
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) {
+            if (applicationMenu != null) {
+                if (method.getName().equals("handleAbout")) {
+                    applicationMenu.onAbout();
+                } else if (method.getName().equals("handlePreferences")) {
+                    applicationMenu.onPreferences();
+                } else if (method.getName().equals("handleQuitRequestWith")) {
+                    applicationMenu.onQuit();
+                    // Must request a force quit since setting a quit handler
+                    // overrides the default behavior.
+                    System.exit(0);
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /**
+     * Calls methods from the task bar API that was introduced in Java 9
+     * using reflection.
+     */
+    private static class TaskBarProxy {
+
+        private Object taskbar;
+
+        public TaskBarProxy() {
+            if (supportsEnhancedDesktop()) {
+                try {
+                    taskbar = Class.forName("java.awt.Taskbar")
+                        .getDeclaredMethod("getTaskbar")
+                        .invoke(null);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Cannot initialize task bar", e);
+                }
+            }
+        }
+
+        public void call(String methodName, Class<?>[] argTypes, Object[] args) {
+            if (supportsEnhancedDesktop()) {
+                try {
+                    Method method = taskbar.getClass().getMethod(methodName, argTypes);
+                    method.invoke(taskbar, args);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Exception while calling task bar API", e);
+                }
+            }
         }
     }
 }

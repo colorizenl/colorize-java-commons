@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Unit tests for the {@code Animator} class.
@@ -153,15 +154,63 @@ public class AnimatorTest {
     }
 
     @Test
-    public void testTimedAnimation() {
-        Animator animator = new ManualAnimator();
-        animator.start();
-        animator.play(TimedAnimation.from(deltaTime -> {}, 2f));
+    public void testTimedAnimatable() {
+        AtomicInteger frameCounter = new AtomicInteger(0);
+
+        TimedAnimatable anim = new TimedAnimatable() {
+            @Override
+            public void onFrame(float deltaTime) {
+                frameCounter.getAndAdd(1);
+            }
+
+            @Override
+            public boolean isCompleted() {
+                return frameCounter.get() >= 2;
+            }
+
+            @Override
+            public void reset() {
+            }
+        };
+
+        ManualAnimator animator = new ManualAnimator();
+        animator.play(anim);
+
+        assertEquals(1, animator.getCurrentlyPlaying().size());
         animator.performFrameUpdate(1f);
+        assertEquals(1, animator.getCurrentlyPlaying().size());
         animator.performFrameUpdate(1f);
+        assertEquals(0, animator.getCurrentlyPlaying().size());
+    }
+
+    @Test
+    public void testResetTimedAnimatable() {
+        AtomicInteger frameCounter = new AtomicInteger(0);
+
+        TimedAnimatable anim = new TimedAnimatable() {
+            @Override
+            public void onFrame(float deltaTime) {
+                frameCounter.getAndAdd(1);
+            }
+
+            @Override
+            public boolean isCompleted() {
+                return frameCounter.get() >= 2;
+            }
+
+            @Override
+            public void reset() {
+                frameCounter.set(0);
+            }
+        };
+
+        ManualAnimator animator = new ManualAnimator();
+        animator.play(anim);
+        animator.performFrameUpdate(1f);
+        anim.reset();
         animator.performFrameUpdate(1f);
 
-        assertEquals(0, animator.getCurrentlyPlaying().size());
+        assertEquals(1, animator.getCurrentlyPlaying().size());
     }
 
     /**
@@ -182,7 +231,7 @@ public class AnimatorTest {
     /**
      * Keeps track of the number of frame updates received.
      */
-    private static class MockAnim implements Animatable {
+    private static class MockAnim implements TimedAnimatable {
         
         private float totalTime;
         private float duration;
@@ -200,6 +249,10 @@ public class AnimatorTest {
         @Override
         public boolean isCompleted() {
             return totalTime >= duration;
+        }
+
+        @Override
+        public void reset() {
         }
     }
 }

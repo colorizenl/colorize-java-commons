@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ import com.google.common.base.Preconditions;
  * although timelines also have the option to loop infinitely or until
  * stopped manually.
  */
-public class Timeline implements Animatable {
+public class Timeline implements TimedAnimatable {
     
     private float playhead;
     private SortedSet<KeyFrame> keyframes;
@@ -96,6 +96,7 @@ public class Timeline implements Animatable {
     /**
      * Moves the playhead back to the start of the timeline.
      */
+    @Override
     public void reset() {
         if (!keyframes.isEmpty()) {
             setPlayhead(0f);

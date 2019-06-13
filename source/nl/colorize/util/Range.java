@@ -1,19 +1,20 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
 
 /**
  * A set that includes integers between the start and end. Ranges represented by
@@ -32,6 +33,7 @@ public final class Range implements Iterable<Integer>, Comparable<Range>, Serial
 
     private int start;
     private int end;
+    private boolean backwards;
     
     private List<Integer> cachedList;
     
@@ -45,6 +47,7 @@ public final class Range implements Iterable<Integer>, Comparable<Range>, Serial
     public Range(int start, int end) {
         this.start = Math.min(start, end);
         this.end = Math.max(start, end);
+        this.backwards = end < start;
     }
     
     /**
@@ -103,6 +106,11 @@ public final class Range implements Iterable<Integer>, Comparable<Range>, Serial
             for (int i = start; i <= end; i++) {
                 values.add(Integer.valueOf(i));
             }
+
+            if (backwards) {
+                values = Lists.reverse(values);
+            }
+
             cachedList = ImmutableList.copyOf(values);
         }
         

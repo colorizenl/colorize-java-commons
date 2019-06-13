@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -127,19 +127,21 @@ public final class VersionInfo {
         File gradleBuildFile = new File(workDir, "build.gradle");
 
         if (!gradleBuildFile.exists()) {
-            gradleBuildFile = new File(workDir.getParentFile(), "build.gradle");
-        }
-
-        if (!gradleBuildFile.exists() && gradleBuildFile.getAbsolutePath().contains(".idea")) {
-            gradleBuildFile = new File(gradleBuildFile.getAbsolutePath().substring(0,
-                    gradleBuildFile.getAbsolutePath().indexOf(".idea")) + "build.gradle");
-        }
-
-        if (gradleBuildFile.exists()) {
-            return extractGradleBuildScriptVersion(gradleBuildFile);
-        } else {
             return null;
         }
+
+        while (workDir.getParentFile() != null) {
+            File parentGradleBuildFile = new File(workDir.getParentFile(), "build.gradle");
+
+            if (!parentGradleBuildFile.exists()) {
+                break;
+            }
+
+            workDir = workDir.getParentFile();
+            gradleBuildFile = parentGradleBuildFile;
+        }
+
+        return extractGradleBuildScriptVersion(gradleBuildFile);
     }
     
     private static String extractGradleBuildScriptVersion(File gradleBuildFile) {

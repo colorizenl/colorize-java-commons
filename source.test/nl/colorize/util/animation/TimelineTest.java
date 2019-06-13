@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -17,68 +17,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Unit tests for all classes in the animation framework.
- */
-public class AnimationTest {
-    
-    private static final float EPSILON = 0.0001f;
-    
-    @Test
-    public void testDiscreteInterpolation() {
-        assertEquals(2f, Interpolation.DISCRETE.interpolate(2f, 9f, 0f), EPSILON);
-        assertEquals(2f, Interpolation.DISCRETE.interpolate(2f, 9f, 0.5f), 0.01f);
-        assertEquals(2f, Interpolation.DISCRETE.interpolate(2f, 9f, 0.9f), 0.01f);
-        assertEquals(9f, Interpolation.DISCRETE.interpolate(2f, 9f, 1f), 0.01f);
-    }
+public class TimelineTest {
+
+    private static final float EPSILON = 0.001f;
 
     @Test
-    public void testLinearInterpolation() {
-        assertEquals(3f, Interpolation.LINEAR.interpolate(3f, 5f, 0f), EPSILON);
-        assertEquals(3.5f, Interpolation.LINEAR.interpolate(3f, 5f, 0.25f), EPSILON);
-        assertEquals(4f, Interpolation.LINEAR.interpolate(3f, 5f, 0.5f), EPSILON);
-        assertEquals(4.5f, Interpolation.LINEAR.interpolate(3f, 5f, 0.75f), EPSILON);
-        assertEquals(5f, Interpolation.LINEAR.interpolate(3f, 5f, 1f), EPSILON);
-    }
-    
-    @Test
-    public void testEaseInterpolation() {
-        assertEquals(3f, Interpolation.EASE.interpolate(3f, 5f, 0f), EPSILON);
-        assertEquals(3.3125f, Interpolation.EASE.interpolate(3f, 5f, 0.25f), EPSILON);
-        assertEquals(4f, Interpolation.EASE.interpolate(3f, 5f, 0.5f), EPSILON);
-        assertEquals(4.6875f, Interpolation.EASE.interpolate(3f, 5f, 0.75f), EPSILON);
-        assertEquals(5f, Interpolation.EASE.interpolate(3f, 5f, 1f), EPSILON);
-    }
-    
-    @Test
-    public void testCubicInterpolation() {
-        assertEquals(0f, Interpolation.CUBIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.0625f, Interpolation.CUBIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.CUBIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.9375f, Interpolation.CUBIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.CUBIC.interpolate(0f, 1f, 1f), EPSILON);
-    }
-    
-    @Test
-    public void testQuadraticInterpolation() {
-        assertEquals(0f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.125f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.875f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.QUADRATIC.interpolate(0f, 1f, 1f), EPSILON);
-    }
-    
-    @Test
-    public void testQuinticInterpolation() {
-        assertEquals(0f, Interpolation.QUINTIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.0156f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.9844f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.QUINTIC.interpolate(0f, 1f, 1f), EPSILON);
-    }
-    
-    @Test
-    public void testDuration() throws Exception {
+    public void testDuration() {
         Timeline timeline = new Timeline();
         assertEquals(0f, timeline.getDuration(), EPSILON);
         timeline.addKeyFrame(0f, 10f);
@@ -88,7 +32,7 @@ public class AnimationTest {
         timeline.addKeyFrame(0.7f, 30f);
         assertEquals(0.7f, timeline.getDuration(), EPSILON);
     }
-    
+
     @Test
     public void testPlayhead() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
@@ -103,7 +47,7 @@ public class AnimationTest {
         timeline.end();
         assertEquals(5f, timeline.getPlayhead(), EPSILON);
     }
-    
+
     @Test
     public void testPlayheadOutOfBounds() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
@@ -117,7 +61,7 @@ public class AnimationTest {
         timeline.setPlayhead(300f);
         assertEquals(5f, timeline.getPlayhead(), EPSILON);
     }
-    
+
     @Test
     public void testLoopingTimeline() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, true);
@@ -130,13 +74,13 @@ public class AnimationTest {
         timeline.movePlayhead(0.1f);
         assertEquals(0.1f, timeline.getPlayhead(), EPSILON);
     }
-    
+
     @Test(expected = IllegalStateException.class)
     public void testNoZeroTimeline() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
         timeline.setPlayhead(1f);
     }
-    
+
     @Test
     public void testKeyFrames() {
         Timeline timeline = new Timeline();
@@ -144,7 +88,7 @@ public class AnimationTest {
         timeline.addKeyFrame(3f, 10f);
         timeline.addKeyFrame(new KeyFrame(1f, 7.1f));
         timeline.addKeyFrame(new KeyFrame(0.5f, 2f));
-        
+
         SortedSet<KeyFrame> keyframes = timeline.getKeyFrames();
         assertEquals(4, keyframes.size());
         Iterator<KeyFrame> iterator = keyframes.iterator();
@@ -161,12 +105,12 @@ public class AnimationTest {
         assertEquals(3f, keyframe.getTime(), EPSILON);
         assertEquals(10f, keyframe.getValue(), 0.01f);
     }
-    
+
     @Test(expected=IllegalArgumentException.class)
     public void testKeyFrameWithNegativePosition() {
         new KeyFrame(-1f, 0f);
     }
-    
+
     @Test
     @SuppressWarnings("deprecation")
     public void testKeyFrameInterpolation() {
@@ -174,7 +118,7 @@ public class AnimationTest {
         timeline.addKeyFrame(new KeyFrame(0f, 2f));
         timeline.addKeyFrame(new KeyFrame(1f, 3f));
         timeline.addKeyFrame(new KeyFrame(5f, 5f));
-        
+
         assertEquals(Interpolation.LINEAR, timeline.getInterpolationMethod());
         assertEquals(2f, timeline.getValue(), 0.01f);
         timeline.setPlayhead(0.5f);
@@ -190,7 +134,7 @@ public class AnimationTest {
         timeline.removeKeyFrame(5f);
         assertEquals(3f, timeline.getValue(), 0.01f);
     }
-    
+
     @Test
     public void testValueBeforeFirstKeyFrame() {
         Timeline timeline = new Timeline();
@@ -199,32 +143,32 @@ public class AnimationTest {
         timeline.addKeyFrame(new KeyFrame(0f, 7f));
         assertEquals(7f, timeline.getValue(), 0.01f);
     }
-    
+
     @Test
     public void testBeforeTheFirstKeyFrame() {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(new KeyFrame(1f, 5f));
         timeline.addKeyFrame(new KeyFrame(2f, 10f));
-        
+
         timeline.setPlayhead(0f);
         assertEquals(5f, timeline.getValue(), 0.01f);
         timeline.setPlayhead(0.5f);
         assertEquals(5f, timeline.getValue(), 0.01f);
     }
-    
+
     @Test(expected = IllegalStateException.class)
     public void testNoKeyFrames() {
         Timeline timeline = new Timeline();
         timeline.getValue();
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testAddKeyFrameTwice() {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(new KeyFrame(1f, 2f));
         timeline.addKeyFrame(new KeyFrame(1f, 3f));
     }
-    
+
     @Test
     public void testAddKeyFrameWhileAnimating() {
         Timeline timeline = new Timeline();
@@ -239,7 +183,7 @@ public class AnimationTest {
         timeline.movePlayhead(0.5f);
         assertTrue(timeline.isCompleted());
     }
-    
+
     @Test
     public void testClosestKeyFrame() {
         Timeline timeline = new Timeline();
@@ -251,7 +195,7 @@ public class AnimationTest {
         assertEquals(5f, timeline.getClosestKeyFrameBefore(10).getValue(), EPSILON);
         assertEquals(11f, timeline.getClosestKeyFrameBefore(11).getValue(), EPSILON);
     }
-    
+
     @Test
     public void testKeyFrameComparator() {
         KeyFrame kf = new KeyFrame(1f, 10f);
@@ -259,14 +203,14 @@ public class AnimationTest {
         assertTrue(kf.compareTo(new KeyFrame(1f, 20f)) == 0);
         assertTrue(kf.compareTo(new KeyFrame(0.5f, 20f)) > 0);
     }
-    
+
     @Test
     public void testAnimatedColor() {
         AnimatedColor nonChangingColor = new AnimatedColor(Color.ORANGE);
         assertRGBA(nonChangingColor, 255, 200, 0, 255);
         nonChangingColor.onFrame(1);
         assertRGBA(nonChangingColor, 255, 200, 0, 255);
-        
+
         AnimatedColor linearColor = new AnimatedColor(Color.RED, Color.BLUE, 2);
         assertRGBA(linearColor, 255, 0, 0, 255);
         linearColor.onFrame(1);
@@ -276,7 +220,7 @@ public class AnimationTest {
         linearColor.onFrame(1);
         assertRGBA(linearColor, 0, 0, 255, 255);
     }
-    
+
     @Test
     public void testAnimatedColorWithKeyFrames() {
         AnimatedColor colorWithKeyFrames = new AnimatedColor(Color.RED);
@@ -293,7 +237,7 @@ public class AnimationTest {
         colorWithKeyFrames.onFrame(1);
         assertRGBA(colorWithKeyFrames, 255, 0, 0, 5);
     }
-    
+
     @Test
     @SuppressWarnings("deprecation")
     public void testReplaceKeyFrame() {
@@ -301,14 +245,14 @@ public class AnimationTest {
         timeline.addKeyFrame(1f, 10f);
         timeline.addKeyFrame(2f, 20f);
         timeline.setPlayhead(20f);
-        
+
         assertTrue(timeline.hasKeyFrameAtPosition(2f));
         assertEquals(20f, timeline.getLastKeyFrame().getValue(), EPSILON);
         assertTrue(timeline.isCompleted());
-        
+
         timeline.removeKeyFrame(2f);
         timeline.addKeyFrame(3f, 30f);
-        
+
         assertFalse(timeline.hasKeyFrameAtPosition(2f));
         assertTrue(timeline.hasKeyFrameAtPosition(3f));
         assertEquals(30f, timeline.getLastKeyFrame().getValue(), EPSILON);

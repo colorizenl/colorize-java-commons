@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -49,8 +49,8 @@ public class SuggestingComboBox extends JTextField implements DocumentListener, 
     private static final int ARROW_HIT_AREA = 30;
     
     public SuggestingComboBox() {
-        suggestionItems = new ArrayList<JMenuItem>();
-        currentlyValidItems = new ArrayList<JMenuItem>();
+        suggestionItems = new ArrayList<>();
+        currentlyValidItems = new ArrayList<>();
         locked = new AtomicBoolean(false);
         
         contentAssistEnabled = true;

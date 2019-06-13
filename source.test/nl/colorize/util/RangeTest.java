@@ -1,21 +1,23 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
+import com.google.common.collect.ImmutableList;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
-import org.junit.Test;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for the {@code Range} class.
@@ -98,14 +100,19 @@ public class RangeTest {
     @Test
     public void testNegativeRange() {
         assertEquals(ImmutableList.of(-6, -5, -4), new Range(-6, -4).toList());
-        assertEquals(ImmutableList.of(2, 3, 4), new Range(4, 2).toList());
+        assertEquals(ImmutableList.of(2), new Range(2, 2).toList());
     }
     
     @Test
-    public void testSize() throws Exception {
+    public void testSize() {
         assertEquals(6, new Range(2, 7).getSize());
         assertEquals(2, new Range(2, 3).getSize());
         assertEquals(1, new Range(2).getSize());
         assertEquals(3, new Range(4, 2).getSize());
+    }
+
+    @Test
+    public void testBackwards() {
+        assertEquals(ImmutableList.of(3, 2, 1), new Range(3, 1).toList());
     }
 }

@@ -1,37 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.uitest;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Logger;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JTabbedPane;
-import javax.swing.JTextField;
-
-import com.google.common.base.Suppliers;
-
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
-import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.swing.AccordionPanel;
 import nl.colorize.util.swing.CircularLoader;
 import nl.colorize.util.swing.ComboFileDialog;
@@ -39,9 +15,27 @@ import nl.colorize.util.swing.FormPanel;
 import nl.colorize.util.swing.MultiLabel;
 import nl.colorize.util.swing.Popups;
 import nl.colorize.util.swing.PropertyEditor;
-import nl.colorize.util.swing.Table;
 import nl.colorize.util.swing.SwingAnimator;
 import nl.colorize.util.swing.SwingUtils;
+import nl.colorize.util.swing.Table;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Graphical test for a number of custom Swing components. These components are
@@ -105,22 +99,10 @@ public class CustomComponentsTest {
         form.addRow("Row with other component:", new JButton("Button"));
         form.addRow("Custom height:", customHeightLabel);
         form.addRow("Radio buttons:", new JRadioButton("First"), new JRadioButton("Second"));
+        form.addEmptyRow();
         form.addRow(new JCheckBox("Row with checkbox"));
         form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
-        form.addEmptyRow();
-        form.addRow(createAddRemoveItemsPanel(), 100);
         return form;
-    }
-
-    private JComponent createAddRemoveItemsPanel() {
-        items = new ArrayList<String>();
-        items.add("First item");
-        items.add("Second item");
-        items.add("Third item");
-        
-        return SwingUtils.createAddRemoveItemsPanel(Suppliers.ofInstance(items), "Item", 
-                ReflectionUtils.toMethodCallback(this, "onAddRow"),
-                ReflectionUtils.toMethodCallback(this, "onRemoveRow", String.class));
     }
 
     private JPanel createMultiLabelTab() {
@@ -146,7 +128,7 @@ public class CustomComponentsTest {
     }
 
     private JPanel createSimpleTableTab() {
-        table = new Table<String>("Name", "Year of Birth");
+        table = new Table<>("Name", "Year of Birth");
         table.setColumnWidth(1, 100);
         table.addRow("D", "Dave", "1984");
         table.addRow("J", "Jim", "1983");
@@ -188,8 +170,7 @@ public class CustomComponentsTest {
     }
 
     private JPanel createPropertyEditorTab() {
-        PropertyEditor propertyEditor = new PropertyEditor();
-        propertyEditor.setProperties(ImmutableMap.of("a", "1", "b", "2", "c", "3"));
+        PropertyEditor propertyEditor = new PropertyEditor(ImmutableMap.of("a", "1", "b", "2", "c", "3"));
         SwingUtils.setPreferredHeight(propertyEditor, 200);
 
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -244,15 +225,5 @@ public class CustomComponentsTest {
     
     public void tableDoubleClicked() {
         LOGGER.info("Double-clicked on row: " + table.getSelectedRowKey());
-    }
-    
-    public void onAddRow() {
-        JTextField inputField = new JTextField();
-        Popups.message(frame, "Add row", inputField);
-        items.add(inputField.getText());
-    }
-    
-    public void onRemoveRow(String selected) {
-        items.remove(selected);
     }
 }

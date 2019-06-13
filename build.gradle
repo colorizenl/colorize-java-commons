@@ -1,29 +1,28 @@
-apply plugin: 'java'
-apply plugin: 'jacoco'
+apply plugin: "java"
+apply plugin: "jacoco"
 
-group = 'nl.colorize'
-version = '2018.6'
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
-compileJava.options.encoding = 'UTF-8'
-sourceSets.main.java.srcDirs = ['source']
-sourceSets.main.resources.srcDirs = ['resources']
-sourceSets.test.java.srcDirs = ['source.test']
+group = "nl.colorize"
+version = "2019.1"
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
+compileJava.options.encoding = "UTF-8"
+sourceSets.main.java.srcDirs = ["source"]
+sourceSets.main.resources.srcDirs = ["resources"]
+sourceSets.test.java.srcDirs = ["source.test"]
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'com.google.guava:guava:25.0-jre'
-    compile 'org.jdom:jdom2:2.0.6'
-    compile 'jaxen:jaxen:1.1.6'
-    compile 'com.google.code.gson:gson:2.8.4'
-    compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
-    testCompile 'junit:junit:4.12'
-    testCompile 'javax.servlet:javax.servlet-api:3.1.0'
+    compile "com.google.guava:guava:27.0.1-jre"
+    compile "org.jdom:jdom2:2.0.6"
+    compile "jaxen:jaxen:1.1.6"
+    compile "com.google.code.gson:gson:2.8.5"
+    compileOnly "javax.servlet:javax.servlet-api:3.1.0"
+    testCompile "junit:junit:4.12"
+    testCompile "javax.servlet:javax.servlet-api:3.1.0"
 }
 
-test.doLast {
-    tasks.jacocoTestReport.execute()
+task coverage(dependsOn: jacocoTestReport) {
 }

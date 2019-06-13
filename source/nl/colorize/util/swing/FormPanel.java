@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
@@ -240,6 +240,7 @@ public class FormPanel extends JPanel implements LayoutManager {
      */
     public void addEmptyRow() {
         JPanel spacer = new JPanel(new BorderLayout(0, 0));
+        spacer.setOpaque(false);
         SwingUtils.setPreferredHeight(spacer, spacer.getFont().getSize());
         addFullWidthRow(spacer);
     }

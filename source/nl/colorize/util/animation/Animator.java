@@ -1,12 +1,11 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.animation;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -76,17 +75,23 @@ public abstract class Animator {
                 observer.onFrame(anim);
             }
 
-            if (anim.isCompleted()) {
-                for (MulticastAnimationObserver observer : observers.get(anim)) {
-                    observer.onComplete(anim);
-                }
-
-                currentlyPlaying.remove(anim);
-                observers.removeAll(anim);
+            if (anim instanceof TimedAnimatable) {
+                checkAnimationCompleted((TimedAnimatable) anim);
             }
         }
     }
-    
+
+    private void checkAnimationCompleted(TimedAnimatable anim) {
+        if (anim.isCompleted()) {
+            for (MulticastAnimationObserver observer : observers.get(anim)) {
+                observer.onComplete(anim);
+            }
+
+            currentlyPlaying.remove(anim);
+            observers.removeAll(anim);
+        }
+    }
+
     /**
      * Returns true if the animation is currently active and should receive frame
      * updates. By default all registered animations are considered active, but

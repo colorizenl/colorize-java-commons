@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.LoadUtils;
@@ -71,7 +70,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -244,6 +245,18 @@ public final class SwingUtils {
             Closeables.close(input, true);
         }
         return font.deriveFont(style, size);
+    }
+
+    /**
+     * Loads a TrueType font and returns it as an AWT font.
+     * @throws IOException if the font could not be loaded from the file.
+     * @throws FontFormatException if the file is not a valid TrueType font.
+     */
+    public static Font loadFont(ResourceFile file, int style, float size)
+        throws IOException, FontFormatException {
+        try (InputStream stream = file.openStream()) {
+            return loadFont(stream, style, size);
+        }
     }
     
     /**
@@ -576,7 +589,7 @@ public final class SwingUtils {
     public static <T> ActionListener toActionListener(Consumer<T> callback, Supplier<T> arg) {
         return e -> callback.accept(arg.get());
     }
-    
+
     /**
      * Creates a component that consists of a list of items, plus buttons to add
      * and/or remove items. Changes made using those buttons are immediately
@@ -586,10 +599,12 @@ public final class SwingUtils {
      *                     and after updates.
      * @param addButtonAction Performed when the add button is used.
      * @param removeButtonAction Performed when the remove button is used.
+     * @deprecated Use {@link PropertyEditor} instead.
      */
+    @Deprecated
     public static JPanel createAddRemoveItemsPanel(Supplier<List<String>> itemSupplier, String header,
-            Consumer<?> addButtonAction, Consumer<String> removeButtonAction) {
-        Table<String> table = new Table<String>(header);
+            Consumer<String> addButtonAction, Consumer<String> removeButtonAction) {
+        Table<String> table = new Table<>(header);
         populateTable(table, itemSupplier);
         
         JButton addButton = new JButton("+");
@@ -661,10 +676,12 @@ public final class SwingUtils {
      * Creates a button that does not follow the platform's UI conventions and
      * changes foreground color on hover. 
      */
-    public static JButton createHoverButton(String label, final Color hoverColor) {
+    public static JButton createHoverButton(String label, Color hoverColor) {
         final JButton button = new JButton(label);
         final Color normalColor = button.getForeground();
+
         removeLookAndFeel(button, false);
+
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -676,6 +693,7 @@ public final class SwingUtils {
                 button.setForeground(normalColor);
             }
         });
+
         return button;
     }
     
@@ -744,6 +762,23 @@ public final class SwingUtils {
         };
     }
 
+    /**
+     * Creates a {@link JPanel} that uses the supplied callback function to draw
+     * its background graphics. The callback takes two arguments: the panel's
+     * graphics and the panel's dimensions.
+     */
+    public static JPanel createCustomGraphicsPanel(BiConsumer<Graphics2D, Dimension> callback) {
+        return new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+
+                Graphics2D g2 = Utils2D.createGraphics(g, true, false);
+                callback.accept(g2, getSize());
+            }
+        };
+    }
+
     static Color getStripedRowColor(int row) {
         if (row % 2 == 0) {
             return STANDARD_ROW_COLOR;
@@ -775,6 +810,19 @@ public final class SwingUtils {
      */
     public static <E> JList<E> createStripedList(List<E> elements) {
         return new StripedList<E>(elements); 
+    }
+
+    public static JPanel createImagePanel(BufferedImage image) {
+        JPanel imagePanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = Utils2D.createGraphics(g, true, true);
+                g2.drawImage(image, 0, 0, null);
+            }
+        };
+        imagePanel.setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
+        return imagePanel;
     }
 
     private static class StripedList<E> extends JList<E> implements ListCellRenderer<E> {

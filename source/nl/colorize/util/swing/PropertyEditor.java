@@ -1,14 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import nl.colorize.util.DynamicResourceBundle;
-import nl.colorize.util.ResourceFile;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -20,31 +19,52 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Simple user interface for editing name/value properties. The interface
  * consists of a list of available properties, plus buttons to add, change,
- * or remove properties.
+ * or remove properties. The provided callback will be invoked whenever the
+ * underlying properties are modified.
  */
 public class PropertyEditor extends JPanel {
 
     private Map<String, String> properties;
     private DynamicResourceBundle bundle;
-    private List<Runnable> listeners;
+    private List<Consumer<Map<String, String>>> listeners;
 
     private Table<String> table;
 
-    public PropertyEditor() {
+    public PropertyEditor(Map<String, String> initialProperties) {
         super(new BorderLayout(0, 10));
 
-        properties = new LinkedHashMap<>();
-        bundle = SwingUtils.getCustomComponentsBundle();
-        listeners = new ArrayList<>();
+        this.properties = new LinkedHashMap<>();
+        this.bundle = SwingUtils.getCustomComponentsBundle();
+        this.listeners = new ArrayList<>();
+
+        // Initialize the properties. The original map cannot be used
+        // because we need to ensure the properties are a LinkedHashMap
+        // so that it keeps the iteration order.
+        for (String name : getInitialPropertyNames(initialProperties)) {
+            this.properties.put(name, initialProperties.get(name));
+        }
 
         table = new Table<>(bundle.getString("PropertyEditor.name"),
             bundle.getString("PropertyEditor.value"));
         add(table, BorderLayout.CENTER);
         add(createButtonPanel(), BorderLayout.SOUTH);
+
+        refresh();
+    }
+
+    private List<String> getInitialPropertyNames(Map<String, String> initialProperties) {
+        if (initialProperties instanceof LinkedHashMap) {
+            return ImmutableList.copyOf(initialProperties.keySet());
+        } else {
+            return initialProperties.keySet().stream()
+                .sorted()
+                .collect(Collectors.toList());
+        }
     }
 
     private JPanel createButtonPanel() {
@@ -65,14 +85,14 @@ public class PropertyEditor extends JPanel {
     }
 
     private void addProperty() {
-        showForm(bundle.getString("PropertyEditor.addTitle"), "", "");
+        showEditForm(bundle.getString("PropertyEditor.addTitle"), "", "");
     }
 
     private void editProperty() {
         String selected = table.getSelectedRowKey();
 
         if (selected != null) {
-            showForm(bundle.getString("PropertyEditor.editTitle"), selected, properties.get(selected));
+            showEditForm(bundle.getString("PropertyEditor.editTitle"), selected, properties.get(selected));
         } else {
             Popups.message(null, bundle.getString("PropertyEditor.noPropertySelected"));
         }
@@ -84,12 +104,13 @@ public class PropertyEditor extends JPanel {
         if (selected != null) {
             properties.remove(selected);
             refresh();
+            notifyListeners();
         } else {
             Popups.message(null, bundle.getString("PropertyEditor.noPropertySelected"));
         }
     }
 
-    private void showForm(String title, String name, String value) {
+    private void showEditForm(String title, String name, String value) {
         JTextField nameField = new JTextField(name);
         JTextField valueField = new JTextField(value);
 
@@ -99,16 +120,11 @@ public class PropertyEditor extends JPanel {
         form.packFormHeight();
 
         if (Popups.message(null, title, form,
-            bundle.getString("PropertyEditor.save"), bundle.getString("PropertyEditor.cancel")) == 0) {
+                bundle.getString("PropertyEditor.save"), bundle.getString("PropertyEditor.cancel")) == 0) {
             properties.put(nameField.getText(), valueField.getText());
             refresh();
+            notifyListeners();
         }
-    }
-
-    public void setProperties(Map<String, String> properties) {
-        this.properties.clear();
-        this.properties.putAll(properties);
-        refresh();
     }
 
     private void refresh() {
@@ -117,21 +133,21 @@ public class PropertyEditor extends JPanel {
         for (Map.Entry<String, String> entry : properties.entrySet()) {
             table.addRow(entry.getKey(), entry.getKey(), entry.getValue());
         }
-
-        for (Runnable listener : listeners) {
-            listener.run();
-        }
     }
 
     public Map<String, String> getProperties() {
         return properties;
     }
 
-    public void addListener(Runnable callback) {
+    public void addListener(Consumer<Map<String, String>> callback) {
         listeners.add(callback);
     }
 
-    public void removeListener(Runnable callback) {
+    public void removeListener(Consumer<Map<String, String>> callback) {
         listeners.remove(callback);
+    }
+
+    private void notifyListeners() {
+        listeners.forEach(listener -> listener.accept(properties));
     }
 }

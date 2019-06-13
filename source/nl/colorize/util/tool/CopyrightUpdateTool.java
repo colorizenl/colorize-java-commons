@@ -1,10 +1,17 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2018 Colorize
+// Copyright 2007-2019 Colorize
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.tool;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import nl.colorize.util.FileUtils;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Relation;
+import nl.colorize.util.Tuple;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,14 +26,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-
-import nl.colorize.util.FileUtils;
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.Relation;
-import nl.colorize.util.Tuple;
-
 /**
  * Command line tool that updates the copyright statement at the top of the 
  * file, for all files in a directory. This tool assumes all files use the 
@@ -39,11 +38,11 @@ public class CopyrightUpdateTool {
     private boolean dryRun;
 
     private static final Pattern COPYRIGHT_PATTERN = Pattern.compile(
-            "Copyright\\s+(20\\d+)(\\s*-\\s*20\\d+)?");
+        "Copyright\\s+(20\\d+)(\\s*-\\s*20\\d+)?");
     private static final List<String> SUPPORTED_FILE_EXTENSIONS = ImmutableList.of(
-            ".java", ".js", ".ts", ".php", ".gradle", ".md", ".properties");
+        ".java", ".js", ".ts", ".php", ".swift", ".gradle", ".md", ".properties", ".json");
     private static final List<String> EXCLUDE_DIRS = ImmutableList.of(
-            "/build/", "/lib/", "/node_modules/", "/.git/", "/.gradle/", "/.idea/", "/out/");
+        "/build/", "/lib/", "/node_modules/", "/.git/", "/.gradle/", "/.idea/", "/out/");
     private static final Charset FILE_CHARSET = Charsets.UTF_8;
     private static final Logger LOGGER = LogHelper.getLogger(CopyrightUpdateTool.class);
 

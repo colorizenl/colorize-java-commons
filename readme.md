@@ -33,13 +33,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2018.6</version>
+        <version>2019.1</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile 'nl.colorize:colorize-java-commons:2018.6'
+        compile "nl.colorize:colorize-java-commons:2019.1"
     }
 
 Build instructions
@@ -55,13 +55,14 @@ The following Gradle build tasks are available:
 
   - `gradle clean` cleans the build directory
   - `gradle assemble` creates the JAR file for distribution
-  - `gradle test` runs all unit tests, then reports on test results and test coverage
+  - `gradle test` runs all unit tests
+  - `gradle coverage` runs all unit tests and reports on test coverage
   - `gradle javadoc` generates the JavaDoc API documentation
 
 License
 -------
 
-Copyright 2007-2018 Colorize
+Copyright 2007-2019 Colorize
 
 The source code is licensed under the Apache License 2.0, meaning you can use it free of charge 
 in commercial and non-commercial projects as long as you mention the original copyright.
