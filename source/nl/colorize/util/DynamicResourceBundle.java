@@ -6,6 +6,8 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Splitter;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -30,13 +32,10 @@ import java.util.Set;
  */
 public class DynamicResourceBundle extends ResourceBundle {
     
-    private ResourceFile sourceFile;
-    private Charset charset;
-    private long expireTime;
-    
     private Properties bundle;
-    private long loadedTime;
-    
+
+    private static final Splitter LINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
+
     /**
      * Looks up the resource bundle with the specified name and locale. If a
      * bundle for that locale is not available the bundle for the "base" locale
@@ -45,25 +44,20 @@ public class DynamicResourceBundle extends ResourceBundle {
      * @throws MissingResourceException if the resource bundle cannot be located.
      */
     public DynamicResourceBundle(String name, ResourceFile dir, Locale locale, Charset charset) {
-        this.charset = charset;
-        this.expireTime = -1;
-        
         ResourceFile countryBundle = new ResourceFile(dir, getCountryBundleName(name, locale));
         ResourceFile languageBundle = new ResourceFile(dir, getLanguageBundleName(name, locale));
         ResourceFile baseBundle = new ResourceFile(dir, getBaseBundleName(name));
-        
+
         if (countryBundle.exists()) {
-            sourceFile = countryBundle;
+            this.bundle = LoadUtils.loadProperties(countryBundle, charset);
         } else if (languageBundle.exists()) {
-            sourceFile = languageBundle;
+            this.bundle = LoadUtils.loadProperties(languageBundle, charset);
         } else if (baseBundle.exists()) {
-            sourceFile = baseBundle;
+            this.bundle = LoadUtils.loadProperties(baseBundle, charset);
         } else {
             throw new MissingResourceException("Cannot locate resource bundle " + 
                     name, getClass().getName(), "");
         }
-        
-        reload();
     }
     
     private String getCountryBundleName(String name, Locale locale) {
@@ -83,11 +77,7 @@ public class DynamicResourceBundle extends ResourceBundle {
      * location. The loaded bundle will initially be set to never expire.
      */
     public DynamicResourceBundle(ResourceFile sourceFile, Charset charset) {
-        this.sourceFile = sourceFile;
-        this.charset = charset;
-        this.expireTime = -1;
-        
-        reload();
+        this.bundle = LoadUtils.loadProperties(sourceFile, charset);
     }
     
     /**
@@ -102,7 +92,6 @@ public class DynamicResourceBundle extends ResourceBundle {
      */
     public DynamicResourceBundle(Properties source) {
         this.bundle = source;
-        this.expireTime = -1;
     }
     
     /**
@@ -121,15 +110,29 @@ public class DynamicResourceBundle extends ResourceBundle {
     public DynamicResourceBundle(InputStream stream, Charset charset) throws IOException {
         this(LoadUtils.loadProperties(stream, charset));
     }
-    
+
+    /**
+     * Creates a resource bundle from text that has been loaded externally.
+     */
+    public DynamicResourceBundle(String contents) {
+        this.bundle = new Properties();
+
+        for (String line : LINE_SPLITTER.split(contents)) {
+            int index = line.indexOf('=');
+            if (index == -1) {
+                index = line.indexOf(':');
+            }
+
+            if (index != -1) {
+                bundle.setProperty(line.substring(0, index).trim(), line.substring(index + 1).trim());
+            }
+        }
+    }
+
     @Override
     protected Object handleGetObject(String key) {
-        if (isExpired()) {
-            reload();
-        }
-        
         String text = bundle.getProperty(key);
-        if ((text == null) && (parent == null)) {
+        if (text == null && parent == null) {
             text = key;
         }
         
@@ -162,25 +165,6 @@ public class DynamicResourceBundle extends ResourceBundle {
         
         return MessageFormat.format(message, params);
     }
-    
-    /**
-     * Reloads the contents of this resource bundle. This method is called during
-     * construction and when the bundle has exceeded its expiry time. It can also
-     * be called manually to force a reload.
-     */
-    public void reload() {
-        if (sourceFile != null) {
-            bundle = LoadUtils.loadProperties(sourceFile, charset);
-            loadedTime = System.currentTimeMillis();
-        }
-    }
-    
-    private boolean isExpired() {
-        if (expireTime < 0) {
-            return false;
-        }
-        return System.currentTimeMillis() - loadedTime > expireTime;
-    }
 
     @Override
     public Set<String> keySet() {
@@ -201,8 +185,8 @@ public class DynamicResourceBundle extends ResourceBundle {
      * Returns all key/value pairs in this resource bundle as a map. The map is
      * a copy, changes to it will not affect the original.
      */
-    public Map<String,String> getAll() {
-        Map<String,String> copy = new HashMap<String,String>();
+    public Map<String, String> getAll() {
+        Map<String, String> copy = new HashMap<>();
         for (Map.Entry<Object,Object> entry : bundle.entrySet()) {
             copy.put(entry.getKey().toString(), entry.getValue().toString());
         }
@@ -217,25 +201,7 @@ public class DynamicResourceBundle extends ResourceBundle {
     public ResourceBundle getParent() {
         return parent;
     }
-    
-    /**
-     * Sets the time after which the contents of this resource bundle will be
-     * reloaded, in milliseconds. A value of -1 indicates the contents will never
-     * expire.
-     */
-    public void setExpireTime(long expireTime) {
-        this.expireTime = expireTime;
-    }
-    
-    /**
-     * Returns the time after which the contents of this resource bundle will be
-     * reloaded, in milliseconds. A value of -1 indicates the contents will never
-     * expire.
-     */
-    public long getExpireTime() {
-        return expireTime;
-    }
-    
+
     private static Properties toProperties(ResourceBundle bundle) {
         Properties properties = new Properties();
         for (String key : Collections.list(bundle.getKeys())) {

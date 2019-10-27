@@ -12,14 +12,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import nl.colorize.util.http.Method;
+import nl.colorize.util.http.URLResponse;
 
 /**
  * Indicates that a method is part of a REST API and requests can be dispatched
  * to it. Methods with this annotation must be public, must have exactly one 
  * parameter of type {@link RestRequest}, and should have a return value of type 
- * {@code HttpResponse}. The HTTP status, Content-Type, additional response 
- * headers, and response body of the response will all also  be used as response 
- * of the service.  
+ * {@link URLResponse}, which will be used for creating the response that will
+ * be returned by the REST API.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

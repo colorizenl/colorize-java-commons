@@ -9,7 +9,7 @@ package nl.colorize.util;
 import com.google.common.base.CharMatcher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import nl.colorize.util.rest.PostData;
+import nl.colorize.util.http.PostData;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;

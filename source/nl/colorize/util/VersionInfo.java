@@ -32,7 +32,7 @@ import com.google.common.base.Charsets;
 public final class VersionInfo {
     
     private static final Pattern GRADLE_VERSION_PATTERN = Pattern.compile(
-            "\\s*(version|def appVersion|ext.appVersion)\\s*[=]\\s*['\"](\\S+?)['\"]");
+        "\\s*(version|def appVersion|ext.appVersion)\\s*[=]\\s*['\"](\\S+?)['\"]");
     private static final Logger LOGGER = LogHelper.getLogger(VersionInfo.class);
 
     private VersionInfo() {

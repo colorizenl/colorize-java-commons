@@ -6,26 +6,26 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Charsets;
+
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.nio.charset.UnsupportedCharsetException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 
 /**
  * Helper methods for initializing and configuring {@code java.util.logging}
@@ -33,15 +33,13 @@ import com.google.common.collect.ImmutableList;
  */
 public final class LogHelper {
 
-    private static Logger rootColorizeLogger;
+    private static AtomicBoolean rootColorizeLoggerConfigured = new AtomicBoolean(false);
     
     private static final String ROOT_COLORIZE_LOGGER_NAME = "nl.colorize";
-    
-    // Some utility class use their own loggers which we also want 
-    // to use the standard Colorize logging configuration.
-    private static final List<String> ADDITIONAL_COLORIZE_LOGGER_NAMES = ImmutableList.of(
-            "com.google.common.io.Closeables",
-            "com.google.common.eventbus.EventBus");
+
+    private static final String COLORIZE_LOGGING_CONFIGURATION =
+        "handlers=java.util.logging.ConsoleHandler\n" +
+        "java.util.logging.ConsoleHandler.formatter=" + CompactFormatter.class.getName();
 
     private LogHelper() {
     }
@@ -51,91 +49,50 @@ public final class LogHelper {
     }
     
     /**
-     * Obtains the logger with the name of the specified class. If only the name 
-     * attribute is specified the logger is returned with its existing (possibly
-     * inherited) configuration. If one or more handlers are specified the logger 
-     * is reconfigured using those handlers.
+     * Obtains the logger with the name of the specified class. The logger is
+     * returned with its existing, possibly inherited, configuration.
      */
-    public static Logger getLogger(Class<?> name, Handler... handlers) {
-        return getLogger(name.getName(), handlers);
+    public static Logger getLogger(Class<?> name) {
+        return getLogger(name.getName());
     }
     
     /**
-     * Obtains the logger with the specified name. If only the name attribute is
-     * specified the logger is returned with its existing (possibly inherited) 
-     * configuration. If one or more handlers are specified the logger is 
-     * reconfigured using those handlers.
+     * Obtains the logger with the specified name. The logger is returned with
+     * its existing, possibly inherited, configuration.
      */
-    public static Logger getLogger(String name, Handler... handlers) {
+    public static Logger getLogger(String name) {
         Logger logger = lookupLogger(name);
         
         // Google App Engine uses its own logger configuration and will
         // throw a security exception when applications try to change it.
-        if (Platform.isGoogleAppEngine()) {
+        // Similarly, TeaVM redirects logging to the browser console and
+        // will crash trying to redirect it.
+        if (Platform.isTeaVM() || Platform.isGoogleAppEngine()) {
             return logger;
         }
-        
-        if (handlers.length >= 1) {
-            configureLogger(logger, handlers);
-        } else if (isColorizeLogger(logger)) {
-            // Make sure the root Colorize logger is configured.
-            getRootColorizeLogger();
+
+        // Make sure the root Colorize logger is configured.
+        if (isColorizeLogger(logger) && !rootColorizeLoggerConfigured.get()) {
+            rootColorizeLoggerConfigured.set(true);
+            configureRootColorizeLogger();
         }
         
         return logger;
     }
-    
-    /**
-     * Configures a logger to use the specified handlers. Any handlers already
-     * present, including inherited ones, will be removed.
-     * @throws IllegalArgumentException if no handlers are specified.
-     */
-    public static void configureLogger(Logger logger, Handler... handlers) {
-        if (handlers.length == 0) {
-            throw new IllegalArgumentException("No handlers specified");
-        }
-        
-        logger.setUseParentHandlers(false);
-        
-        Handler[] existingHandlers = logger.getHandlers();
-        for (Handler handler : existingHandlers) {
-            logger.removeHandler(handler);
-        }
-        
-        for (Handler handler : handlers) {
-            logger.addHandler(handler);
-        }
-    }
-    
+
     private static boolean isColorizeLogger(Logger logger) {
         return logger.getName() != null && logger.getName().startsWith(ROOT_COLORIZE_LOGGER_NAME);
     }
     
-    /**
-     * Returns the root logger for the {@code nl.colorize} namespace, configuring
-     * it if this is the first time it's used.
-     */
-    public static synchronized Logger getRootColorizeLogger() {
-        if (rootColorizeLogger == null) {
-            rootColorizeLogger = lookupLogger(ROOT_COLORIZE_LOGGER_NAME);
-            configureLogger(rootColorizeLogger, createConsoleHandler());
-            
-            for (String loggerName : ADDITIONAL_COLORIZE_LOGGER_NAMES) {
-                Logger additionalLogger = lookupLogger(loggerName);
-                configureLogger(additionalLogger, createConsoleHandler());
-            }
+    private static synchronized void configureRootColorizeLogger() {
+        LogManager logManager = LogManager.getLogManager();
+        byte[] config = COLORIZE_LOGGING_CONFIGURATION.getBytes(Charsets.UTF_8);
+
+        try (InputStream stream = new ByteArrayInputStream(config)) {
+            logManager.readConfiguration(stream);
+        } catch (IOException | UnsupportedCharsetException e) {
+            // Use the default logging configuration.
         }
-        
-        return rootColorizeLogger;
-    }
-    
-    /**
-     * Resets the configuration of all Colorize loggers in the {@code nl.colorize}
-     * namespace.
-     */
-    @VisibleForTesting
-    public static synchronized void resetColorizeLoggerConfiguration() {
-        rootColorizeLogger = null;
     }
 
     /**
@@ -152,12 +109,12 @@ public final class LogHelper {
      * Creates a log handler that will print messages to {@code stderr} and will
      * not apply any formatting to messages.
      * @deprecated Use {@link #createConsoleHandler()} in combination with 
-     *             {@link #createCompactFormatter()} instead.
+     *             a {@code CompactFormatter} instead.
      */
     @Deprecated
     public static ConsoleHandler createPlainConsoleHandler() {
         ConsoleHandler consoleHandler = new ConsoleHandler();
-        consoleHandler.setFormatter(createCompactFormatter());
+        consoleHandler.setFormatter(new CompactFormatter());
         consoleHandler.setLevel(Level.INFO);
         return consoleHandler;
     }
@@ -228,18 +185,7 @@ public final class LogHelper {
     public static Handler createStringHandler(StringWriter stringWriter) {
         return createStringHandler(stringWriter, new CompactFormatter());
     }
-    
-    /**
-     * Removes all handlers from the specified logger. Note that the logger
-     * might still inherit handlers from its parents.
-     */
-    public static void removeHandlers(Logger logger) {
-        Handler[] handlers = logger.getHandlers();
-        for (Handler handler : handlers) {
-            logger.removeHandler(handler);
-        }
-    }
-    
+
     /**
      * Returns the strack trace for the specified exception as a string.
      */
@@ -250,7 +196,7 @@ public final class LogHelper {
         writer.close();
         return buffer.toString();
     }
-    
+
     /**
      * Skeletal implementation of a log handler. It leaves only the
      * {@code publish(...)} method to be implemented by subclasses.
@@ -266,45 +212,6 @@ public final class LogHelper {
 
         @Override
         public void close() {
-        }
-    }
-    
-    /**
-     * Creates a log message formatter that uses a compact format so that log 
-     * messages only contain a single line. This makes it easier to visually 
-     * scan log files.
-     */
-    public static Formatter createCompactFormatter() {
-        return new CompactFormatter();
-    }
-    
-    private static class CompactFormatter extends Formatter {
-    
-        private SimpleDateFormat dateFormat;
-        private Date scratchDate;
-
-        public CompactFormatter() {
-            dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            scratchDate = new Date();
-        }
-        
-        @Override
-        public synchronized String format(LogRecord record) {
-            scratchDate.setTime(record.getMillis());
-            return format(record.getMessage(), record.getThrown(), record.getLevel(), scratchDate);
-        }
-        
-        public String format(String message, Throwable thrown, Level level, Date timestamp) {
-            StringBuilder log = new StringBuilder();
-            log.append(dateFormat.format(timestamp));
-            log.append("  ");
-            log.append(Strings.padEnd(level.toString(), 9, ' '));
-            log.append(message);
-            log.append(Platform.getLineSeparator());
-            if (thrown != null) {
-                log.append(LogHelper.getStackTrace(thrown));
-            }
-            return log.toString();
         }
     }
 }

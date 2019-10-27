@@ -6,6 +6,8 @@
 
 package nl.colorize.util;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -13,10 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import com.google.common.collect.ImmutableMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provides access to the underlying platform. This includes information such 
@@ -52,17 +51,10 @@ import com.google.common.collect.ImmutableMap;
  * the platform's conventions might not be followed.
  */
 public abstract class Platform {
+
+    private static AtomicBoolean teaVM = new AtomicBoolean(false);
     
-    private static Map<String, Platform> supportedPlatforms = new ImmutableMap.Builder<String, Platform>()
-        .put("Windows", new WindowsPlatform())
-        .put("macOS", new MacPlatform())
-        .put("OS X", new MacPlatform())
-        .put("Linux", new LinuxPlatform())
-        .put("Google App Engine", new GoogleCloudPlatform())
-        .put("Android", new AndroidPlatform())
-        .build();
-    
-    private static final Map<String, String> MACOS_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
+    private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
         .put("10.5", "Leopard")
         .put("10.6", "Snow Leopard")
@@ -77,10 +69,9 @@ public abstract class Platform {
         .put("10.15", "Catalina")
         .build();
     
-    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.7.0");
+    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.8.0");
     private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
-    private static final Logger LOGGER = LogHelper.getLogger(Platform.class);
-    
+
     /**
      * Creates a new platform implementation. Applications should use the static
      * methods in this class to access platform-specific information, this
@@ -133,19 +124,17 @@ public abstract class Platform {
      * reasonable default implementation will be used.
      */
     public static Platform getCurrentPlatform() {
-        Platform impl = supportedPlatforms.get(getPlatformName());
-        if (impl == null) {
-            impl = supportedPlatforms.get(getPlatformFamily());
-            if (impl == null) {
-                // The "default implementation" assumes a Linux-based
-                // platform. In reality almost all non-desktop platforms
-                // except Windows use basically the same conventions.
-                LOGGER.warning("No explicit support for platform " + getPlatformName() + 
-                        ", using default support");
-                impl = new LinuxPlatform();
-            }
+        if (isWindows()) {
+            return new WindowsPlatform();
+        } else if (isMac()) {
+            return new MacPlatform();
+        } else if (isGoogleAppEngine()) {
+            return new GoogleCloudPlatform();
+        } else if (isAndroid()) {
+            return new AndroidPlatform();
+        } else {
+            return new LinuxPlatform();
         }
-        return impl;
     }
     
     /**
@@ -155,50 +144,44 @@ public abstract class Platform {
      * or "macOS").
      */
     public static String getPlatformName() {    
-        String os = System.getProperty("os.name");
-        String vendor = System.getProperty("java.vendor");
+        String os = System.getProperty("os.name", "Unknown");
+        String vendor = System.getProperty("java.vendor", "Unknown");
         
-        String platformName = os;
         // Handle cases where the os.name system property does not return
         // the commonly used name of the OS. For example, on Android the
         // value of this system property is "Linux", which is technically
         // correct but not very useful.
         if (vendor.toLowerCase().contains("android")) {
-            platformName = "Android " + getAndroidVersion();
-        } else if (System.getProperty("com.google.appengine.runtime.version") != null) {
-            platformName = "Google App Engine";
+            return "Android " + getAndroidVersion();
+        } else if (isGoogleAppEngine()) {
+            return "Google App Engine";
         } else if (os.toLowerCase().contains("os x") || os.toLowerCase().contains("macos")) {
-            platformName = "macOS " + getMacOSVersionName();
+            return "macOS " + getMacOSVersionName();
+        } else if (isTeaVM()) {
+            return "TeaVM";
+        } else {
+            return os;
         }
-        
-        return platformName;
     }
     
     private static String getMacOSVersionName() {
         String version = System.getProperty("os.version");
-        for (Map.Entry<String, String> entry : MACOS_VERSION_NAMES.entrySet()) {
+        for (Map.Entry<String, String> entry : MAC_VERSION_NAMES.entrySet()) {
             if (version.startsWith(entry.getKey())) {
                 return entry.getValue();
             }
         }
-        LOGGER.warning("Unknown macOS version: " + version);
         return version;
     }
     
     private static Version getAndroidVersion() {
         try {
-            Class<?> buildClass = Class.forName("android.os.Build");
-            for (Class<?> innerClass : buildClass.getDeclaredClasses()) {
-                if (innerClass.getName().endsWith("VERSION")) {
-                    String release = (String) innerClass.getField("RELEASE").get(null);
-                    return Version.parse(release).truncate(2);
-                }
-            }
+            Class<?> buildVersionClass = Class.forName("android.os.Build$VERSION");
+            String release = (String) buildVersionClass.getField("RELEASE").get(null);
+            return Version.parse(release).truncate(2);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Exception while attempting to determine Android version", e);
+            return UNKNOWN_ANDROID_VERSION;
         }
-        LOGGER.warning("Cannot determine Android version");
-        return UNKNOWN_ANDROID_VERSION;
     }
     
     /**
@@ -214,6 +197,7 @@ public abstract class Platform {
         if (isLinux()) return "Linux";
         if (isGoogleAppEngine()) return "Google App Engine";
         if (isAndroid()) return "Android";
+        if (isTeaVM()) return "TeaVM";
         return getPlatformName();
     }
     
@@ -228,13 +212,26 @@ public abstract class Platform {
     public static boolean isLinux() {
         return getPlatformName().startsWith("Linux");
     }
+
+    public static boolean isGoogleCloud() {
+        return System.getenv("GAE_APPLICATION") != null ||
+            System.getProperty("com.google.appengine.runtime.version") != null;
+    }
     
     public static boolean isGoogleAppEngine() {
-        return getPlatformName().startsWith("Google App Engine");
+        return isGoogleCloud();
     }
     
     public static boolean isAndroid() {
         return getPlatformName().startsWith("Android");
+    }
+
+    public static void enableTeaVM() {
+        teaVM.set(true);
+    }
+
+    public static boolean isTeaVM() {
+        return teaVM.get();
     }
     
     /**
@@ -312,7 +309,6 @@ public abstract class Platform {
         } else if (isAndroid()) {
             return getAndroidJavaVersion();
         } else {
-            LOGGER.warning("Cannot determine Java version");
             return MIN_REQUIRED_JAVA_VERSION;
         }
     }
@@ -485,7 +481,6 @@ public abstract class Platform {
                 return (File) fileSystemView.getClass().getMethod("getDefaultDirectory")
                     .invoke(fileSystemView);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Attempt to locate My Documents failed", e);
                 return getUserHomeDir();
             }
         }
@@ -501,8 +496,7 @@ public abstract class Platform {
         @Override
         protected File getApplicationDataDirectory(String app) {
             if (isMacAppSandboxEnabled()) {
-                File sandboxContainer = new File(System.getenv("HOME"));
-                return sandboxContainer;                
+                return new File(System.getenv("HOME"));
             } else {
                 // These directory names are always in English, regardless
                 // of the language of the user interface.
@@ -514,8 +508,7 @@ public abstract class Platform {
         @Override
         protected File getUserDataDirectory() {
             if (isMacAppSandboxEnabled()) {
-                File sandboxContainer = new File(System.getenv("HOME"));
-                return sandboxContainer;
+                return new File(System.getenv("HOME"));
             } else {
                 // The "Documents" directory has the same name on non-English 
                 // versions of macOS, according to Apple's documentation.

@@ -6,19 +6,16 @@
 
 package nl.colorize.util.rest;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.ReflectionUtils;
 import nl.colorize.util.TextUtils;
-import nl.colorize.util.http.HttpResponse;
 import nl.colorize.util.http.HttpStatus;
 import nl.colorize.util.http.Method;
+import nl.colorize.util.http.URLResponse;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,13 +64,14 @@ public class RestRequestDispatcher {
         for (java.lang.reflect.Method method : ReflectionUtils.getMethodsWithAnnotation(
                 serviceObject, Rest.class)) {
             MappedService mappedService = new MappedService(ReflectionUtils.toMethodCallback(
-                    serviceObject, method, RestRequest.class, HttpResponse.class), 
-                    method.getAnnotation(Rest.class));
+                serviceObject, method, RestRequest.class, URLResponse.class),
+                method.getAnnotation(Rest.class));
+
             registerService(mappedService);
         }
     }
     
-    public void registerService(Function<RestRequest, HttpResponse> service, Rest config) {
+    public void registerService(Function<RestRequest, URLResponse> service, Rest config) {
         MappedService mappedService = new MappedService(service, config);
         registerService(mappedService);
     }
@@ -106,11 +104,11 @@ public class RestRequestDispatcher {
      *   <li>The response of the matched service, if none of the above apply</li>
      * </ul>
      */
-    public HttpResponse dispatch(RestRequest request) {
+    public URLResponse dispatch(RestRequest request) {
         Map<Method, MappedService> mappedForPath = getMappedServices(request.getPath());
         MappedService mappedForMethod = getMappedService(mappedForPath, request.getMethod());
         
-        HttpResponse response = null;
+        URLResponse response = null;
         if (mappedForPath.isEmpty()) {
             response = createEmptyResponse(HttpStatus.NOT_FOUND);
         } else if (request.getMethod() == Method.OPTIONS) {
@@ -124,7 +122,7 @@ public class RestRequestDispatcher {
         return processResponse(response);
     }
     
-    private HttpResponse dispatch(RestRequest request, MappedService mappedService) {
+    private URLResponse dispatch(RestRequest request, MappedService mappedService) {
         bindRequest(request, mappedService.config);
         
         if (!authorizationCheck.isRequestAuthorized(request, mappedService.config)) {
@@ -146,59 +144,9 @@ public class RestRequestDispatcher {
         Map<String, String> pathParameters = parsePathParameters(request, config);
 
         request.bindPath(pathComponents, pathParameters);
-        request.bindPostData(parsePostData(request));
     }
 
-    /**
-     * Attempts to parse the request body as POST data encoded using the
-     * {@code application/x-www-form-urlencoded} content type. This will return
-     * an empty {@link PostData} object if the request does not contain a body,
-     * or if the body cannot be parsed as POST data. Note that this method does
-     * not require the correct Content-Type header. This behavior is intentionally
-     * lenient to support the widespread practice of incomplete HTTP requests.
-     * <p>
-     * This method also provides limited support to treat a JSON request body as
-     * POST data. If the request's content type is "application/json" and the
-     * request body is a JSON object, the keys and values of the JSON object will
-     * be used as POST data names and values. Other types of JSON request body
-     * are not supported.
-     */
-    private PostData parsePostData(RestRequest request) {
-        String body = request.getBody();
-        if (body == null || body.isEmpty()) {
-            return PostData.empty();
-        }
-
-        String contentType = request.getHeader(HttpHeaders.CONTENT_TYPE);
-        if (contentType != null && contentType.startsWith("application/json")) {
-            return PostData.create(parseJsonRequestBody(body));
-        } else {
-            return PostData.parse(body, request.getCharset());
-        }
-    }
-
-    private Map<String,String> parseJsonRequestBody(String body) {
-        JsonParser jsonParser = new JsonParser();
-        JsonElement json = jsonParser.parse(body);
-
-        if (!(json instanceof JsonObject)) {
-            return Collections.emptyMap();
-        }
-
-        Map<String, String> data = new HashMap<>();
-
-        for (Map.Entry<String, JsonElement> entry : ((JsonObject) json).entrySet()) {
-            if (entry.getValue() instanceof JsonPrimitive) {
-                data.put(entry.getKey(), entry.getValue().getAsString());
-            } else {
-                data.put(entry.getKey(), entry.getValue().toString());
-            }
-        }
-
-        return data;
-    }
-
-    private HttpResponse callService(RestRequest boundRequest, MappedService mappedService) {
+    private URLResponse callService(RestRequest boundRequest, MappedService mappedService) {
         Exception thrown = null;
         try {
             return mappedService.apply(boundRequest);
@@ -213,12 +161,19 @@ public class RestRequestDispatcher {
         }
     }
     
-    private HttpResponse processResponse(HttpResponse response) {
+    private URLResponse processResponse(URLResponse response) {
         Map<String, String> mergedHeaders = new LinkedHashMap<>();
         mergedHeaders.putAll(defaultResponseHeaders);
-        mergedHeaders.putAll(response.getHeaders());
-        
-        return new HttpResponse(response.getStatus(), mergedHeaders, response.getBody());
+        for (String header : response.getHeaderNames()) {
+            for (String value : response.getHeaderValues(header)) {
+                mergedHeaders.put(header, value);
+            }
+        }
+
+        URLResponse result = new URLResponse(response.getStatus(), response.getBody(),
+            response.getEncoding());
+        result.addHeaders(mergedHeaders);
+        return result;
     }
     
     /**
@@ -228,11 +183,13 @@ public class RestRequestDispatcher {
      */
     private Map<Method, MappedService> getMappedServices(String path) {
         Map<Method, MappedService> matches = new HashMap<>();
+
         for (MappedService mappedService : mappedServices) {
             if (isMatchingPath(path, mappedService.config.path())) {
                 matches.put(mappedService.config.method(), mappedService);
             }
         }
+
         return matches;
     }
     
@@ -255,9 +212,10 @@ public class RestRequestDispatcher {
         return false;
     }
     
-    private HttpResponse createEmptyResponse(HttpStatus status) {
-        Map<String, String> headers = ImmutableMap.of(HttpHeaders.CONTENT_TYPE, "text/plain");
-        return new HttpResponse(status, headers, "");
+    private URLResponse createEmptyResponse(HttpStatus status) {
+        URLResponse response = new URLResponse(status, new byte[0], Charsets.UTF_8);
+        response.addHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
+        return response;
     }
     
     /**
@@ -266,7 +224,7 @@ public class RestRequestDispatcher {
      * https://developer.mozilla.org/en-US/docs/HTTP/Access_control_CORS
      * for more information on CORS (Cross Origin Resource Sharing).
      */
-    private HttpResponse handlePreflightedRequest() {
+    private URLResponse handlePreflightedRequest() {
         return createEmptyResponse(HttpStatus.OK);
     }
     
@@ -356,18 +314,18 @@ public class RestRequestDispatcher {
      * that occur while handling the request will result in an 
      * {@link InternalServerException}.
      */
-    private static class MappedService implements Function<RestRequest, HttpResponse> {
+    private static class MappedService implements Function<RestRequest, URLResponse> {
         
-        private Function<RestRequest, HttpResponse> methodCallback;
+        private Function<RestRequest, URLResponse> methodCallback;
         private Rest config;
         
-        public MappedService(Function<RestRequest, HttpResponse> methodCallback, Rest config) {
+        public MappedService(Function<RestRequest, URLResponse> methodCallback, Rest config) {
             this.methodCallback = methodCallback;
             this.config = config;
         }
 
         @Override
-        public HttpResponse apply(RestRequest request) {
+        public URLResponse apply(RestRequest request) {
             try {
                 return methodCallback.apply(request);
             } catch (Exception e) {

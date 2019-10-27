@@ -2,20 +2,20 @@ apply plugin: "java"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2019.1"
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
+version = "2019.2"
+sourceCompatibility = "11"
+targetCompatibility = "11"
 compileJava.options.encoding = "UTF-8"
 sourceSets.main.java.srcDirs = ["source"]
 sourceSets.main.resources.srcDirs = ["resources"]
-sourceSets.test.java.srcDirs = ["source.test"]
+sourceSets.test.java.srcDirs = ["test"]
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile "com.google.guava:guava:27.0.1-jre"
+    compile "com.google.guava:guava:28.1-jre"
     compile "org.jdom:jdom2:2.0.6"
     compile "jaxen:jaxen:1.1.6"
     compile "com.google.code.gson:gson:2.8.5"
@@ -24,5 +24,11 @@ dependencies {
     testCompile "javax.servlet:javax.servlet-api:3.1.0"
 }
 
-task coverage(dependsOn: jacocoTestReport) {
+task coverage(dependsOn: ["test", "jacocoTestReport"]) {
+    doLast {
+        def report = file("${buildDir}/reports/jacoco/test/html/index.html").text
+        def coverage = report =~ "tfoot.*?ctr2.*?>([\\d.]+%).*?tfoot"
+        println "-" * 40
+        println "Test coverage: " + coverage[0][1]
+    }
 }

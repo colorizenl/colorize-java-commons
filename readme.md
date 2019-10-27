@@ -7,22 +7,20 @@ library includes the following features:
 
 - assists in creating and sending HTTP requests
 - an animation framework that includes scheduling and keyframe animation
-- a REST API framework that can be used in both servlets and other types of web app environments
+- a lightweight REST API framework that can be used in environments with limited resources
 - a framework for managing, selecting, filtering, sorting, and performing calculations on data sets
 - a component library for Swing applications
 - automatic logger configuration
 - working with Apple's Property List file format
 - various other utility classes
 
-The library is used in a large variety of application types: web applications, the cloud (Google
-App Engine), desktop applications (Windows/macOS/Linux), mobile applications (Android), command
-line tools, REST APIs, and other libraries. In order to support these different environments the 
-source code has to be extremely portable. 
+The library focuses on portability, and supports a wide variety of platforms and environments:
 
-Because the library is mostly used for web-based applications, both client-side and server-side,
-a lot of the functionality is related to HTTP communication between components or systems. The
-library has a dependency on the Servlet API, but also supports environments in which Servlets are
-not available or supported.
+- desktop (Windows, Mac OS, Linux)
+- Android
+- iOS (via [RoboVM](http://robovm.mobidevelop.com))
+- Google Cloud
+- browsers (via [TeaVM](http://teavm.org))
 
 Usage
 -----
@@ -33,13 +31,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2019.1</version>
+        <version>2019.2</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2019.1"
+        compile "nl.colorize:colorize-java-commons:2019.2"
     }
 
 Build instructions
@@ -48,16 +46,16 @@ Build instructions
 The build is cross-platform and supports Windows, macOS, and Linux, but requires the following 
 software to be available:
 
-  - [Java JDK](http://java.oracle.com)
-  - [Gradle](http://gradle.org)
+- [Java JDK](http://java.oracle.com) 11+
+- [Gradle](http://gradle.org)
 
 The following Gradle build tasks are available:
 
-  - `gradle clean` cleans the build directory
-  - `gradle assemble` creates the JAR file for distribution
-  - `gradle test` runs all unit tests
-  - `gradle coverage` runs all unit tests and reports on test coverage
-  - `gradle javadoc` generates the JavaDoc API documentation
+- `gradle clean` cleans the build directory
+- `gradle assemble` creates the JAR file for distribution
+- `gradle test` runs all unit tests
+- `gradle coverage` runs all unit tests and reports on test coverage
+- `gradle javadoc` generates the JavaDoc API documentation
 
 License
 -------

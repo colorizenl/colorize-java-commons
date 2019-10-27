@@ -6,9 +6,6 @@
 
 package nl.colorize.util;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * A timer with millisecond precision. Although timer values are reported in
  * milliseconds, the timer resolution is dependent on the platform and may be
@@ -17,14 +14,13 @@ import java.util.Map;
  * This class is not thread safe, {@code Stopwatch} instances cannot be shared
  * between multiple threads.
  */
-public final class Stopwatch {
+public class Stopwatch {
     
     private long lastTick;
-    private Map<String, Long> marks;
+    private long lastInterval;
     
     public Stopwatch() {
         tick();
-        marks = new HashMap<String, Long>();
     }
     
     /**
@@ -38,46 +34,31 @@ public final class Stopwatch {
     
     /**
      * Marks this point in time. Calling {@link #tock()} will return the time
-     * relative to this point.
-     * @return Time passed since the last tick, in milliseconds.
+     * relative to this point. Returns the interval between the new tick and
+     * the previous tick, in milliseconds. This value can later also be obtained
+     * using {@link #getLastInterval()}.
      */
     public long tick() {
         long thisTick = value();
-        long since = thisTick - lastTick;
+        long interval = thisTick - lastTick;
         lastTick = thisTick;
-        return since;
+        lastInterval = interval;
+        return interval;
     }
     
     /**
-     * Returns the time since the last {@link #tick()}, but does not set a new
-     * tick.
-     * @return Time passed since the last tick, in milliseconds.
+     * Returns the time since the last {@link #tick()} in milliseconds, but
+     * does not set a new tick.
      */
     public long tock() {
         return value() - lastTick;
     }
-    
+
     /**
-     * Marks this point in time for future reference. This method is equivalent
-     * to {@link #tick()}, but stores the time passed since the last tick so 
-     * that it can be retrieved later using {@link #getMark(String)}.
-     * @param label Text description for the mark, used to retrieve it later. 
+     * Returns the distance between the most recent tick and the tick before
+     * that. Returns zero if there has only been one tick so far.
      */
-    public void mark(String label) {
-        marks.put(label, tick());
-    }
-    
-    /**
-     * Retrieves a marked point in time that has been created using 
-     * {@link #mark(String)}. If multiple marks use the same label, the most
-     * recent one is returned.
-     * @throws IllegalArgumentException if no mark with that label exists.  
-     */
-    public long getMark(String label) {
-        Long mark = marks.get(label);
-        if (mark == null) {
-            throw new IllegalArgumentException("No mark with label " + label);
-        }
-        return mark.longValue();
+    public long getLastInterval() {
+        return lastInterval;
     }
 }

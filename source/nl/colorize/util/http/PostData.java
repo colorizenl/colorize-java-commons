@@ -4,12 +4,13 @@
 // Apache license (http://www.colorize.nl/code_license.txt)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.rest;
+package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.Escape;
+import nl.colorize.util.rest.BadRequestException;
 
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -69,14 +70,18 @@ public class PostData {
 
     public String encode(Charset charset) {
         StringBuilder buffer = new StringBuilder();
+
         for (Map.Entry<String,String> entry : data.entrySet()) {
             if (buffer.length() > 0) {
                 buffer.append('&');
             }
             buffer.append(Escape.urlEncode(entry.getKey(), charset));
-            buffer.append('=');
+            if (!entry.getKey().isEmpty()) {
+                buffer.append('=');
+            }
             buffer.append(Escape.urlEncode(entry.getValue(), charset));
         }
+
         return buffer.toString();
     }
 
@@ -97,6 +102,10 @@ public class PostData {
         }
 
         return new PostData(processedData);
+    }
+
+    public static PostData create(String name, String value) {
+        return create(ImmutableMap.of(name, value));
     }
 
     public static PostData parse(String encoded, Charset charset) {

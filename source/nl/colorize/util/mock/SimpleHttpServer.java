@@ -6,6 +6,17 @@
 
 package nl.colorize.util.mock;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Charsets;
+import com.google.common.net.HttpHeaders;
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Tuple;
+import nl.colorize.util.http.HttpStatus;
+import nl.colorize.util.http.Method;
+import nl.colorize.util.http.URLResponse;
+import nl.colorize.util.rest.RestRequest;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -13,7 +24,6 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,19 +32,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HttpHeaders;
-
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.Tuple;
-import nl.colorize.util.http.HttpResponse;
-import nl.colorize.util.http.HttpStatus;
-import nl.colorize.util.http.Method;
-import nl.colorize.util.rest.RestRequest;
 
 /**
  * Simple implementation of an embedded HTTP server that can be used for testing.
@@ -52,7 +49,7 @@ public class SimpleHttpServer {
     
     private ServerSocket serverSocket;
     private AtomicBoolean running;
-    private Map<String, HttpResponse> expected;
+    private Map<String, URLResponse> expected;
     
     private static final String PROTOCOL = "HTTP/1.1";
     private static final Pattern REQUEST_LINE_PATTERN = Pattern.compile("(\\w+)\\s+(\\S+)\\s+(\\S+)");
@@ -112,7 +109,7 @@ public class SimpleHttpServer {
         PrintWriter out = new PrintWriter(new OutputStreamWriter(client.getOutputStream(), CHARSET));
         
         RestRequest request = parseRequest(in);
-        HttpResponse response = handleRequest(request);
+        URLResponse response = handleRequest(request);
         sendResponse(response, out);
         
         out.close();
@@ -200,8 +197,8 @@ public class SimpleHttpServer {
         headers.put(matcher.group(1), matcher.group(2));
     }
 
-    private HttpResponse handleRequest(RestRequest request) {
-        HttpResponse expectedResponse = expected.get(request.getPath());
+    private URLResponse handleRequest(RestRequest request) {
+        URLResponse expectedResponse = expected.get(request.getPath());
         if (expectedResponse != null) {
             return expectedResponse;
         } else {
@@ -209,22 +206,23 @@ public class SimpleHttpServer {
         }
     }
     
-    private HttpResponse createDefaultResponse(RestRequest request) {
-        Map<String, String> headers = ImmutableMap.of(
-                HttpHeaders.CONTENT_TYPE, "text/plain;charset=" + CHARSET.displayName());
-        
-        return new HttpResponse(HttpStatus.OK, headers, serialize(request));
+    private URLResponse createDefaultResponse(RestRequest request) {
+        URLResponse response = new URLResponse(HttpStatus.OK, serialize(request), CHARSET);
+        response.addHeader(HttpHeaders.CONTENT_TYPE, "text/plain;charset=" + CHARSET.displayName());
+        return response;
     }
 
-    private void sendResponse(HttpResponse response, PrintWriter out) {
+    private void sendResponse(URLResponse response, PrintWriter out) {
         out.print(serialize(response));
     }
     
     protected String serialize(RestRequest request) {
         StringBuilder buffer = new StringBuilder();
         buffer.append(request.getMethod() + " " + request.getPath() + " " + PROTOCOL + "\r\n");
-        for (Map.Entry<String, String> header : request.getHeaders().entrySet()) {
-            buffer.append(header.getKey() + ": " + header.getValue() + "\r\n");
+        for (String header : request.getHeaderNames()) {
+            for (String value : request.getHeaderValues(header)) {
+                buffer.append(header + ": " + value + "\r\n");
+            }
         }
         buffer.append("\r\n");
         if (request.getBody() != null && !request.getBody().isEmpty()) {
@@ -233,13 +231,17 @@ public class SimpleHttpServer {
         return buffer.toString();
     }
     
-    protected String serialize(HttpResponse response) {
+    protected String serialize(URLResponse response) {
         StringBuilder buffer = new StringBuilder();
         buffer.append(PROTOCOL + " " + response.getStatus().getCode() + " " + 
-                response.getStatus().getDescription() + "\r\n");
-        for (Map.Entry<String, String> header : response.getHeaders().entrySet()) {
-            buffer.append(header.getKey() + ": " + header.getValue() + "\r\n");
+            response.getStatus().getDescription() + "\r\n");
+
+        for (String header : response.getHeaderNames()) {
+            for (String value : response.getHeaderValues(header)) {
+                buffer.append(header + ": " + value + "\r\n");
+            }
         }
+
         buffer.append("\r\n");
         buffer.append(response.getBody());
         return buffer.toString();
@@ -249,19 +251,18 @@ public class SimpleHttpServer {
      * Specifies a predefined response that should be returned by the server for
      * requests sent to the specified path.
      */
-    public void expect(String forPath, HttpResponse response) {
+    public void expect(String forPath, URLResponse response) {
         expected.put(forPath, response);
     }
     
     public void expect(String forPath, HttpStatus status, String contentType, String body) {
-        Map<String, String> headers = ImmutableMap.of(HttpHeaders.CONTENT_TYPE, contentType);
-        HttpResponse response = new HttpResponse(status, headers, body);
+        URLResponse response = new URLResponse(status, body, CHARSET);
+        response.addHeader(HttpHeaders.CONTENT_TYPE, contentType);
         expected.put(forPath, response);
     }
     
     public void expect(String forPath, HttpStatus status, String body) {
-        Map<String, String> headers = Collections.emptyMap();
-        HttpResponse response = new HttpResponse(status, headers, body);
+        URLResponse response = new URLResponse(status, body, CHARSET);
         expected.put(forPath, response);
     }
     

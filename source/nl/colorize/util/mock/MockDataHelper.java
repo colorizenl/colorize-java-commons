@@ -6,6 +6,15 @@
 
 package nl.colorize.util.mock;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.net.HttpHeaders;
+import nl.colorize.util.CompactFormatter;
+import nl.colorize.util.DynamicResourceBundle;
+import nl.colorize.util.Formatting;
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Platform;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,18 +30,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.net.HttpHeaders;
-
-import nl.colorize.util.DynamicResourceBundle;
-import nl.colorize.util.Formatting;
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.Platform;
-import nl.colorize.util.http.Method;
-import nl.colorize.util.http.URLLoader;
 
 /**
  * Helper class for creating test data. This includes mock implementations of
@@ -110,23 +107,7 @@ public final class MockDataHelper {
             }
         };
     }
-    
-    public static HttpURLConnection mockURLConnection(String url, int httpStatus, String mimeType, 
-            String response) {
-        return mockURLConnection(url, httpStatus, mimeType, response.getBytes(Charsets.UTF_8));
-    }
-    
-    public static URLLoader mockURLLoader(String url, final HttpURLConnection connection) {
-        // The charset here is only used to send the request, not to
-        // read the response. 
-        return new URLLoader(url, Method.GET, Charsets.UTF_8) {
-            @Override
-            public HttpURLConnection openConnection() throws IOException {
-                return connection;
-            }
-        };
-    }
-    
+
     /**
      * A {@code ByteArrayInputStream} that has an artificial delay each time 
      * data is read from it. 
@@ -180,8 +161,8 @@ public final class MockDataHelper {
             throw new IllegalArgumentException("Date notation not supported: " + date);
         }
         
-        SimpleDateFormat dateFormat = new SimpleDateFormat(formatString);
         try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat(formatString);
             return dateFormat.parse(date);
         } catch (ParseException e) {
             throw new RuntimeException("Cannot parse date " + date + " using format " + formatString);
@@ -197,7 +178,7 @@ public final class MockDataHelper {
      * {@code StringWriter}.
      */
     public static Handler createInMemoryLogHandler(StringWriter writer) {
-        return LogHelper.createStringHandler(writer, LogHelper.createCompactFormatter());
+        return LogHelper.createStringHandler(writer, new CompactFormatter());
     }
     
     public static void sleep(long time) {
