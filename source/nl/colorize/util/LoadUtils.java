@@ -1,12 +1,21 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.CharStreams;
+import com.google.common.io.Closeables;
+import com.google.common.io.Files;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileFilter;
@@ -27,15 +36,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CharStreams;
-import com.google.common.io.Closeables;
-import com.google.common.io.Files;
 
 /**
  * Utility class to load and save data of various types. Data can be loaded from
@@ -45,6 +48,8 @@ import com.google.common.io.Files;
  * documentation, the stream is closed directly after reading or writing from it. 
  */
 public final class LoadUtils {
+
+    private static final Logger LOGGER = LogHelper.getLogger(LoadUtils.class);
     
     private LoadUtils() { 
     }
@@ -149,12 +154,25 @@ public final class LoadUtils {
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Properties loadProperties(Reader source) throws IOException {
+        // This needs a workaround because the "normal" version
+        // of Properties.load(Reader) is not available in TeaVM.
+        // This workaround leads to some unnecessary overhead,
+        // but since property files are generally not loaded
+        // multiple times this should be OK.
         Properties properties = new Properties();
-        try {
-            properties.load(source);
-        } finally {
-            Closeables.close(source, true);
+        byte[] contents = new byte[0];
+
+        if (Platform.isTeaVM()) {
+            contents = CharStreams.toString(source).getBytes(Charsets.UTF_8);
+            LOGGER.warning("Unable to load non-ASCII characters in property files when running in TeaVM");
+        } else {
+            contents = CharStreams.toString(source).getBytes(Charsets.ISO_8859_1);
         }
+
+        try (InputStream buffer = new ByteArrayInputStream(contents)) {
+            properties.load(buffer);
+        }
+
         return properties;
     }
     
@@ -164,7 +182,9 @@ public final class LoadUtils {
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Properties loadProperties(InputStream stream, Charset charset) throws IOException {
-        return loadProperties(new InputStreamReader(stream, charset));
+        try (Reader reader = new InputStreamReader(stream, charset)) {
+            return loadProperties(reader);
+        }
     }
     
     /**
@@ -183,8 +203,8 @@ public final class LoadUtils {
      * @throws RuntimeException if the resource file could not be parsed.
      */
     public static Properties loadProperties(ResourceFile file, Charset charset) {
-        try {
-            return loadProperties(file.openReader(charset));
+        try (Reader reader = file.openReader(charset)) {
+            return loadProperties(reader);
         } catch (IOException e) {
             throw new RuntimeException("Cannot parse properties file", e);
         }
@@ -195,7 +215,9 @@ public final class LoadUtils {
      * @throws IOException if the file could not be read.
      */
     public static Properties loadProperties(File source, Charset charset) throws IOException {
-        return loadProperties(Files.newReader(source, charset));
+        try (Reader reader = Files.newReader(source, charset)) {
+            return loadProperties(reader);
+        }
     }
     
     /**

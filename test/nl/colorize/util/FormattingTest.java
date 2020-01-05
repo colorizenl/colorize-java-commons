@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
@@ -15,13 +15,9 @@ import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * Unit test for the {@code FormatUtils} class.
- */
 public class FormattingTest {
     
     @Test
-    @SuppressWarnings("deprecation")
     public void testNumberFormat() {
         assertEquals("1.0", Formatting.numberFormat(1f, 1));
         assertEquals("0.12", Formatting.numberFormat(0.1234f, 2));
@@ -96,17 +92,7 @@ public class FormattingTest {
         assertEquals("6 months ago", Formatting.formatDateDiff(asDate("2010-07-15 00:00:00"), base));
         assertEquals("100 years ago", Formatting.formatDateDiff(asDate("2110-01-01 12:00:00"), base));
     }
-    
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testHumanReadableFormat() {
-        assertEquals("something", Formatting.humanReadableFormat("something"));
-        assertEquals("Something", Formatting.humanReadableFormat("Something"));
-        assertEquals("Something else", Formatting.humanReadableFormat("Something Else"));
-        assertEquals("Something else", Formatting.humanReadableFormat("SOMETHING ELSE"));
-        assertEquals("Something else", Formatting.humanReadableFormat("SOMETHING_ELSE"));
-    }
-    
+
     @Test
     public void testFormatHumanReadableFileLocation() {
         assertEquals("a \u00BB b.txt", Formatting.formatHumanReadableFileLocation(new File("a/b.txt")));

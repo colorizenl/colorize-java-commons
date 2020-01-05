@@ -31,13 +31,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2019.2</version>
+        <version>2019.2.4</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2019.2"
+        compile "nl.colorize:colorize-java-commons:2019.2.4"
     }
 
 Build instructions
@@ -60,12 +60,8 @@ The following Gradle build tasks are available:
 License
 -------
 
-Copyright 2007-2019 Colorize
+Copyright 2007-2020 Colorize
 
-The source code is licensed under the Apache License 2.0, meaning you can use it free of charge 
-in commercial and non-commercial projects as long as you mention the original copyright.
-The full license text can be found at 
-[http://www.colorize.nl/code_license.txt](http://www.colorize.nl/code_license.txt).
-
-By using the source code you agree to the Colorize terms and conditions, which are available 
-from the Colorize website at [http://www.colorize.nl/en/](http://www.colorize.nl/en/).
+The source code is licensed under the Apache License. Refer to
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0) for
+the full license text.

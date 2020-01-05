@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
@@ -311,10 +311,9 @@ public final class MacIntegration {
                 Class<?> aboutHandlerClass = Class.forName("com.apple.eawt.AboutHandler");
                 invokeApplication("setAboutHandler", aboutHandlerClass, proxy(aboutHandlerClass));
 
-                if (showPreferences) {
-                    Class<?> prefsHandlerClass = Class.forName("com.apple.eawt.PreferencesHandler");
-                    invokeApplication("setPreferencesHandler", prefsHandlerClass, proxy(prefsHandlerClass));
-                }
+                Class<?> prefsHandlerClass = Class.forName("com.apple.eawt.PreferencesHandler");
+                invokeApplication("setPreferencesHandler", prefsHandlerClass,
+                    showPreferences ? proxy(prefsHandlerClass) : null);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Error while registering application menu listener", e);
             }

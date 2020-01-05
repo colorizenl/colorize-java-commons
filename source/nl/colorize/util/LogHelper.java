@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
@@ -67,7 +67,7 @@ public final class LogHelper {
         // throw a security exception when applications try to change it.
         // Similarly, TeaVM redirects logging to the browser console and
         // will crash trying to redirect it.
-        if (Platform.isTeaVM() || Platform.isGoogleAppEngine()) {
+        if (Platform.isTeaVM() || Platform.isGoogleCloud()) {
             return logger;
         }
 

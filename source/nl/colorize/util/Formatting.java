@@ -1,21 +1,21 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
+
 import java.io.File;
 import java.util.Date;
 import java.util.Map;
-import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.swing.SwingUtils;
 
 /**
  * Miscellaneous utility functions for creating formatted strings out of data.
@@ -28,6 +28,8 @@ import nl.colorize.util.swing.SwingUtils;
  * thread safe. 
  */
 public final class Formatting {
+
+    private static DynamicResourceBundle durationsBundle;
 
     // SimpleDateFormat patterns, see class documentation.
     public static final String YYYYMMDD = "yyyyMMdd";
@@ -42,38 +44,39 @@ public final class Formatting {
     private static final Pattern WORD_SEPARATOR_PATTERN = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR_PATTERN).omitEmptyStrings();
 
-    private static final DynamicResourceBundle DURATIONS_BUNDLE = SwingUtils.getCustomComponentsBundle();
-    private static final long MILLIS_IN_HOUR = 3600000L;
+    private static final ResourceFile DURATIONS_BUNDLE_FILE =
+        new ResourceFile("custom-swing-components.properties");
+    private static final long MILLIS_IN_HOUR = 3_600_000L;
     private static final long MILLIS_IN_DAY = 24L * MILLIS_IN_HOUR;
+
     // Number of milliseconds in each time unit. Note that these values are an
     // apporoximation, they are not intended to be exact. The values for month
     // and year in particular are not that accurate, but since this is only used
     // for human-readable text labels the error margin is acceptable.
     private static final Map<String,Long> TIME_UNITS = new ImmutableMap.Builder<String,Long>()
-            .put("SECOND", 1000L)
-            .put("MINUTE", 60000L)
-            .put("HOUR", MILLIS_IN_HOUR)
-            .put("DAY", MILLIS_IN_DAY)
-            .put("WEEK", MILLIS_IN_DAY * 7L)
-            .put("MONTH", MILLIS_IN_DAY * 30L)
-            .put("YEAR", MILLIS_IN_DAY * 365L)
-            .build();
+        .put("SECOND", 1000L)
+        .put("MINUTE", 60_000L)
+        .put("HOUR", MILLIS_IN_HOUR)
+        .put("DAY", MILLIS_IN_DAY)
+        .put("WEEK", MILLIS_IN_DAY * 7L)
+        .put("MONTH", MILLIS_IN_DAY * 30L)
+        .put("YEAR", MILLIS_IN_DAY * 365L)
+        .build();
 
     private Formatting() {
     }
 
     /**
      * Formats a number with a set amount of decimal places.
-     * @throws IllegalArgumentException for less than one decimal places.
-     * @deprecated Use {@link java.text.DecimalFormat} or
-     *             {@link java.lang.String#format(String, Object...)} instead.
+     * <p>
+     * <strong>Note:</strong> In conventional cases {@code String.format} should
+     * be used instead of this method. However, on some platforms, such as TeaVM,
+     * {@code printf} might not be fully available or have issues. This method
+     * has not been marked as deprecated to keep supporting those platforms.
      */
-    @Deprecated
     public static String numberFormat(float n, int decimals) {
-        if (decimals < 1) {
-            throw new IllegalArgumentException(decimals + " decimal places");
-        }
-        
+        Preconditions.checkArgument(decimals >= 1, decimals + " decimal places");
+
         double factor = Math.pow(10, decimals);
         return String.valueOf(Math.round(n * factor) / factor);
     }
@@ -84,14 +87,12 @@ public final class Formatting {
      * @throws IllegalArgumentException if the time is negative.
      */
     public static String timeFormat(long time, boolean includeMillis) {
-        if (time < 0) {
-            throw new IllegalArgumentException("Cannot format negative time");
-        }
-        
-        long hours = time / 3600000L;
-        long minutes = (time % 3600000L) / 60000L;
-        long seconds = (time % 3600000L % 60000L) / 1000L;
-        long millis = time % 3600000L % 60000L % 1000L;
+        Preconditions.checkArgument(time >= 0L, "Cannot format negative time");
+
+        long hours = time / 3_600_000L;
+        long minutes = (time % 3_600_000L) / 60_000L;
+        long seconds = (time % 3_600_000L % 60_000L) / 1000L;
+        long millis = time % 3_600_000L % 60_000L % 1000L;
         
         String formatted = "";
         if (hours > 0) {
@@ -147,8 +148,8 @@ public final class Formatting {
      */
     public static String memoryFormat(long bytes, int decimals) {
         long bytesInKB = 1024L;
-        long bytesInMB = 1048576L;
-        long bytesInGB = 1073741824L;
+        long bytesInMB = 1_048_576L;
+        long bytesInGB = 1_073_741_824L;
         
         if (bytes >= bytesInGB) {
             float gb = (float) bytes / (float) bytesInGB;
@@ -203,7 +204,7 @@ public final class Formatting {
      * default resource bundle.
      */
     public static String formatDateDiff(Date first, Date second) {
-        return formatDateDiff(first, second, DURATIONS_BUNDLE);
+        return formatDateDiff(first, second, getDurationsBundle());
     }
     
     /**
@@ -211,39 +212,24 @@ public final class Formatting {
      * the default resource bundle.
      */
     public static String formatDateDiff(Date date) {
-        return formatDateDiff(date, DURATIONS_BUNDLE);
+        return formatDateDiff(date, getDurationsBundle());
     }
-    
-    /**
-     * Takes an arbitrary string and attempts to format it in a human-readable 
-     * way. Usage of uppercase letters, hyphens, and underscores will be normalized.
-     * @deprecated This method is too vague about the ways it changes the original
-     *             string, which makes it difficult to determine whether it should
-     *             be used in a specific situation. 
-     */
-    @Deprecated
-    public static String humanReadableFormat(String str) {
-        if (str.isEmpty()) {
-            return str;
+
+    private static DynamicResourceBundle getDurationsBundle() {
+        if (durationsBundle == null) {
+            durationsBundle = new DynamicResourceBundle(DURATIONS_BUNDLE_FILE, Charsets.UTF_8);
         }
-        
-        String formatted = str.trim();
-        if (Character.isUpperCase(formatted.charAt(0))) {
-            formatted = formatted.substring(0, 1) + formatted.substring(1).toLowerCase();
-        } else {
-            formatted = formatted.toLowerCase();
-        }
-        formatted = formatted.replace("_", " ");
-        formatted = formatted.replace("-", " ");
-        return formatted;
+        return durationsBundle;
     }
-    
+
     /**
      * Formats a file's location in a human readable format containing the file's
      * name and parent directory. This can be used to communicate file locations
      * in a user interface to communicate the file's location without having to
      * display the file's full path.
+     * @deprecated Should be replaced by application-specific logic.
      */
+    @Deprecated
     public static String formatHumanReadableFileLocation(File file) {
         File parent = file.getParentFile();
         if (parent == null) {

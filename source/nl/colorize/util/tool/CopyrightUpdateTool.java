@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.tool;
@@ -33,36 +33,43 @@ import java.util.stream.Collectors;
  * character encodings or line endings will be replaced.
  */
 public class CopyrightUpdateTool {
-    
+
+    private String startCopyrightYear;
     private String newCopyrightYear;
-    private boolean dryRun;
+    private String license;
 
     private static final Pattern COPYRIGHT_PATTERN = Pattern.compile(
-        "Copyright\\s+(20\\d+)(\\s*-\\s*20\\d+)?");
+        "Copyright\\s+(20\\d+)(\\s*[-,]\\s*)?(20\\d+)?");
     private static final List<String> SUPPORTED_FILE_EXTENSIONS = ImmutableList.of(
-        ".java", ".js", ".ts", ".php", ".swift", ".gradle", ".md", ".properties", ".json");
+        ".java", ".js", ".ts", ".php", ".swift", ".gradle", ".md", ".properties", ".json", ".yaml");
     private static final List<String> EXCLUDE_DIRS = ImmutableList.of(
         "/build/", "/lib/", "/node_modules/", "/.git/", "/.gradle/", "/.idea/", "/out/");
     private static final Charset FILE_CHARSET = Charsets.UTF_8;
+    private static final String LEAVE_MARKER = "leave";
     private static final Logger LOGGER = LogHelper.getLogger(CopyrightUpdateTool.class);
 
     public static void main(String[] args) {
-        if (args.length < 2) {
-            LOGGER.info("Usage: CopyrightUpdateTool <dir> <newCopyrightYear> [dryRun]");
+        if (args.length != 4) {
+            LOGGER.info("Usage: CopyrightUpdateTool <dir> <startYear> <copyrightYear> <license>");
+            LOGGER.info("");
+            LOGGER.info("Providing the value of 'leave' for any of the arguments");
+            LOGGER.info("will not rewrite that value and retain the original.");
             System.exit(1);
         }
         
         File dir = new File(args[0]);
-        String newCopyrightYear = args[1];
-        boolean dryRun = args.length >= 3 && (args[2].equals("dryRun") || args[2].equals("true"));
-        
-        CopyrightUpdateTool tool = new CopyrightUpdateTool(newCopyrightYear, dryRun);
+        String startCopyrightYear = args[1];
+        String newCopyrightYear = args[2];
+        String license = args[3];
+
+        CopyrightUpdateTool tool = new CopyrightUpdateTool(startCopyrightYear, newCopyrightYear, license);
         tool.updateDirectory(dir);
     }
     
-    public CopyrightUpdateTool(String newCopyrightYear, boolean dryRun) {
+    public CopyrightUpdateTool(String startCopyrightYear, String newCopyrightYear, String license) {
+        this.startCopyrightYear = startCopyrightYear;
         this.newCopyrightYear = newCopyrightYear;
-        this.dryRun = dryRun;
+        this.license = license;
     }
 
     private void updateDirectory(File dir) {
@@ -79,9 +86,7 @@ public class CopyrightUpdateTool {
             }
         }
         
-        if (!dryRun) {
-            LOGGER.info("Done, updated " + files.size() + " files");
-        }
+        LOGGER.info("Done, updated " + files.size() + " files");
     }
 
     private List<File> findFiles(File dir) {
@@ -122,26 +127,39 @@ public class CopyrightUpdateTool {
             LOGGER.info("    >>> " + diff.getRight().trim());
         }
             
-        if (!dryRun) {
-            PrintWriter writer = new PrintWriter(file, FILE_CHARSET.displayName());
-            for (String line : processedLines) {
-                writer.println(line);
-            }
-            writer.close();
+        PrintWriter writer = new PrintWriter(file, FILE_CHARSET.displayName());
+        for (String line : processedLines) {
+            writer.println(line);
+        }
+        writer.close();
+    }
+
+    protected String processLine(String line) {
+        Matcher matcher = COPYRIGHT_PATTERN.matcher(line);
+
+        if (!matcher.find()) {
+            return processLineLicense(line);
+        }
+
+        if (matcher.group(3) == null) {
+            return matcher.replaceFirst("Copyright " + newCopyrightYear);
+        } else if (startCopyrightYear.equals(LEAVE_MARKER)) {
+            return matcher.replaceFirst("Copyright $1$2" + newCopyrightYear);
+        } else {
+            return matcher.replaceFirst("Copyright " + startCopyrightYear + "$2" + newCopyrightYear);
         }
     }
 
-    private String processLine(String line) {
-        Matcher matcher = COPYRIGHT_PATTERN.matcher(line);
-        if (matcher.find()) {
-            if (matcher.group(2) == null || newCopyrightYear.indexOf('-') != -1) {
-                return matcher.replaceFirst("Copyright " + newCopyrightYear);
-            } else {
-                return matcher.replaceFirst("Copyright $1-" + newCopyrightYear);
-            }
-        } else {
+    private String processLineLicense(String line) {
+        if (license == null || LEAVE_MARKER.equals(license)) {
             return line;
         }
+
+        if (!line.trim().toLowerCase().startsWith("// apache license")) {
+            return line;
+        }
+
+        return "// " + license;
     }
 
     private Relation<String, String> calculateDiff(List<String> first, List<String> second) {

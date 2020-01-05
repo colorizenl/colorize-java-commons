@@ -2,7 +2,7 @@ apply plugin: "java"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2019.2"
+version = "2019.2.4"
 sourceCompatibility = "11"
 targetCompatibility = "11"
 compileJava.options.encoding = "UTF-8"
@@ -15,10 +15,10 @@ repositories {
 }
 
 dependencies {
-    compile "com.google.guava:guava:28.1-jre"
+    compile "com.google.guava:guava:28.2-jre"
     compile "org.jdom:jdom2:2.0.6"
-    compile "jaxen:jaxen:1.1.6"
-    compile "com.google.code.gson:gson:2.8.5"
+    compile "jaxen:jaxen:1.2.0"
+    compile "com.google.code.gson:gson:2.8.6"
     compileOnly "javax.servlet:javax.servlet-api:3.1.0"
     testCompile "junit:junit:4.12"
     testCompile "javax.servlet:javax.servlet-api:3.1.0"

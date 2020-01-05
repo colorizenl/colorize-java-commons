@@ -1,11 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.io.Closeables;
@@ -17,6 +18,7 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Graphics;
@@ -25,6 +27,7 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.Transparency;
 import java.awt.font.FontRenderContext;
 import java.awt.font.LineBreakMeasurer;
@@ -459,6 +462,11 @@ public final class Utils2D {
         
         return new Color(red, green, blue, alpha);
     }
+
+    public static Stroke createDashedStroke(float weight, int dashSize) {
+        return new BasicStroke(weight, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL,
+            0, new float[] {dashSize}, 0);
+    }
     
     /**
      * Creates a new image by applying gaussian blur to an existing image.
@@ -531,7 +539,8 @@ public final class Utils2D {
         g2.dispose();
         return combined;
     }
-    
+
+    @VisibleForTesting
     public static BufferedImage createTestImage(int width, int height, Color color) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = createGraphics(image, true, true);
@@ -540,7 +549,8 @@ public final class Utils2D {
         g2.dispose();
         return image;
     }
-    
+
+    @VisibleForTesting
     public static BufferedImage createTestImage(int width, int height) {
         return createTestImage(width, height, Color.RED);
     }

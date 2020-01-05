@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
@@ -82,10 +82,8 @@ public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
-    private static final ResourceFile CUSTOM_COMPONENTS_BUNDLE_FILE =
-        new ResourceFile("custom-swing-components.properties");
     private static final DynamicResourceBundle CUSTOM_COMPONENTS_BUNDLE =
-        new DynamicResourceBundle(CUSTOM_COMPONENTS_BUNDLE_FILE, Charsets.UTF_8);
+        new DynamicResourceBundle(new ResourceFile("custom-swing-components.properties"), Charsets.UTF_8);
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);

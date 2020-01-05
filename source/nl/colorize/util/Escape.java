@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
@@ -40,7 +40,10 @@ public final class Escape {
     
     /**
      * Encodes a string using URL encoding.
+     * @deprecated As of Java 10 this method is now available as part
+     *             of the standard library.
      */
+    @Deprecated
     public static String urlEncode(String str, Charset charset) {
         try {
             return URLEncoder.encode(str, charset.displayName());
@@ -51,7 +54,10 @@ public final class Escape {
     
     /**
      * Decodes a URL encoded string.
+     * @deprecated As of Java 10 this method is now available as part
+     *             of the standard library.
      */
+    @Deprecated
     public static String urlDecode(String encoded, Charset charset) {
         try {
             return URLDecoder.decode(encoded, charset.displayName());
@@ -188,7 +194,8 @@ public final class Escape {
     }
     
     /**
-     * Returns the hexcode for the specified byte array.
+     * Returns the hexcode for the specified byte array. For example, 0xDEADBEEF
+     * will return a hexcode of 6465616462656566.
      */
     public static String toHexString(byte[] bytes) {
         // Implementation based on

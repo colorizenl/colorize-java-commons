@@ -1,15 +1,14 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import java.awt.BorderLayout;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Logger;
+import com.google.common.collect.ImmutableList;
+import nl.colorize.util.DynamicResourceBundle;
+import nl.colorize.util.LogHelper;
 
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -17,11 +16,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-
-import com.google.common.collect.ImmutableList;
-
-import nl.colorize.util.DynamicResourceBundle;
-import nl.colorize.util.LogHelper;
+import java.awt.BorderLayout;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Utility class for working with pop-up windows. This class can be used instead

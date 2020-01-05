@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
@@ -69,7 +69,7 @@ public abstract class Platform {
         .put("10.15", "Catalina")
         .build();
     
-    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("1.8.0");
+    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("11.0.0");
     private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
 
     /**
@@ -128,7 +128,7 @@ public abstract class Platform {
             return new WindowsPlatform();
         } else if (isMac()) {
             return new MacPlatform();
-        } else if (isGoogleAppEngine()) {
+        } else if (isGoogleCloud()) {
             return new GoogleCloudPlatform();
         } else if (isAndroid()) {
             return new AndroidPlatform();
@@ -153,8 +153,8 @@ public abstract class Platform {
         // correct but not very useful.
         if (vendor.toLowerCase().contains("android")) {
             return "Android " + getAndroidVersion();
-        } else if (isGoogleAppEngine()) {
-            return "Google App Engine";
+        } else if (isGoogleCloud()) {
+            return "Google Cloud";
         } else if (os.toLowerCase().contains("os x") || os.toLowerCase().contains("macos")) {
             return "macOS " + getMacOSVersionName();
         } else if (isTeaVM()) {
@@ -195,7 +195,7 @@ public abstract class Platform {
         if (isWindows()) return "Windows";
         if (isMac()) return "macOS";
         if (isLinux()) return "Linux";
-        if (isGoogleAppEngine()) return "Google App Engine";
+        if (isGoogleCloud()) return "Google Cloud";
         if (isAndroid()) return "Android";
         if (isTeaVM()) return "TeaVM";
         return getPlatformName();
@@ -217,11 +217,17 @@ public abstract class Platform {
         return System.getenv("GAE_APPLICATION") != null ||
             System.getProperty("com.google.appengine.runtime.version") != null;
     }
-    
+
+    /**
+     * @deprecated Google App Engine is no longer a separate SDK and has
+     *             been integrated into the Google Cloud SDK.
+     *             Use {@link #isGoogleCloud()}
+     */
+    @Deprecated
     public static boolean isGoogleAppEngine() {
         return isGoogleCloud();
     }
-    
+
     public static boolean isAndroid() {
         return getPlatformName().startsWith("Android");
     }

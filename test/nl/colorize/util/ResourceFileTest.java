@@ -1,26 +1,26 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
-
-/**
- * Unit test for the {@code ResourceFile} class.
- */
 public class ResourceFileTest {
 
     @Test

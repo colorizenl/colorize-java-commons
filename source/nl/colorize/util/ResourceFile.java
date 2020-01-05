@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
@@ -110,27 +110,39 @@ public final class ResourceFile {
     
     /**
      * Convenience method that reads in the binary contents of this resource file.
-     * @throws IOException if an I/O error occurs while reading the file.
+     * @throws IllegalStateException if the resource file does not exist.
      */
-    public byte[] readBytes() throws IOException {
-        return LoadUtils.readToByteArray(openStream());
+    public byte[] readBytes() {
+        try {
+            return LoadUtils.readToByteArray(openStream());
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read resource file " + path, e);
+        }
     }
     
     /**
      * Convenience method that reads in the textual contents of this resource file.
-     * @throws IOException if an I/O error occurs while reading the file.
+     * @throws IllegalStateException if the resource file does not exist.
      */
-    public String read(Charset charset) throws IOException {
-        return LoadUtils.readToString(openReader(charset));
+    public String read(Charset charset) {
+        try {
+            return LoadUtils.readToString(openReader(charset));
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read resource file " + path, e);
+        }
     }
     
     /**
      * Convenience method that reads in the textual contents of this resource file
      * and returns the contents as a list of lines.
-     * @throws IOException if an I/O error occurs while reading the file.
+     * @throws IllegalStateException if the resource file does not exist.
      */
-    public List<String> readLines(Charset charset) throws IOException {
-        return LoadUtils.readLines(openReader(charset));
+    public List<String> readLines(Charset charset) {
+        try {
+            return LoadUtils.readLines(openReader(charset));
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read resource file " + path, e);
+        }
     }
     
     /**
@@ -139,7 +151,7 @@ public final class ResourceFile {
     public boolean exists() {
         try {
             return openStream() != null;
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             return false;
         }
     }

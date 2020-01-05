@@ -1,17 +1,15 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.http;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.Escape;
-import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 
@@ -20,6 +18,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
@@ -36,6 +35,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -64,6 +65,8 @@ public abstract class URLLoader extends HttpMessage {
 
     private int timeout;
     private boolean certificateVerification;
+
+    public static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
 
     private static final List<String> SUPPORTED_PROTOCOLS = ImmutableList.of("http", "https");
     private static final int DEFAULT_TIMEOUT = 30_000;
@@ -185,13 +188,41 @@ public abstract class URLLoader extends HttpMessage {
     public abstract URLResponse sendRequest() throws IOException;
 
     /**
+     * Sends the HTTP request asynchronously from a separate thread. Returns
+     * a {@code Future} that will produce the response.
+     */
+    public Future<URLResponse> sendRequestAsync() {
+        FutureTask<URLResponse> task = new FutureTask<>(() -> sendRequest());
+
+        Thread thread = new Thread(task, "ColorizeJavaCommons-URLLoader");
+        thread.start();
+
+        return task;
+    }
+
+    /**
      * Creates a new {@link URLLoader} that will send a request using the specified
      * HTTP request method. In addition to this generic factory method a number of
      * convenience methods are provided, e.g. {@link #get(String, Charset)}, 
      * {@link #post(String, Charset)}.
      */
     public static URLLoader create(Method httpMethod, String url, Charset requestCharset) {
-        if (Platform.isAndroid()) {
+        boolean useClassicLoader = Platform.isAndroid();
+
+        //TODO there is a bug in Java 11.0.5 that causes issues with requests that
+        //     return HTTP 204 (no content). Since we have no way to influence the
+        //     behavior of the external websites, the only solution is to keep using
+        //     the classic loader for now.
+        //     See https://bugs.openjdk.java.net/browse/JDK-8218662 for details.
+        if (Platform.getJavaVersion().toString().startsWith("11.")) {
+            useClassicLoader = true;
+        }
+
+        if (System.getProperty(CLASSIC_LOADER_PROPERTY) != null) {
+            useClassicLoader = System.getProperty(CLASSIC_LOADER_PROPERTY).equals("true");
+        }
+
+        if (useClassicLoader) {
             return new ClassicURLLoader(httpMethod, URI.create(url), requestCharset);
         } else {
             return new HttpURLLoader(httpMethod, URI.create(url), requestCharset);
@@ -332,23 +363,27 @@ public abstract class URLLoader extends HttpMessage {
             URLResponse response = new URLResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 new byte[0], getEncoding());
 
-            try {
+            try (InputStream responseStream = connection.getInputStream()) {
                 // The entire response has to be downloaded first. We cannot read
                 // the HTTP status first, as that will call .getInuputStream()
                 // internally, and the stream will block in case of Keep-Alive
                 // connections.
-                byte[] body = LoadUtils.readToByteArray(connection.getInputStream());
+                byte[] body = responseStream.readAllBytes();
                 HttpStatus status = readHttpStatus(connection);
                 response = new URLResponse(status, body, getEncoding());
                 readResponseHeaders(connection, response);
 
                 if (connection instanceof HttpsURLConnection) {
+                    // If the response contains a body, the body has already
+                    // been downloaded at this point. If the response does
+                    // not have a body, this redundant is needed to download
+                    // the HTTPS certificates.
+                    connection.connect();
+
                     for (Certificate certificate : ((HttpsURLConnection) connection).getServerCertificates()) {
                         response.addCertificate(certificate);
                     }
                 }
-            } finally {
-                connection.disconnect();
             }
 
             return response;
@@ -387,10 +422,10 @@ public abstract class URLLoader extends HttpMessage {
          */
         private void readResponseHeaders(HttpURLConnection connection, URLResponse response) {
             for (Map.Entry<String, List<String>> entry : connection.getHeaderFields().entrySet()) {
-                String header = entry.getKey() != null ? entry.getKey() : "";
-
-                for (String value : entry.getValue()) {
-                    response.addHeader(header, value);
+                if (entry.getKey() != null && !entry.getKey().isEmpty()) {
+                    for (String value : entry.getValue()) {
+                        response.addHeader(entry.getKey(), value);
+                    }
                 }
             }
         }

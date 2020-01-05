@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.http;
@@ -20,6 +20,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -38,6 +40,8 @@ public class URLLoaderTest {
         server = new SimpleHttpServer();
         server.start(9090);
         testURL = "http://localhost:9090";
+
+        System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "true");
     }
     
     @AfterClass
@@ -152,11 +156,14 @@ public class URLLoaderTest {
             .map(header -> header.toLowerCase())
             .sorted()
             .collect(Collectors.toList());
+            
+        // Ignore headers that depend on the HTTP version.
+        headers.remove("connection");
+        headers.remove("transfer-encoding");
 
         assertEquals("text/html; charset=UTF-8", response.getHeader("Content-Type"));
         assertEquals(ImmutableList.of("accept-ranges", "age", "content-type", "date",
-            "server", "vary", "via", "x-powered-by", "x-varnish"),
-            headers);
+            "server", "vary", "via", "x-powered-by", "x-varnish"), headers);
     }
     
     @Test
@@ -290,6 +297,24 @@ public class URLLoaderTest {
         URLResponse response = request.sendRequest();
 
         assertEquals(2, response.getCertificates().size());
+    }
+
+    @Test
+    public void testHttp204ResponseWithContentLengthHeader() throws IOException {
+        URLLoader request = URLLoader.get("https://www.colorize-dashboard.nl/rest/website/colorize.nl/check",
+            Charsets.UTF_8);
+        URLResponse response = request.sendRequest();
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatus());
+        assertEquals("", response.getBody());
+    }
+
+    @Test
+    public void testSendRequestAsync() throws ExecutionException, InterruptedException {
+        URLLoader request = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
+        Future<URLResponse> future = request.sendRequestAsync();
+
+        assertEquals(HttpStatus.OK, future.get().getStatus());
     }
 
     private URLResponse toResponse(HttpStatus status, String contentType, String body) {

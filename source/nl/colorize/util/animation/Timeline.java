@@ -1,15 +1,15 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.animation;
 
+import com.google.common.base.Preconditions;
+
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Animates the value of a property over time, by interpolating between key
@@ -19,7 +19,7 @@ import com.google.common.base.Preconditions;
  * although timelines also have the option to loop infinitely or until
  * stopped manually.
  */
-public class Timeline implements TimedAnimatable {
+public class Timeline implements Animatable {
     
     private float playhead;
     private SortedSet<KeyFrame> keyframes;
@@ -96,7 +96,6 @@ public class Timeline implements TimedAnimatable {
     /**
      * Moves the playhead back to the start of the timeline.
      */
-    @Override
     public void reset() {
         if (!keyframes.isEmpty()) {
             setPlayhead(0f);
@@ -156,7 +155,6 @@ public class Timeline implements TimedAnimatable {
     /**
      * Returns true if the playhead has reached the end of the timeline. 
      */
-    @Override
     public boolean isCompleted() {
         if (keyframes.isEmpty()) {
             return false;

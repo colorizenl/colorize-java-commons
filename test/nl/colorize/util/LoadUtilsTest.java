@@ -1,10 +1,14 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -20,15 +24,11 @@ import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-/**
- * Unit test for the {@code LoadUtils} class.
- */
 public class LoadUtilsTest {
     
     @Test

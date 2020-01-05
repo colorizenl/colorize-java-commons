@@ -1,10 +1,16 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2019 Colorize
-// Apache license (http://www.colorize.nl/code_license.txt)
+// Copyright 2007-2020 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
+import com.google.common.io.Closeables;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,12 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.escape.Escaper;
-import com.google.common.escape.Escapers;
-import com.google.common.io.Closeables;
 
 /**
  * Runs an external process and captures its output. This can optionally be done
@@ -67,12 +67,12 @@ public class CommandRunner {
     private StringWriter output;
     
     private static final Escaper BASH_ESCAPER = Escapers.builder()
-            .addEscape(' ', "\\ ")
-            .addEscape('$', "\\$")
-            .addEscape('`', "\\`")
-            .addEscape('\\', "\\\\")
-            .addEscape('!', "\\!")
-            .build();
+        .addEscape(' ', "\\ ")
+        .addEscape('$', "\\$")
+        .addEscape('`', "\\`")
+        .addEscape('\\', "\\\\")
+        .addEscape('!', "\\!")
+        .build();
     
     private static final Joiner COMMAND_JOINER = Joiner.on(' ').skipNulls();
     private static final char SSH_COMMAND_WRAP_CHAR = '"';
@@ -374,7 +374,7 @@ public class CommandRunner {
     }
     
     public boolean isExecuteSupported() {
-        return !Platform.isGoogleAppEngine();
+        return !Platform.isGoogleCloud();
     }
     
     public boolean isShellModeSupported() {
@@ -386,7 +386,7 @@ public class CommandRunner {
     }
     
     private boolean isSandboxedEnvironment() {
-        return Platform.isGoogleAppEngine() || 
+        return Platform.isGoogleCloud() ||
                 Platform.isMacAppSandboxEnabled() ||
                 Platform.isAndroid();
     }
