@@ -27,9 +27,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.Enumeration;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Exposes a REST API through a servlet. Mapping requests to services is handled
@@ -42,15 +40,17 @@ import java.util.Map;
  * applications that were already using the Colorize REST API framework and have
  * not yet migrated to Spring.
  */
-public abstract class RestServlet extends HttpServlet implements Filter, AuthorizationCheck {
+public abstract class RestServlet extends HttpServlet implements Filter {
     
-    private RestRequestDispatcher requestDispatcher;
+    private RestRequestDispatcher dispatcher;
     
     public static final Charset REQUEST_CHARSET = Charsets.UTF_8;
 
     /**
      * Registers all methods from {@link #getServiceObjects()} annotated with 
-     * {@link Rest} as services.
+     * {@link Rest} as services. These services will then be configured using
+     * the objects provided by {@link #getResponseSerializer()} and
+     * {@link #getAuthorization()}.
      * @throws IllegalArgumentException if one of the annotated methods cannot
      *         be used as service.
      * @throws IllegalStateException if multiple services are attempting to use
@@ -58,9 +58,10 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
      */
     @Override
     public final void init() {
-        requestDispatcher = new RestRequestDispatcher(this, getDefaultResponseHeaders());
+        dispatcher = new RestRequestDispatcher(getResponseSerializer(), getAuthorization());
+
         for (Object serviceObject : getServiceObjects()) {
-            requestDispatcher.registerServices(serviceObject);
+            dispatcher.registerServices(serviceObject);
         }
     }
 
@@ -78,6 +79,21 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
      * and are assumed to be stateless and thread-safe.
      */
     protected abstract List<?> getServiceObjects();
+
+    /**
+     * Returns the serialization mechanism used to convert the response from
+     * REST services into the HTTP response that will be returned by the
+     * servlet. This will be used for all REST services that are exposed by
+     * this servlet.
+     */
+    protected abstract ResponseSerializer getResponseSerializer();
+
+    /**
+     * Returns the authorization mechanism that should be used to check requests
+     * before they are dispatched to REST services. This will be used for all
+     * REST services that are exposed by this servlet.
+     */
+    protected abstract AuthorizationCheck getAuthorization();
 
     @Override
     public final void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -114,7 +130,7 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
         }
     }
 
-    protected void handleRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void handleRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
         URLResponse serviceResponse = dispatchRequest(request);
         fillServletResponse(serviceResponse, response);
     }
@@ -146,7 +162,7 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
      * Attempts to dispatch a request to one of the registered services. This
      * method delegates to {@link RestRequestDispatcher#dispatch(RestRequest)}.
      */
-    protected URLResponse dispatchRequest(HttpServletRequest httpRequest) {
+    private URLResponse dispatchRequest(HttpServletRequest httpRequest) {
         String path = ServletUtils.getRequestPath(httpRequest);
         if (path.startsWith(getRequestPrefix())) {
             path = path.substring(getRequestPrefix().length());
@@ -157,7 +173,7 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
         extractRequestHeaders(httpRequest, restRequest);
         extractRequestBody(httpRequest, restRequest);
 
-        return requestDispatcher.dispatch(restRequest);
+        return dispatcher.dispatch(restRequest);
     }
 
     private void extractRequestHeaders(HttpServletRequest httpRequest, RestRequest result) {
@@ -192,36 +208,11 @@ public abstract class RestServlet extends HttpServlet implements Filter, Authori
             throw new InternalServerException("Unexpected read error while reading request body", e);
         }
     }
-    
-    @Override
-    public boolean isRequestAuthorized(RestRequest request, Rest serviceConfig) {
-        return isRequestAuthorized(request, serviceConfig.authorized());
-    }
-    
-    /**
-     * Returns whether a request is authorized to call a service. Subclasses
-     * should override this method based on whatever authentication/authorization
-     * mechanism is used by the REST API.
-     * @param authorizedRoles The roles authorized to access the service, as
-     *        indicated by {@link Rest#authorized()}.
-     */
-    protected abstract boolean isRequestAuthorized(RestRequest request, String authorizedRoles);
-    
-    /**
-     * Returns the default HTTP response headers that should be added to each 
-     * request. The default implementation for this method sets the 
-     * {@code Cache-Control} and {@code Access-Control-X} headers, but this
-     * list can be extended or changed by subclasses. 
-     */
-    protected Map<String, String> getDefaultResponseHeaders() {
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put(HttpHeaders.CACHE_CONTROL, "no-cache");
-        headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-        headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, PUT, DELETE, OPTIONS");
-        headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-        headers.put(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Accept");
-        return headers;
-    }
 
+    /**
+     * Returns the URL prefix, if any, that should be removed before dispatching
+     * requests to REST services. If there is no prefix this method should return
+     * an empty string.
+     */
     public abstract String getRequestPrefix();
 }

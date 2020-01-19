@@ -9,8 +9,9 @@ package nl.colorize.util.http;
 import nl.colorize.util.Formatting;
 
 /**
- * HTTP response status codes, as defined by the HTTP/1.1 standard
- * (http://tools.ietf.org/html/rfc7231).
+ * HTTP response status codes, as defined by the HTTP/1.1 standard, as defined
+ * in RFC 2616 (https://tools.ietf.org/html/rfc2616#section-10). Note that
+ * this class cannot be used to parse non-standard HTTP status .
  */
 public enum HttpStatus {
     
@@ -25,6 +26,7 @@ public enum HttpStatus {
     NON_AUTHORITATIVE_INFORMATION(203),
     NO_CONTENT(204),
     RESET_CONTENT(205),
+    PARTIAL_CONTENT(206),
     
     // Redirection 3xx
     MULTIPLE_CHOICES(300),
@@ -34,6 +36,7 @@ public enum HttpStatus {
     NOT_MODIFIED(304),
     USE_PROXY(305),
     TEMPORARY_REDIRECT(307),
+    PERMANENT_REDIRECT(308),
     
     // Client Error 4xx,
     BAD_REQUEST(400),
@@ -52,8 +55,15 @@ public enum HttpStatus {
     PAYLOAD_TOO_LARGE(413),
     URI_TOO_LONG(414),
     UNSUPPORTED_MEDIA_TYPE(415),
+    RANGE_NOT_SATISFIABLE(416),
     EXPECTATION_FAILED(417),
+    IM_A_TEAPOT(418),
+    TOO_EARLY(425),
     UPGRADE_REQUIRED(426),
+    PRECONDITION_REQUIRED(428),
+    TOO_MANY_REQUESTS(429),
+    REQUEST_HEADER_FIELDS_TOO_LARGE(431),
+    UNAVAILABLE_FOR_LEGAL_REASONS(451),
     
     // Server Error 5xx
     INTERNAL_SERVER_ERROR(500),
@@ -61,7 +71,10 @@ public enum HttpStatus {
     BAD_GATEWAY(502),
     SERVICE_UNAVAILABLE(503),
     GATEWAY_TIMEOUT(504),
-    HTTP_VERSION_NOT_SUPPORTED(505);
+    HTTP_VERSION_NOT_SUPPORTED(505),
+    VARIANT_ALSO_NEGOTATES(506),
+    NOT_EXTENDED(510),
+    NETWORK_AUTHENTICATION_REQUIRED(511);
     
     private int statusCode;
     

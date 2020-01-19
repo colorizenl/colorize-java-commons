@@ -209,15 +209,6 @@ public abstract class URLLoader extends HttpMessage {
     public static URLLoader create(Method httpMethod, String url, Charset requestCharset) {
         boolean useClassicLoader = Platform.isAndroid();
 
-        //TODO there is a bug in Java 11.0.5 that causes issues with requests that
-        //     return HTTP 204 (no content). Since we have no way to influence the
-        //     behavior of the external websites, the only solution is to keep using
-        //     the classic loader for now.
-        //     See https://bugs.openjdk.java.net/browse/JDK-8218662 for details.
-        if (Platform.getJavaVersion().toString().startsWith("11.")) {
-            useClassicLoader = true;
-        }
-
         if (System.getProperty(CLASSIC_LOADER_PROPERTY) != null) {
             useClassicLoader = System.getProperty(CLASSIC_LOADER_PROPERTY).equals("true");
         }

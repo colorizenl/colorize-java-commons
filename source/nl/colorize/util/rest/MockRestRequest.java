@@ -4,15 +4,13 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.mock;
+package nl.colorize.util.rest;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.http.Method;
-import nl.colorize.util.rest.RestRequest;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +18,7 @@ import java.util.Map;
  * Mock implementation of a {@code RestRequest}, suitable for testing, that
  * does not require a complete {@code HttpServletRequest}
  */
+@VisibleForTesting
 public class MockRestRequest extends RestRequest {
 
     private Method method;

@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Provides access to the underlying platform. This includes information such 
@@ -40,12 +41,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>macOS (desktop, formerly known as OS X)</li>
  *   <li>Linux (desktop, server)</li>
  *   <li>Google Cloud Platform (cloud)</li>
+ *   <li>AWS (cloud)</li>
  *   <li>Android (mobile)</li>
+ *   <li>iOS (mobile, via RoboVM)</li>
+ *   <li>TeaVM (browser)</li>
  * </ul>
  * <p>
  * Note that the above list refers to platform <em>families</em>, not individual
  * platform versions. For example, "Windows" includes support from Windows XP to
- * Windows Server 2008 to Windows 10.
+ * Windows Server 2008 to Windows 10. Use {@link #getPlatformName()} to obtain
+ * the platform's display name including the version number, and use
+ * {@link #getPlatformFamily()} to obtain the platform family.
  * <p>
  * If a platform is not explicitly supported this class can still be used, but
  * the platform's conventions might not be followed.
@@ -53,6 +59,36 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class Platform {
 
     private static AtomicBoolean teaVM = new AtomicBoolean(false);
+
+    /**
+     * All platform families that are supported by this class and by this library
+     * in general. The term "family" generally refers to multiple versions or
+     * distributions of an operating system that are (mostly) compatible with each
+     * other. So, Windows 7 and Windows 10 are both considered Windows, and Ubuntu
+     * and Debian are both considered Linux.
+     */
+    public static enum PlatformFamily {
+        WINDOWS("Windows"),
+        MAC("macOS"),
+        LINUX("Linux"),
+        GOOGLE_CLOUD("Google Cloud"),
+        AWS("AWS"),
+        ANDROID("Android"),
+        IOS("iOS"),
+        TEAVM("TeaVM"),
+        UNKNOWN("Unknown");
+
+        private String displayName;
+
+        private PlatformFamily(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
     
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
@@ -139,9 +175,9 @@ public abstract class Platform {
     
     /**
      * Returns the platform's human-readable name, such as "Windows 10" or
-     * "macOS Sierra". Note this returns the <em>full</em> platform name, use
-     * {@link #getPlatformFamily()} for the platform family name (e.g. "Windows"
-     * or "macOS").
+     * "macOS Catalina". For platform-specific logic, it is more reliable to
+     * use {@link #getPlatformFamily()} rather than parsing the string
+     * returned by this method.
      */
     public static String getPlatformName() {    
         String os = System.getProperty("os.name", "Unknown");
@@ -157,6 +193,8 @@ public abstract class Platform {
             return "Google Cloud";
         } else if (os.toLowerCase().contains("os x") || os.toLowerCase().contains("macos")) {
             return "macOS " + getMacOSVersionName();
+        } else if (isAWS()) {
+            return "AWS";
         } else if (isTeaVM()) {
             return "TeaVM";
         } else {
@@ -185,20 +223,27 @@ public abstract class Platform {
     }
     
     /**
-     * Returns the platform's "family" name, such as "Windows" or "macOS". Note
-     * this family name does not include the specific version of the platform
-     * (e.g. Windows XP, macOS Sierra), for that use {@link #getPlatformName()}. 
-     * If the platform is not part of any known platform family this method
-     * will return the platform name instead.
+     * Returns the current platform family. Use {@link #getPlatformName()} for
+     * obtaining the platform's display name as a string, including the exact
+     * platform version name. Refer to the {@link PlatformFamily} documentation
+     * for more information on what is considered a "family".
      */
-    public static String getPlatformFamily() {
-        if (isWindows()) return "Windows";
-        if (isMac()) return "macOS";
-        if (isLinux()) return "Linux";
-        if (isGoogleCloud()) return "Google Cloud";
-        if (isAndroid()) return "Android";
-        if (isTeaVM()) return "TeaVM";
-        return getPlatformName();
+    public static PlatformFamily getPlatformFamily() {
+        Map<PlatformFamily, Supplier<Boolean>> mapper =
+                new ImmutableMap.Builder<PlatformFamily, Supplier<Boolean>>()
+            .put(PlatformFamily.WINDOWS, Platform::isWindows)
+            .put(PlatformFamily.MAC, Platform::isMac)
+            .put(PlatformFamily.LINUX, Platform::isLinux)
+            .put(PlatformFamily.GOOGLE_CLOUD, Platform::isGoogleCloud)
+            .put(PlatformFamily.AWS, Platform::isAWS)
+            .put(PlatformFamily.ANDROID, Platform::isAndroid)
+            .put(PlatformFamily.TEAVM, Platform::isTeaVM)
+            .build();
+
+        return mapper.keySet().stream()
+            .filter(family -> mapper.get(family).get())
+            .findFirst()
+            .orElse(PlatformFamily.UNKNOWN);
     }
     
     public static boolean isWindows() {
@@ -228,10 +273,25 @@ public abstract class Platform {
         return isGoogleCloud();
     }
 
+    public static boolean isAWS() {
+        try {
+            Class.forName("software.amazon.awssdk.services.ec2.Ec2Client");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static boolean isAndroid() {
         return getPlatformName().startsWith("Android");
     }
 
+    /**
+     * Marks the current platform as running in the browser via TeaVM. Unlike
+     * other platforms, it is not possible to detect this automatically, so
+     * applications must call this method manually in their {@code main}
+     * method in order to enable TeaVM support.
+     */
     public static void enableTeaVM() {
         teaVM.set(true);
     }
@@ -373,6 +433,29 @@ public abstract class Platform {
             throw new UnsupportedOperationException("Platform does not support user accounts");
         }
         return new File(userHome);
+    }
+
+    /**
+     * Returns a {@code File} that points to the current user's desktop directory.
+     * Note that this method is only available on desktop platforms, and that even
+     * then some platforms might not allow applications to write directly to the
+     * user's desktop.
+     * @throws UnsupportedOperationException if the user desktop is not available
+     *         or not accessible.
+     */
+    public static File getUserDesktopDir() {
+        if (Platform.isMacAppStore()) {
+            throw new UnsupportedOperationException(
+                "Mac App Store does not allow applications to write directly to desktop");
+        }
+
+        File home = Platform.getUserHomeDir();
+        File desktop = new File(home, "Desktop");
+        if (desktop.exists()) {
+            return desktop;
+        } else {
+            return home;
+        }
     }
 
     /**
@@ -585,7 +668,7 @@ public abstract class Platform {
             if (cachedContext == null) {
                 throw new UnsupportedOperationException("Android app context not available");    
             }
-            
+
             return cachedContext;
         }
 

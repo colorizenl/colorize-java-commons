@@ -8,16 +8,13 @@
 package nl.colorize.util.rest;
 
 /**
- * Used when dispatching requests to REST services to determine if the request
- * is authorized to access that service.
+ * Called before a request to a REST service is dispatched, to determine if
+ * the request is authorized to access that service.
  */
+@FunctionalInterface
 public interface AuthorizationCheck {
-    
-    public static final AuthorizationCheck PUBLIC = new AuthorizationCheck() {
-        public boolean isRequestAuthorized(RestRequest request, Rest serviceConfig) {
-            return true;
-        }
-    };
 
-    public boolean isRequestAuthorized(RestRequest request, Rest serviceConfig);
+    public static final AuthorizationCheck PUBLIC = (request, service) -> true;
+    
+    public boolean isRequestAuthorized(RestRequest request, Rest service);
 }

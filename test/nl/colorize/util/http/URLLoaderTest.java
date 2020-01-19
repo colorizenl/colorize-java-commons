@@ -11,7 +11,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HttpHeaders;
-import nl.colorize.util.mock.SimpleHttpServer;
 import nl.colorize.util.swing.Utils2D;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -300,12 +299,12 @@ public class URLLoaderTest {
     }
 
     @Test
-    public void testHttp204ResponseWithContentLengthHeader() throws IOException {
+    public void testHttpResponseWithContentLengthHeaderZero() throws IOException {
         URLLoader request = URLLoader.get("https://www.colorize-dashboard.nl/rest/website/colorize.nl/check",
             Charsets.UTF_8);
         URLResponse response = request.sendRequest();
 
-        assertEquals(HttpStatus.NO_CONTENT, response.getStatus());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatus());
         assertEquals("", response.getBody());
     }
 

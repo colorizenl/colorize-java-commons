@@ -16,11 +16,14 @@ library includes the following features:
 
 The library focuses on portability, and supports a wide variety of platforms and environments:
 
-- desktop (Windows, Mac OS, Linux)
+- Windows (desktop, server)
+- Mac OS (desktop)
+- Linux (desktop, server)
+- Google Cloud (cloud)
+- AWS (cloud)
 - Android
-- iOS (via [RoboVM](http://robovm.mobidevelop.com))
-- Google Cloud
-- browsers (via [TeaVM](http://teavm.org))
+- iOS (mobile, via [RoboVM](http://robovm.mobidevelop.com))
+- [TeaVM](http://teavm.org) (browser)
 
 Usage
 -----
@@ -31,13 +34,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2019.2.4</version>
+        <version>2020.1</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2019.2.4"
+        compile "nl.colorize:colorize-java-commons:2020.1"
     }
 
 Build instructions

@@ -6,6 +6,7 @@
 
 package nl.colorize.util.rest;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -23,7 +24,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,8 +37,16 @@ import java.util.logging.Logger;
 public class RestRequestDispatcher {
     
     private List<MappedService> mappedServices;
-    private AuthorizationCheck authorizationCheck;
-    private Map<String, String> defaultResponseHeaders;
+    private ResponseSerializer serializer;
+    private AuthorizationCheck authorization;
+
+    private static final Map<String, String> DEFAULT_RESPONSE_HEADERS = ImmutableMap.of(
+        HttpHeaders.CACHE_CONTROL, "no-cache",
+        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*",
+        HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, PUT, DELETE, OPTIONS",
+        HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true",
+        HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Accept, X-Requested-With"
+    );
 
     private static final Splitter PATH_SPLITTER = Splitter.on('/').omitEmptyStrings();
     private static final Logger LOGGER = LogHelper.getLogger(RestServlet.class);
@@ -46,36 +54,30 @@ public class RestRequestDispatcher {
     /**
      * Creates a new request dispatcher that will dispatch requests to one of the
      * registered REST services.
-     * @param authorizationCheck Authorization check performed on all incoming
-     *        request. Failing this check will result in a response with HTTP
-     *        status 401 (Unauthorized).
-     * @param defaultResponseHeaders HTTP headers that will be added to each 
-     *        response. If the service itself also sets one of these headers, 
-     *        the header value set by the service overrules the default value.
      */
-    public RestRequestDispatcher(AuthorizationCheck authorizationCheck, 
-            Map<String, String> defaultResponseHeaders) {
+    public RestRequestDispatcher(ResponseSerializer serializer, AuthorizationCheck authorization) {
         this.mappedServices = new CopyOnWriteArrayList<>();
-        this.authorizationCheck = authorizationCheck;
-        this.defaultResponseHeaders = ImmutableMap.copyOf(defaultResponseHeaders);
+        this.serializer = serializer;
+        this.authorization = authorization;
     }
     
     public void registerServices(Object serviceObject) {
-        for (java.lang.reflect.Method method : ReflectionUtils.getMethodsWithAnnotation(
-                serviceObject, Rest.class)) {
-            MappedService mappedService = new MappedService(ReflectionUtils.toMethodCallback(
-                serviceObject, method, RestRequest.class, URLResponse.class),
-                method.getAnnotation(Rest.class));
+        ReflectionUtils.getMethodsWithAnnotation(serviceObject, Rest.class).stream()
+            .map(m -> new MappedService(serviceObject, m.getName(), m.getAnnotation(Rest.class)))
+            .forEach(mappedService -> registerService(mappedService));
+    }
 
-            registerService(mappedService);
-        }
+    /**
+     * Registers a service but overrides the default configuration with the
+     * provided one. This method only exists for testing purposes.
+     */
+    @VisibleForTesting
+    protected void registerServices(Object serviceObject, Rest config) {
+        ReflectionUtils.getMethodsWithAnnotation(serviceObject, Rest.class).stream()
+            .map(m -> new MappedService(serviceObject, m.getName(), config))
+            .forEach(mappedService -> registerService(mappedService));
     }
-    
-    public void registerService(Function<RestRequest, URLResponse> service, Rest config) {
-        MappedService mappedService = new MappedService(service, config);
-        registerService(mappedService);
-    }
-    
+
     private void registerService(MappedService mappedService) {
         if (!mappedService.config.path().startsWith("/")) {
             throw new IllegalArgumentException("Method is annotated with @Rest, " +
@@ -94,6 +96,7 @@ public class RestRequestDispatcher {
      * Attempts to dispatches an incoming request to one of the registered
      * services. This will return a response with one of the following HTTP 
      * status codes:
+     *
      * <ul>
      *   <li>400 if one or more required parameters are not set</li>
      *   <li>401 if the request fails authorization</li>
@@ -121,16 +124,34 @@ public class RestRequestDispatcher {
         
         return processResponse(response);
     }
-    
+
+    /**
+     * Binds the incoming request to a service, and then calls that service to
+     * obtain the response. The response will then be serialized into the
+     * desired format.
+     * <p>
+     * If the caller is not authorized to call the service this method will
+     * result in a response with HTTP 401 (unauthorized). This check can only
+     * be done here, not during dispatching, as the authorization check might
+     * require the request to be bound to the service.
+     */
     private URLResponse dispatch(RestRequest request, MappedService mappedService) {
         bindRequest(request, mappedService.config);
         
-        if (!authorizationCheck.isRequestAuthorized(request, mappedService.config)) {
+        if (!authorization.isRequestAuthorized(request, mappedService.config)) {
             return createEmptyResponse(HttpStatus.UNAUTHORIZED);
         }
         
         try {
-            return callService(request, mappedService);
+            Object result = callService(request, mappedService);
+
+            if (result instanceof URLResponse) {
+                return serializer.process((URLResponse) result);
+            } else if (result instanceof RestResponse) {
+                return serializer.process((RestResponse) result);
+            } else {
+                throw new IllegalStateException("Unknown response type: " + result);
+            }
         } catch (BadRequestException e) {
             return createEmptyResponse(HttpStatus.BAD_REQUEST);
         } catch (InternalServerException e) {
@@ -146,10 +167,10 @@ public class RestRequestDispatcher {
         request.bindPath(pathComponents, pathParameters);
     }
 
-    private URLResponse callService(RestRequest boundRequest, MappedService mappedService) {
+    private Object callService(RestRequest boundRequest, MappedService mappedService) {
         Exception thrown = null;
         try {
-            return mappedService.apply(boundRequest);
+            return mappedService.call(boundRequest);
         } catch (Exception e) {
             thrown = e;
         }
@@ -163,7 +184,8 @@ public class RestRequestDispatcher {
     
     private URLResponse processResponse(URLResponse response) {
         Map<String, String> mergedHeaders = new LinkedHashMap<>();
-        mergedHeaders.putAll(defaultResponseHeaders);
+        mergedHeaders.putAll(DEFAULT_RESPONSE_HEADERS);
+
         for (String header : response.getHeaderNames()) {
             for (String value : response.getHeaderValues(header)) {
                 mergedHeaders.put(header, value);
@@ -311,23 +333,26 @@ public class RestRequestDispatcher {
     /**
      * Represents a REST service that can handle requests based on the configuration
      * in the {@link Rest} annotation used to annotate the method. Any exceptions
-     * that occur while handling the request will result in an 
+     * that occur while handling the request will result in an
      * {@link InternalServerException}.
      */
-    private static class MappedService implements Function<RestRequest, URLResponse> {
+    private static class MappedService {
         
-        private Function<RestRequest, URLResponse> methodCallback;
+        private Object serviceObject;
+        private String methodName;
         private Rest config;
-        
-        public MappedService(Function<RestRequest, URLResponse> methodCallback, Rest config) {
-            this.methodCallback = methodCallback;
+
+        public MappedService(Object serviceObject, String methodName, Rest config) {
+            this.serviceObject = serviceObject;
+            this.methodName = methodName;
             this.config = config;
         }
 
-        @Override
-        public URLResponse apply(RestRequest request) {
+        public Object call(RestRequest request) {
             try {
-                return methodCallback.apply(request);
+                return serviceObject.getClass()
+                    .getMethod(methodName, RestRequest.class)
+                    .invoke(serviceObject, request);
             } catch (Exception e) {
                 throw new InternalServerException("Exception while handling request", e);
             }

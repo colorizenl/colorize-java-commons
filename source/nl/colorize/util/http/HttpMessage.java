@@ -89,7 +89,12 @@ public abstract class HttpMessage {
      * message contains multiple headers with this name, the first value is
      * returned. The header name is considered case-insensitive.
      * @throws IllegalArgumentException if the message contains no such header.
+     * @deprecated Use {@link #getHeader(String, String)} instead, as this
+     *             version of the method does not throw an exception and is
+     *             therefore less likely to lead to unexpected behavior when
+     *             called in situations where the header is not present.
      */
+    @Deprecated
     public String getHeader(String name) {
         Collection<String> values = headers.get(new HeaderName(name));
         Preconditions.checkArgument(!values.isEmpty(),

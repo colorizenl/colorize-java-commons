@@ -2,7 +2,7 @@ apply plugin: "java"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2019.2.4"
+version = "2020.1"
 sourceCompatibility = "11"
 targetCompatibility = "11"
 compileJava.options.encoding = "UTF-8"

@@ -12,6 +12,8 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 
 import java.io.File;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -162,6 +164,42 @@ public final class Formatting {
             return String.format("%." + decimals + "f KB", kb);
         } else {
             return bytes + " bytes";
+        }
+    }
+
+    /**
+     * Utility method to parse a date that has been formatted using the ISO 8601
+     * date format. This allows for multiple precision levels, so the following
+     * formats are supported:
+     *
+     * <ul>
+     *   <li>yyyy-mm-dd hh:mm:ss
+     *   <li>yyyy-mm-dd hh:mm
+     *   <li>yyyy-mm-dd
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the date's notation is not included
+     *         in the list above..
+     */
+    public static Date toDate(String date) {
+        Map<Integer, String> formats = ImmutableMap.of(
+            19, YYYY_MM_DD_SECONDS,
+            16, YYYY_MM_DD_TIME,
+            10, YYYY_MM_DD
+        );
+
+        String formatString = formats.get(date.length());
+
+        if (formatString == null) {
+            throw new IllegalArgumentException("Date notation not supported: " + date);
+        }
+
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat(formatString);
+            return dateFormat.parse(date);
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Cannot parse date " + date +
+                " using format " + formatString);
         }
     }
     

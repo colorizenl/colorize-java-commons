@@ -11,8 +11,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.colorize.util.FileUtils;
+import nl.colorize.util.Formatting;
 import nl.colorize.util.LoadUtils;
-import nl.colorize.util.mock.MockDataHelper;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -32,9 +32,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-/**
- * Unit test for the {@code PropertyList} class.
- */
 public class PropertyListTest {
 
     @Test
@@ -114,7 +111,7 @@ public class PropertyListTest {
     
     @Test
     public void testSaveAndLoadDate() {
-        Date date = MockDataHelper.asDate("2011-01-20 00:00:00");
+        Date date = Formatting.toDate("2011-01-20 00:00:00");
         PropertyList plist = new PropertyList();
         plist.setProperty("test", date);
         plist.setProperty("other", false);
@@ -365,7 +362,7 @@ public class PropertyListTest {
         plist.setProperty("a", "test");
         plist.setProperty("b", "123");
         plist.setProperty("c", "false");
-        plist.setProperty("d", MockDataHelper.asDate(2013, 02, 21));
+        plist.setProperty("d", Formatting.toDate("2013-02-21"));
         
         String expected = "";
         expected += "a=test\n";

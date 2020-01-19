@@ -6,8 +6,8 @@
 
 package nl.colorize.util.xml;
 
+import nl.colorize.util.Formatting;
 import nl.colorize.util.Version;
-import nl.colorize.util.mock.MockDataHelper;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.junit.Test;
@@ -20,9 +20,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * Unit test for the {@code XMLConverter} class.
- */
 public class XMLConverterTest {
     
     @Test
@@ -34,7 +31,7 @@ public class XMLConverterTest {
         assertEquals("<a>2.3</a>", toXmlString(converter.toXML(2.3f, "a")));
         assertEquals("<a>true</a>", toXmlString(converter.toXML(true, "a")));
         assertEquals("<a>2014-08-01 00:00:00</a>", toXmlString(converter.toXML(
-                MockDataHelper.asDate("2014-08-01"), "a")));
+            Formatting.toDate("2014-08-01"), "a")));
     }
     
     @Test

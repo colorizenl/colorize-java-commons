@@ -4,17 +4,16 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.mock;
+package nl.colorize.util.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Tuple;
-import nl.colorize.util.http.HttpStatus;
-import nl.colorize.util.http.Method;
-import nl.colorize.util.http.URLResponse;
+import nl.colorize.util.rest.MockRestRequest;
 import nl.colorize.util.rest.RestRequest;
 
 import java.io.IOException;
@@ -45,6 +44,7 @@ import java.util.regex.Pattern;
  * multiple threads. Handling requests is done from a single thread, meaning that 
  * the server is only able to handle one request at a time.
  */
+@VisibleForTesting
 public class SimpleHttpServer {
     
     private ServerSocket serverSocket;

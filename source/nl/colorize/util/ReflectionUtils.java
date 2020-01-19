@@ -17,10 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
-
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 
 /**
  * Various utility and convenience methods for working with reflection. Unless
@@ -229,7 +225,7 @@ public final class ReflectionUtils {
      * Returns a list containing all of an object's fields that are marked with
      * the specified annotation.
      */
-    public static List<Field> getFieldsWithAnnotation(Object subject, 
+    public static List<Field> getFieldsWithAnnotation(Object subject,
             Class<? extends Annotation> annotationClass) {
         List<Field> matches = new ArrayList<>();
         for (Field field : subject.getClass().getDeclaredFields()) {
@@ -238,86 +234,5 @@ public final class ReflectionUtils {
             }
         }
         return matches;
-    }
-    
-    /**
-     * Locates a method with the specified name and that takes no parameters, and
-     * then wraps that in a callback that invokes the method when called. 
-     * @throws IllegalArgumentException if no method with that name exists, or
-     *         the parameters do not match the criteria described above. 
-     */
-    public static Consumer<?> toMethodCallback(final Object subject, String methodName) {
-        final Method method = getMethod(subject, methodName);
-        return value -> callMethod(subject, method);
-    }
-    
-    /**
-     * Locates a method with the specified name and that takes one parameter of 
-     * type {@code argType}, and then wraps that in a callback that invokes the
-     * method when called. 
-     * @throws IllegalArgumentException if no method with that name exists, or
-     *         if the parameters do not match the criteria described above. 
-     */
-    public static <T> Consumer<T> toMethodCallback(Object subject, String methodName, Class<T> argType) {
-        Method method = getMethod(subject, methodName, argType);
-        return new MethodCallback<T, Void>(subject, method);
-    }
-    
-    /**
-     * Locates a method with the specified name and that takes one parameter of 
-     * type {@code A} and returns a value of type {@code R}, and then wraps that 
-     * in a function that invokes the method when called. 
-     * @throws IllegalArgumentException if no function with that name exists,
-     *         or if the parameters do not match the criteria described above. 
-     */
-    public static <A, R> Function<A, R> toMethodCallback(Object subject, String methodName, 
-            Class<A> argType, Class<R> returnType) {
-        Method method = getMethod(subject, methodName, argType);
-        return new MethodCallback<A, R>(subject, method);
-    }
-    
-    /**
-     * Takes a reference to a method, and wraps it into a callback function.
-     * @throws IllegalArgumentException if the method's single parameter is not
-     *         of type {@code A}, or if the method's return value is not of
-     *         type {@code R}. 
-     */
-    public static <A, R> Function<A, R> toMethodCallback(Object subject, Method method,
-            Class<A> argType, Class<R> returnType) {
-        //TODO this should also check if the method has a single parameter of
-        //     the specified type. However, Google App Engine currently 
-        //     disallows access to java.lang.reflect.Parameter (though
-        //     strangely all other parts of the reflection API *are*
-        //     allowed), so this check cannot be performed as it would
-        //     break compatibility with Google App Engine.
-        Preconditions.checkArgument(method.getReturnType() == returnType,
-                "Expected return type " + returnType + ", but found " + method.getReturnType());
-        
-        return new MethodCallback<A, R>(subject, method);
-    }
-    
-    private static class MethodCallback<A, R> implements Consumer<A>, Function<A, R> {
-        
-        private Object subject;
-        private Method method;
-        
-        public MethodCallback(Object subject, Method method) {
-            this.subject = subject;
-            this.method = method;
-        }
-
-        public void accept(A value) {
-            callMethod(subject, method, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        public R apply(A input) {
-            return (R) callMethod(subject, method, input);
-        }
-        
-        @Override
-        public String toString() {
-            return subject.getClass().toString() + "." + method.getName();
-        }
     }
 }

@@ -10,6 +10,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.io.Closeables;
+import com.google.common.io.Files;
 import nl.colorize.util.ResourceFile;
 
 import javax.imageio.IIOImage;
@@ -36,6 +37,8 @@ import java.awt.font.TextLayout;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -44,6 +47,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
+import java.util.Base64;
 
 /**
  * Utility methods for Java 2D, mainly focused on image manipulation. 
@@ -99,7 +103,7 @@ public final class Utils2D {
             return (BufferedImage) image;
         } else {
             BufferedImage wrapper = new BufferedImage(image.getWidth(null), image.getHeight(null), 
-                    BufferedImage.TYPE_INT_ARGB);
+                BufferedImage.TYPE_INT_ARGB);
             Graphics2D g2 = createGraphics(wrapper, false, false);
             g2.drawImage(image, 0, 0, null);
             g2.dispose();
@@ -311,6 +315,42 @@ public final class Utils2D {
         g2.dispose();
         
         return scaled;
+    }
+
+    /**
+     * Creates a data URL out of an existing image. The data URL will be based
+     * on a PNG image.
+     */
+    public static String toDataURL(BufferedImage image) {
+        try {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            Utils2D.savePNG(image, buffer);
+            String base64 = Base64.getUrlEncoder().encodeToString(buffer.toByteArray());
+            return "data:image/png;base64," + base64;
+        } catch (IOException e) {
+            throw new UnsupportedOperationException("Unable to convert image to PNG", e);
+        }
+    }
+
+    /**
+     * Creates an image from a data URL.
+     * @throws IOException if the data URL is corrupted or uses an image format
+     *         that is not supported by Java2D.
+     */
+    public static BufferedImage fromDataURL(String dataURL) throws IOException {
+        byte[] imageData = Base64.getUrlDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
+
+        try (InputStream stream = new ByteArrayInputStream(imageData)) {
+            return loadImage(stream);
+        }
+    }
+
+    /**
+     * Saves an image that is represented by a data URL to a file.
+     */
+    public static void saveDataURL(String dataURL, File file) throws IOException {
+        byte[] imageData = Base64.getUrlDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
+        Files.write(imageData, file);
     }
     
     public static Graphics2D createGraphics(Graphics g, boolean antialias, boolean bilinear) {

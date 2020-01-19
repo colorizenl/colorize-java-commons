@@ -6,7 +6,7 @@
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -16,14 +16,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
-/**
- * Unit tests for the {@code ReflectionUtils} class.
- */
 public class ReflectionUtilsTest {
     
     @Test
@@ -124,42 +120,7 @@ public class ReflectionUtilsTest {
         assertEquals(1, fields.size());
         assertEquals("secondProperty", fields.get(0).getName());
     }
-    
-    @Test
-    public void testToMethodCallback() throws Exception {
-        ReflectionSubject subject = new ReflectionSubject();
-        AtomicInteger counter = new AtomicInteger();
-        Consumer<AtomicInteger> callback = ReflectionUtils.toMethodCallback(subject,
-                "incrementCounter", AtomicInteger.class);
-        subject.incrementCounter(counter);
-        callback.accept(counter);
-        callback.accept(counter);
-        
-        assertEquals(3, counter.get());
-        
-        Function<AtomicInteger, Integer> callbackFunction = ReflectionUtils.toMethodCallback(
-                subject, "incrementCounter", AtomicInteger.class, Integer.class);
-        Integer returnValue = callbackFunction.apply(counter);
-        
-        assertEquals(4, returnValue.intValue());
-        assertEquals(4, counter.get());
-        
-        Method method = ReflectionSubject.class.getMethod("incrementCounter", AtomicInteger.class);
-        callbackFunction = ReflectionUtils.toMethodCallback(subject, method, AtomicInteger.class, 
-                int.class);
-        returnValue = callbackFunction.apply(counter);
-        
-        assertEquals(5, returnValue.intValue());
-        assertEquals(5, counter.get());
-    }
-    
-    @Test(expected=IllegalArgumentException.class)
-    public void testMethodCallbackMustHaveCorrectReturnType() throws Exception {
-        ReflectionSubject subject = new ReflectionSubject();
-        Method method = ReflectionSubject.class.getMethod("incrementCounter", AtomicInteger.class);
-        ReflectionUtils.toMethodCallback(subject, method, AtomicInteger.class, String.class);
-    }
-    
+
     private static class ReflectionSubject {
         public String firstProperty = "first";
         @Deprecated private String secondProperty = "second";

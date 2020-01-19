@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import nl.colorize.util.mock.MockDataHelper;
 import org.junit.Test;
 
 import java.io.File;
@@ -70,7 +69,8 @@ public class FormattingTest {
     
     @Test
     public void testDateFormats() {
-        Date date = MockDataHelper.asDate("2011-04-05 12:01:30");
+        Date date = asDate("2011-04-05 12:01:30");
+
         assertEquals("20110405", format(Formatting.YYYYMMDD, date));
         assertEquals("2011-04-05", format(Formatting.YYYY_MM_DD, date));
         assertEquals("2011-04-05 12:01", format(Formatting.YYYY_MM_DD_TIME, date));
@@ -83,7 +83,8 @@ public class FormattingTest {
 
     @Test
     public void testFormatDiff() {
-        Date base = MockDataHelper.asDate("2010-01-01 12:00:00");
+        Date base = Formatting.toDate("2010-01-01 12:00:00");
+
         assertEquals("seconds ago", Formatting.formatDateDiff(asDate("2010-01-01 12:00:00"), base));
         assertEquals("5 minutes ago", Formatting.formatDateDiff(asDate("2010-01-01 12:05:00"), base));
         assertEquals("8 hours ago", Formatting.formatDateDiff(asDate("2010-01-01 20:00:00"), base));
@@ -102,7 +103,7 @@ public class FormattingTest {
     }
     
     private Date asDate(String date) {
-        return MockDataHelper.asDate(date);
+        return Formatting.toDate(date);
     }
     
     private String format(String pattern, Date date) {

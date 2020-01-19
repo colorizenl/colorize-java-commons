@@ -6,20 +6,21 @@
 
 package nl.colorize.util.rest;
 
+import nl.colorize.util.http.Method;
+import nl.colorize.util.http.URLResponse;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import nl.colorize.util.http.Method;
-import nl.colorize.util.http.URLResponse;
-
 /**
  * Indicates that a method is part of a REST API and requests can be dispatched
- * to it. Methods with this annotation must be public, must have exactly one 
- * parameter of type {@link RestRequest}, and should have a return value of type 
- * {@link URLResponse}, which will be used for creating the response that will
- * be returned by the REST API.
+ * to it. Methods with this annotation must be public, and must have exactly one
+ * parameter of type {@link RestRequest}. Methods can either return an instance
+ * of {@link URLResponse} when the service returns a "raw" HTTP response, or a
+ * {@link RestResponse} when the service returns an object that should be
+ * serialized later based on the REST API configuration.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -47,11 +48,10 @@ public @interface Rest {
     public String path();
     
     /**
-     * Describes the role(s) that are authorized for this service. The
-     * authorization check is performed by the {@link RestServlet}, in
-     * {@link RestServlet#isRequestAuthorized(RestRequest, String)}. Calling
-     * this service without the required role will result in HTTP status 401 
-     * (unauthorized).
+     * Describes the role(s) that are authorized for this service. This value
+     * is used by the {@link AuthorizationCheck} configured for this service.
+     * Calling this service without the required role will result in HTTP
+     * status 401 (unauthorized).
      */
     public String authorized() default "";
 }
