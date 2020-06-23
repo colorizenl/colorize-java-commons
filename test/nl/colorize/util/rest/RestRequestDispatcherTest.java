@@ -11,10 +11,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HttpHeaders;
+import nl.colorize.util.http.Headers;
 import nl.colorize.util.http.HttpStatus;
 import nl.colorize.util.http.Method;
 import nl.colorize.util.http.URLResponse;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 import java.util.Collections;
@@ -22,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static nl.colorize.util.rest.AuthorizationCheck.PUBLIC;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for the {@code RestRequestDispatcher} class. Note that this only
@@ -31,7 +32,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class RestRequestDispatcherTest {
 
-    private static final ResponseSerializer NO_SERIALIZER = response -> null;
+    private static final ResponseSerializer NO_SERIALIZER = (request, response) -> null;
     private static final Map<String, String> NO_HEADERS = Collections.emptyMap();
 
     @Test
@@ -54,12 +55,12 @@ public class RestRequestDispatcherTest {
     public void testDefaultResponseHeaders() {
         ResponseSerializer serializer = new ResponseSerializer() {
             @Override
-            public URLResponse process(RestResponse response) {
+            public URLResponse process(RestRequest request, RestResponse response) {
                 return null;
             }
 
             @Override
-            public URLResponse process(URLResponse response) {
+            public URLResponse process(RestRequest request, URLResponse response) {
                 response.addHeader("Test-1", "test1");
                 response.addHeader("Test-2", "test2");
                 return response;
@@ -70,12 +71,12 @@ public class RestRequestDispatcherTest {
         registerService(requestDispatcher, Method.POST, "/", HttpStatus.OK, 
             ImmutableMap.of("Test-2", "something else", "Test-3", "test3"), "");
         URLResponse response = requestDispatcher.dispatch(createPostRequest("/", ""));
-        Set<String> headers = response.getHeaderNames();
+        Set<String> headers = response.getHeaders().getNames();
 
         assertEquals(8, headers.size());
-        assertEquals("test1", response.getHeader("Test-1"));
-        assertEquals("test2", response.getHeader("Test-2"));
-        assertEquals("test3", response.getHeader("Test-3"));
+        assertEquals("test1", response.getHeaders().getValue("Test-1"));
+        assertEquals("test2", response.getHeaders().getValue("Test-2"));
+        assertEquals("test3", response.getHeaders().getValue("Test-3"));
     }
     
     @Test
@@ -136,7 +137,7 @@ public class RestRequestDispatcherTest {
 
     @Test
     public void testCustomResponseSerializer() {
-        ResponseSerializer serializer = response -> {
+        ResponseSerializer serializer = (request, response) -> {
             URLResponse httpResponse = new URLResponse(response.getStatus());
             httpResponse.setBody("123-" + response.getBodyObject().toString());
             return httpResponse;
@@ -163,7 +164,7 @@ public class RestRequestDispatcherTest {
             final HttpStatus status, final Map<String, String> headers, final String body) {
         Function<RestRequest, URLResponse> service = request -> {
             URLResponse response = new URLResponse(status, body, Charsets.UTF_8);
-            response.addHeaders(headers);
+            response.addHeaders(new Headers(headers));
             return response;
         };
 

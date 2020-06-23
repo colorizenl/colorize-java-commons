@@ -6,13 +6,13 @@
 
 package nl.colorize.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class FormattingTest {
     
@@ -65,20 +65,6 @@ public class FormattingTest {
         assertEquals("1 KB", Formatting.memoryFormat(1024, 0));
         assertEquals("1.0 KB", Formatting.memoryFormat(1024, 1));
         assertEquals("1.0 MB", Formatting.memoryFormat(1024 * 1024, 1));
-    }
-    
-    @Test
-    public void testDateFormats() {
-        Date date = asDate("2011-04-05 12:01:30");
-
-        assertEquals("20110405", format(Formatting.YYYYMMDD, date));
-        assertEquals("2011-04-05", format(Formatting.YYYY_MM_DD, date));
-        assertEquals("2011-04-05 12:01", format(Formatting.YYYY_MM_DD_TIME, date));
-        assertEquals("2011-04-05 12:01:30", format(Formatting.YYYY_MM_DD_SECONDS, date));
-        assertEquals("05-04-2011", format(Formatting.DD_MM_YYYY, date));
-        assertEquals("05-04-2011 12:01", format(Formatting.DD_MM_YYYY_TIME, date));
-        assertEquals("05-04-2011 12:01:30", format(Formatting.DD_MM_YYYY_SECONDS, date));
-        assertEquals("2011-04-05T12:01:30", format(Formatting.ISO_8601, date));
     }
 
     @Test

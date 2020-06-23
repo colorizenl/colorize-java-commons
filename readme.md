@@ -22,8 +22,8 @@ The library focuses on portability, and supports a wide variety of platforms and
 - Google Cloud (cloud)
 - AWS (cloud)
 - Android
-- iOS (mobile, via [RoboVM](http://robovm.mobidevelop.com))
-- [TeaVM](http://teavm.org) (browser)
+- iOS via [RoboVM](http://robovm.mobidevelop.com)
+- Browser via [TeaVM](http://teavm.org)
 
 Usage
 -----
@@ -34,13 +34,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2020.1</version>
+        <version>2020.1.10</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2020.1"
+        compile "nl.colorize:colorize-java-commons:2020.1.10"
     }
 
 Build instructions

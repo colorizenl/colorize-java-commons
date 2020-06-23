@@ -125,7 +125,7 @@ public class CircularLoader extends JPanel implements Animatable {
 
     private static BufferedImage createFrameImage(int frame, int size, Color lineColor, 
             Stroke lineStroke) {
-        BufferedImage image = Utils2D.createImage(size, size, true);
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = Utils2D.createGraphics(image, true, false);
         
         int offsetX = size / 2;

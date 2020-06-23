@@ -6,7 +6,15 @@
 
 package nl.colorize.util;
 
-import java.io.Serializable;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
+import com.google.common.math.Stats;
+import com.google.common.primitives.Doubles;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,15 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Ordering;
-import com.google.common.math.Stats;
-import com.google.common.primitives.Doubles;
 
 /**
  * Collection of data points that can be used for (statistical) analysis. Each
@@ -44,17 +43,17 @@ import com.google.common.primitives.Doubles;
  * <p>
  * This class is not thread safe. The data set should not be accessed or modified
  * from multiple threads, unless access is synchronized externally.
+ *
  * @param <R> The type of keys by which data points can be identified, i.e. the
  *            key used for rows in the data set.
  * @param <C> The type of keys by which values for a data point can be identified,
  *            i.e. the key used for columns in the data set.
  */
-public final class DataSet<R, C> implements Serializable {
+public final class DataSet<R, C> {
     
     private Map<R, DataPoint<R, C>> dataPoints;
     
     private static final Joiner NAME_JOINER = Joiner.on(", ");
-    private static final long serialVersionUID = 1;
 
     public DataSet() {
         dataPoints = new LinkedHashMap<>();
@@ -418,6 +417,10 @@ public final class DataSet<R, C> implements Serializable {
             weights.add(get(entry.getKey(), weightColumn).doubleValue());
         }
 
+        return calculateWeightedAverage(values, weights);
+    }
+
+    private double calculateWeightedAverage(List<Double> values, List<Double> weights) {
         double weightedSum = 0.0;
         double weightedCount = 0.0;
         for (int i = 0; i < values.size(); i++) {
@@ -431,7 +434,7 @@ public final class DataSet<R, C> implements Serializable {
 
         return weightedSum / weightedCount;
     }
-    
+
     public Map<R, Number> calculatePercentiles(C column) {
         return calculatePercentiles(column, noFilter());
     }
@@ -509,7 +512,9 @@ public final class DataSet<R, C> implements Serializable {
     public void sort(final C column, final Comparator<Number> sortFunction) {
         List<R> sortedKeys = new ArrayList<>(dataPoints.keySet());
         Collections.sort(sortedKeys, (a, b) -> {
-            return sortFunction.compare(dataPoints.get(a).data.get(column), dataPoints.get(b).data.get(column));
+            Number valueA = dataPoints.get(a).data.get(column);
+            Number valueB = dataPoints.get(b).data.get(column);
+            return sortFunction.compare(valueA, valueB);
         });
         
         Map<R, DataPoint<R, C>> copy = new LinkedHashMap<>(dataPoints);
@@ -518,7 +523,7 @@ public final class DataSet<R, C> implements Serializable {
             dataPoints.put(sortedKey, copy.get(sortedKey));
         }
     }
-    
+
     public void sortAscending(C column) {
         sort(column, numericalComparator(false));
     }
@@ -598,14 +603,12 @@ public final class DataSet<R, C> implements Serializable {
     /**
      * Stores all data, both numerical data and metadata, for a data point.
      */
-    private static class DataPoint<K, D> implements Serializable {
+    private static class DataPoint<K, D> {
         
         private K rowKey;
         private Map<D, Number> data;
         private Map<String, String> metadata;
 
-        private static final long serialVersionUID = 1;
-        
         public DataPoint(K rowKey) {
             this.rowKey = rowKey;
             this.data = new HashMap<>();

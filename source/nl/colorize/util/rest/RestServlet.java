@@ -142,11 +142,11 @@ public abstract class RestServlet extends HttpServlet implements Filter {
         dest.setContentType(contentType.withoutParameters().toString());
         dest.setCharacterEncoding(source.getEncoding().displayName());
 
-        for (String header : source.getHeaderNames()) {
+        for (String header : source.getHeaders().getNames()) {
             // The Content-Type is a special case, because it's already set
             // using HttpServletResponse.setContentType().
             if (!HttpHeaders.CONTENT_TYPE.equalsIgnoreCase(header)) {
-                for (String value : source.getHeaderValues(header)) {
+                for (String value : source.getHeaders().getValues(header)) {
                     dest.addHeader(header, value);
                 }
             }

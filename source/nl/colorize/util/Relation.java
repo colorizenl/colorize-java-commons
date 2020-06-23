@@ -6,14 +6,13 @@
 
 package nl.colorize.util;
 
-import java.io.Serializable;
+import com.google.common.collect.ForwardingList;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.ForwardingList;
 
 /**
  * A set where all elements are tuples with the same types. Even though a relation
@@ -22,12 +21,10 @@ import com.google.common.collect.ForwardingList;
  * @param <L> Type of the tuples' first (left) element.
  * @param <R> Type of the tuples' second (right) element.
  */
-public class Relation<L, R> extends ForwardingList<Tuple<L, R>> implements Serializable {
+public class Relation<L, R> extends ForwardingList<Tuple<L, R>> {
     
     private List<Tuple<L, R>> tuples;
-    
-    private static final long serialVersionUID = 3;
-    
+
     /**
      * Creates a relation that is based on the provided underlying list.
      */

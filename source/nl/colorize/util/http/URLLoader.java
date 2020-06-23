@@ -12,6 +12,7 @@ import com.google.common.net.HttpHeaders;
 import nl.colorize.util.Escape;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
+import nl.colorize.util.Task;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -142,7 +143,7 @@ public abstract class URLLoader extends HttpMessage {
      * be intercepted when using plain HTTP instead of HTTPS.
      */
     public void setBasicAuthentication(String user, String password) {
-        replaceHeader(HttpHeaders.AUTHORIZATION,
+        getHeaders().replace(HttpHeaders.AUTHORIZATION,
             "Basic " + Escape.base64Encode(user + ":" + password, getEncoding()));
     }
 
@@ -192,9 +193,33 @@ public abstract class URLLoader extends HttpMessage {
      * a {@code Future} that will produce the response.
      */
     public Future<URLResponse> sendRequestAsync() {
-        FutureTask<URLResponse> task = new FutureTask<>(() -> sendRequest());
+        FutureTask<URLResponse> task = new FutureTask<>(this::sendRequest);
 
         Thread thread = new Thread(task, "ColorizeJavaCommons-URLLoader");
+        thread.start();
+
+        return task;
+    }
+
+    /**
+     * Sends the HTTP request asynchronously, and returns a {@link Task} that
+     * can be used to obtain the result. This method is similar to
+     * {@link #sendRequestAsync()}, but does not block the calling thread when
+     * retrieving the value.
+     */
+    public Task<URLResponse> sendRequestPromise() {
+        Task<URLResponse> task = new Task<>();
+
+        Runnable backgroundRequest = () -> {
+            try {
+                URLResponse response = sendRequest();
+                task.complete(response);
+            } catch (IOException e) {
+                task.fail(e);
+            }
+        };
+
+        Thread thread = new Thread(backgroundRequest, "ColorizeJavaCommons-URLLoader");
         thread.start();
 
         return task;
@@ -264,8 +289,8 @@ public abstract class URLLoader extends HttpMessage {
             connection.setInstanceFollowRedirects(true);
             connection.setConnectTimeout(getTimeout());
             connection.setReadTimeout(getTimeout());
-            for (String header : getHeaderNames()) {
-                for (String value : getHeaderValues(header)) {
+            for (String header : getHeaders().getNames()) {
+                for (String value : getHeaders().getValues(header)) {
                     connection.setRequestProperty(header, value);
                 }
             }
@@ -326,10 +351,11 @@ public abstract class URLLoader extends HttpMessage {
          * method will perform additional redirects if the HTTP status indicates that
          * one should be performed.
          */
-        private HttpURLConnection followRedirect(HttpStatus status, HttpURLConnection connection) throws IOException {
+        private HttpURLConnection followRedirect(HttpStatus status, HttpURLConnection connection)
+                throws IOException {
             URLResponse head = new URLResponse(status, new byte[0], getEncoding());
             readResponseHeaders(connection, head);
-            String location = head.getHeader(HttpHeaders.LOCATION);
+            String location = head.getHeaders().getValue(HttpHeaders.LOCATION);
 
             if (location == null || location.isEmpty()) {
                 // HTTP status indicates redirect but no alternative location is provided.
@@ -446,7 +472,8 @@ public abstract class URLLoader extends HttpMessage {
                     java.net.http.HttpResponse.BodyHandlers.ofByteArray()));
 
                 if (response.getStatus().isClientError() || response.getStatus().isServerError()) {
-                    throw new IOException("URL " + getFullURL() + " returns HTTP status " + response.getStatus());
+                    throw new IOException("URL " + getFullURL() +
+                        " returns HTTP status " + response.getStatus());
                 }
 
                 return response;
@@ -465,8 +492,8 @@ public abstract class URLLoader extends HttpMessage {
                 requestBuilder.method(getMethod().toString(), HttpRequest.BodyPublishers.noBody());
             }
 
-            for (String header : getHeaderNames()) {
-                for (String value : getHeaderValues(header)) {
+            for (String header : getHeaders().getNames()) {
+                for (String value : getHeaders().getValues(header)) {
                     requestBuilder.header(header, value);
                 }
             }

@@ -16,6 +16,7 @@ import nl.colorize.util.ResourceFile;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -28,7 +29,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
-import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
@@ -394,16 +394,12 @@ public final class SwingUtils {
      * @param height Preferred height, or -1 for default.
      */
     public static JPanel createSpacerPanel(int width, int height, final Color backgroundColor) {
-        JPanel spacer = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (backgroundColor != null) {
-                    g.setColor(backgroundColor);
-                    g.fillRect(0, 0, getWidth(), getHeight());
-                }
+        JPanel spacer = createCustomGraphicsPanel((g2, bounds) -> {
+            if (backgroundColor != null) {
+                g2.setColor(backgroundColor);
+                g2.fillRect(0, 0, bounds.width, bounds.height);
             }
-        };
+        });
         spacer.setOpaque(false);
         
         if (width > 0 && height > 0) {
@@ -777,6 +773,24 @@ public final class SwingUtils {
         };
     }
 
+    /**
+     * Creates a new panel with contents consisting of the specified image. The
+     * image will be drawn at its original size, and the panel's dimensions will
+     * be set accordingly.
+     */
+    public static JPanel createImagePanel(BufferedImage image) {
+        JPanel imagePanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = Utils2D.createGraphics(g, true, true);
+                g2.drawImage(image, 0, 0, null);
+            }
+        };
+        imagePanel.setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
+        return imagePanel;
+    }
+
     static Color getStripedRowColor(int row) {
         if (row % 2 == 0) {
             return STANDARD_ROW_COLOR;
@@ -810,29 +824,24 @@ public final class SwingUtils {
         return new StripedList<E>(elements); 
     }
 
-    public static JPanel createImagePanel(BufferedImage image) {
-        JPanel imagePanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = Utils2D.createGraphics(g, true, true);
-                g2.drawImage(image, 0, 0, null);
-            }
-        };
-        imagePanel.setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
-        return imagePanel;
-    }
-
-    private static class StripedList<E> extends JList<E> implements ListCellRenderer<E> {
-        
-        private ListCellRenderer<? super E> renderer;
+    private static class StripedList<E> extends JList<E> {
         
         private static final int ESTIMATED_ROW_HEIGHT = 17;
         
         public StripedList(List<E> elements) {
             super(new Vector<E>(elements));
-            renderer = getCellRenderer();
-            setCellRenderer(this);
+            setOpaque(false);
+
+            DefaultListCellRenderer delegate = new DefaultListCellRenderer();
+
+            setCellRenderer((list, value, index, selected, focus) -> {
+                JComponent cell = (JComponent) delegate.getListCellRendererComponent(list, value,
+                    index, selected, focus);
+                if (!selected) {
+                    cell.setBackground(getStripedRowColor(index));
+                }
+                return cell;
+            });
         }
         
         @Override
@@ -840,16 +849,6 @@ public final class SwingUtils {
             Graphics2D g2 = Utils2D.createGraphics(g, false, false);
             paintStripedRows(g2, this, ESTIMATED_ROW_HEIGHT);
             super.paintComponent(g);
-        }
-
-        @Override
-        public Component getListCellRendererComponent(JList<? extends E> list, E value, 
-                int index, boolean selected, boolean focus) {
-            Component cell = renderer.getListCellRendererComponent(list, value, index, selected, focus);
-            if (cell instanceof JComponent && !selected) {
-                ((JComponent) cell).setOpaque(false);
-            }
-            return cell;
         }
     }
     
@@ -861,37 +860,37 @@ public final class SwingUtils {
         return new StripedTree(treeModel);
     }
     
-    private static class StripedTree extends JTree implements TreeCellRenderer {
+    private static class StripedTree extends JTree {
         
         private TreeCellRenderer renderer;
         
         public StripedTree(DefaultTreeModel treeModel) {
             super(treeModel);
             setOpaque(false);
+
             renderer = getCellRenderer();
             ((DefaultTreeCellRenderer) renderer).setOpenIcon(null);
             ((DefaultTreeCellRenderer) renderer).setClosedIcon(null);
             ((DefaultTreeCellRenderer) renderer).setLeafIcon(null);
-            setCellRenderer(this);
+
+            setCellRenderer((tree, value, selected, expanded, leaf, row, focus) -> {
+                Component cell = renderer.getTreeCellRendererComponent(tree, value, selected, expanded,
+                    leaf, row, focus);
+                if (cell instanceof JComponent && !selected) {
+                    Color color = getStripedRowColor(row);
+                    ((JComponent) cell).setOpaque(false);
+                    cell.setBackground(color);
+                    ((DefaultTreeCellRenderer) renderer).setBackgroundNonSelectionColor(color);
+                }
+                return cell;
+            });
         }
-        
+
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = Utils2D.createGraphics(g, false, false);
             paintStripedRows(g2, this, getRowHeight());
             super.paintComponent(g);
-        }
-
-        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
-                boolean expanded, boolean leaf, int row, boolean focus) {
-            Component cell = renderer.getTreeCellRendererComponent(tree, value, selected, expanded, 
-                    leaf, row, focus);
-            if (cell instanceof JComponent && !selected) {
-                ((JComponent) cell).setOpaque(false);
-                ((JComponent) cell).setBackground(getStripedRowColor(row));
-                ((DefaultTreeCellRenderer) renderer).setBackgroundNonSelectionColor(getStripedRowColor(row));
-            }
-            return cell;
         }
     }
 }

@@ -13,7 +13,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -60,36 +59,6 @@ public abstract class Platform {
 
     private static AtomicBoolean teaVM = new AtomicBoolean(false);
 
-    /**
-     * All platform families that are supported by this class and by this library
-     * in general. The term "family" generally refers to multiple versions or
-     * distributions of an operating system that are (mostly) compatible with each
-     * other. So, Windows 7 and Windows 10 are both considered Windows, and Ubuntu
-     * and Debian are both considered Linux.
-     */
-    public static enum PlatformFamily {
-        WINDOWS("Windows"),
-        MAC("macOS"),
-        LINUX("Linux"),
-        GOOGLE_CLOUD("Google Cloud"),
-        AWS("AWS"),
-        ANDROID("Android"),
-        IOS("iOS"),
-        TEAVM("TeaVM"),
-        UNKNOWN("Unknown");
-
-        private String displayName;
-
-        private PlatformFamily(String displayName) {
-            this.displayName = displayName;
-        }
-
-        @Override
-        public String toString() {
-            return displayName;
-        }
-    }
-    
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
         .put("10.5", "Leopard")
@@ -103,6 +72,7 @@ public abstract class Platform {
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
         .put("10.15", "Catalina")
+        .put("11.0", "Big Sur")
         .build();
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("11.0.0");
@@ -165,9 +135,9 @@ public abstract class Platform {
         } else if (isMac()) {
             return new MacPlatform();
         } else if (isGoogleCloud()) {
-            return new GoogleCloudPlatform();
+            return new LimitedPlatform();
         } else if (isAndroid()) {
-            return new AndroidPlatform();
+            return new LimitedPlatform();
         } else {
             return new LinuxPlatform();
         }
@@ -266,7 +236,7 @@ public abstract class Platform {
     /**
      * @deprecated Google App Engine is no longer a separate SDK and has
      *             been integrated into the Google Cloud SDK.
-     *             Use {@link #isGoogleCloud()}
+     *             Use {@link #isGoogleCloud()} instead.
      */
     @Deprecated
     public static boolean isGoogleAppEngine() {
@@ -626,9 +596,10 @@ public abstract class Platform {
     }
     
     /**
-     * Support for Google Cloud Platform (including Google App Engine).
+     * Support for platforms that do not have the concept of a file system that
+     * is accessible by applications.
      */
-    private static class GoogleCloudPlatform extends LinuxPlatform {
+    private static class LimitedPlatform extends LinuxPlatform {
         
         @Override
         protected File getApplicationDataDirectory(String app) {
@@ -638,68 +609,6 @@ public abstract class Platform {
         @Override
         protected File getUserDataDirectory() {
             throw new UnsupportedOperationException();
-        }
-    }
-    
-    /**
-     * Support for Android. The Android SDK is accessed using reflection, so that
-     * this library does not require the Android SDK as a compile-time dependency.
-     * <p>
-     * Unlike other platforms, accessing information such as resources files or
-     * application data requires a "context", usually represented by the current
-     * activity. Attempting to access the context before it is abailable will
-     * result in a {@code IllegalStateException}.
-     */
-    private static class AndroidPlatform extends Platform {
-        
-        private Object cachedContext;
-        
-        private Object getContext() {
-            if (cachedContext == null) {
-                try {
-                    Class<?> appGlobalsClass = Class.forName("android.app.AppGlobals");
-                    Method getCurrentApp = appGlobalsClass.getMethod("getInitialApplication");
-                    cachedContext = getCurrentApp.invoke(null);
-                } catch (Exception e) {
-                    throw new UnsupportedOperationException("Cannot access Android context", e);
-                }
-            }
-            
-            if (cachedContext == null) {
-                throw new UnsupportedOperationException("Android app context not available");    
-            }
-
-            return cachedContext;
-        }
-
-        public Version getAppVersion() {
-            Object context = getContext();
-            try {
-                Object packageName = context.getClass().getMethod("getPackageName").invoke(context);
-                Object packageManager = context.getClass().getMethod("getPackageManager").invoke(context);
-                Object packageInfo = packageManager.getClass().getMethod("getPackageInfo",
-                    String.class, int.class).invoke(packageManager, packageName, 0);
-                Object appVersion = packageInfo.getClass().getField("versionName").get(packageInfo);
-                return Version.parse(appVersion.toString());
-            } catch (Exception e) {
-                throw new UnsupportedOperationException("Cannot access Android app version", e);
-            }
-        }
-
-        @Override
-        protected File getApplicationDataDirectory(String app) {
-            Object context = getContext();
-            try {
-                Method getFilesDir = context.getClass().getMethod("getFilesDir");
-                return (File) getFilesDir.invoke(context);
-            } catch (Exception e) {
-                throw new UnsupportedOperationException("Cannot access Android context", e);
-            }
-        }
-
-        @Override
-        protected File getUserDataDirectory() {
-            throw new UnsupportedOperationException("Android does not support shared user data");
         }
     }
 }

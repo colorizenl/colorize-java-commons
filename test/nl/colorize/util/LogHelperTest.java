@@ -7,9 +7,9 @@
 package nl.colorize.util;
 
 import com.google.common.base.Charsets;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -23,8 +23,8 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LogHelperTest {
     
@@ -34,7 +34,7 @@ public class LogHelperTest {
     private static PrintStream stderr;
     private static ByteArrayOutputStream errBuffer;
     
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         stdout = System.out;
         outBuffer = prepareBuffer(outBuffer);
@@ -45,7 +45,7 @@ public class LogHelperTest {
         System.setErr(new PrintStream(errBuffer));
     }
     
-    @AfterClass
+    @AfterAll
     public static void after() {
         System.setOut(stdout);
         System.setErr(stderr);

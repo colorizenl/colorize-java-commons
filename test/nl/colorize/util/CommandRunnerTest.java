@@ -6,14 +6,15 @@
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Charsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CommandRunnerTest {
     
@@ -21,6 +22,7 @@ public class CommandRunnerTest {
     public void testCaptureOutput() throws Exception {
         CommandRunner commandRunner = new CommandRunner("pwd");
         commandRunner.execute();
+
         assertEquals(0, commandRunner.getExitCode());
         assertEquals(Platform.getUserWorkingDirectory().getAbsolutePath(), commandRunner.getOutput());
     }
@@ -30,6 +32,7 @@ public class CommandRunnerTest {
         CommandRunner commandRunner = new CommandRunner("pwd");
         commandRunner.setWorkingDirectory(new File("test"));
         commandRunner.execute();
+
         assertEquals(new File("test").getAbsolutePath(), commandRunner.getOutput());
     }
     
@@ -41,16 +44,18 @@ public class CommandRunnerTest {
         CommandRunner commandRunner = new CommandRunner("echo", "test", ">", tempFile.getAbsolutePath());
         commandRunner.setShellMode(true);
         commandRunner.execute();
+
         assertEquals(0, commandRunner.getExitCode());
         assertEquals("test\n", FileUtils.read(tempFile, Charsets.UTF_8));
     }
     
-    @Test(expected=TimeoutException.class)
+    @Test
     public void testTimeout() throws Exception {
         CommandRunner commandRunner = new CommandRunner("sleep", "3");
         commandRunner.setShellMode(true);
         commandRunner.setTimeout(500);
-        commandRunner.execute();
+
+        assertThrows(TimeoutException.class, () -> commandRunner.execute());
     }
     
     @Test

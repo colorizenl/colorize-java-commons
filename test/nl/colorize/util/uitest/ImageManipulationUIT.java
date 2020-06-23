@@ -33,7 +33,7 @@ import nl.colorize.util.swing.Utils2D;
 /**
  * Graphical test for all image manipulation functions.
  */
-public class ImageManipulationTest extends JPanel {
+public class ImageManipulationUIT extends JPanel {
 
     private BufferedImage photo;
     private int scale;
@@ -46,11 +46,11 @@ public class ImageManipulationTest extends JPanel {
     private static final int PADDING = 40;
     
     public static void main(String[] args) throws IOException {
-        ImageManipulationTest test = new ImageManipulationTest();
+        ImageManipulationUIT test = new ImageManipulationUIT();
         test.createWindow();
     }
     
-    public ImageManipulationTest() {
+    public ImageManipulationUIT() {
         super(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
     }
@@ -93,7 +93,7 @@ public class ImageManipulationTest extends JPanel {
     }
     
     private void loadImageWithAlpha() {
-        BufferedImage image = Utils2D.createImage(220, 220, true);
+        BufferedImage image = new BufferedImage(220, 220, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = Utils2D.createGraphics(image, true, true);
         g2.setColor(Color.RED);
         g2.fillOval(10, 10, 200, 200);

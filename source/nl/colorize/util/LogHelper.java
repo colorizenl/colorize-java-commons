@@ -6,8 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +13,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -63,11 +62,9 @@ public final class LogHelper {
     public static Logger getLogger(String name) {
         Logger logger = lookupLogger(name);
         
-        // Google App Engine uses its own logger configuration and will
-        // throw a security exception when applications try to change it.
-        // Similarly, TeaVM redirects logging to the browser console and
+        // TeaVM redirects logging to the browser console and
         // will crash trying to redirect it.
-        if (Platform.isTeaVM() || Platform.isGoogleCloud()) {
+        if (Platform.isTeaVM()) {
             return logger;
         }
 
@@ -86,7 +83,7 @@ public final class LogHelper {
     
     private static synchronized void configureRootColorizeLogger() {
         LogManager logManager = LogManager.getLogManager();
-        byte[] config = COLORIZE_LOGGING_CONFIGURATION.getBytes(Charsets.UTF_8);
+        byte[] config = COLORIZE_LOGGING_CONFIGURATION.getBytes(StandardCharsets.UTF_8);
 
         try (InputStream stream = new ByteArrayInputStream(config)) {
             logManager.readConfiguration(stream);

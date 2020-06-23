@@ -6,7 +6,7 @@
 
 package nl.colorize.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -17,8 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ReflectionUtilsTest {
     
@@ -65,10 +66,13 @@ public class ReflectionUtilsTest {
         assertEquals("test2", subject.secondProperty);
     }
     
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testSetPropertyWrongType() {
         ReflectionSubject subject = new ReflectionSubject();
-        ReflectionUtils.setProperty(subject, "firstProperty", 1234);
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            ReflectionUtils.setProperty(subject, "firstProperty", 1234);
+        });
     }
     
     @Test
@@ -87,13 +91,15 @@ public class ReflectionUtilsTest {
         assertEquals(firstSubject, subjects.get(1));
     }
     
-    @Test(expected=ClassCastException.class)
+    @Test
     public void testComparatorForNonComparableProperty() {
         ReflectionSubject firstSubject = new ReflectionSubject();
         ReflectionSubject secondSubject = new ReflectionSubject();
-        Comparator<ReflectionSubject> comparator = ReflectionUtils.getPropertyComparator("thirdProperty");
-        Collections.sort(Arrays.asList(firstSubject, secondSubject), comparator);
-        assertNotEquals(firstSubject.thirdProperty, secondSubject.thirdProperty);
+
+        assertThrows(ClassCastException.class, () -> {
+            Comparator<ReflectionSubject> comparator = ReflectionUtils.getPropertyComparator("thirdProperty");
+            Collections.sort(Arrays.asList(firstSubject, secondSubject), comparator);
+        });
     }
     
     @Test

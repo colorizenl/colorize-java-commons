@@ -51,7 +51,14 @@ import java.util.logging.Logger;
  * environments from attackers that want to break out of the sandbox. Attempting
  * to run shell commands in those environments will result in a 
  * {@code SecurityException}.
+ *
+ * @deprecated It is no longer needed to create {@code Process} instances using this
+ *             class. Use {@link java.lang.ProcessBuilder} instead, which supports
+ *             common operations such as setting environment variables and capturing
+ *             process output. For executing SSH command, use a library such as
+ *             <a href="http://www.jcraft.com/jsch/index.html">JSch</a>.
  */
+@Deprecated
 public class CommandRunner {
     
     private List<String> command;

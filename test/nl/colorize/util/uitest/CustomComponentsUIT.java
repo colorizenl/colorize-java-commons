@@ -6,6 +6,7 @@
 
 package nl.colorize.util.uitest;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.swing.AccordionPanel;
@@ -24,6 +25,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
@@ -41,17 +43,17 @@ import java.util.logging.Logger;
  * Graphical test for a number of custom Swing components. These components are
  * displayed in different tabs. 
  */
-public class CustomComponentsTest {
+public class CustomComponentsUIT {
     
     private JFrame frame;
     private SwingAnimator animator;
     private Table<String> table;
     private List<String> items;
     
-    private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsTest.class);
+    private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
-        CustomComponentsTest test = new CustomComponentsTest();
+        CustomComponentsUIT test = new CustomComponentsUIT();
         test.createWindow();
     }
     
@@ -64,6 +66,7 @@ public class CustomComponentsTest {
         tabs.addTab("Dialogs", createDialogsTab());
         tabs.addTab("Accordion", createAccordionTab());
         tabs.addTab("PropertyEditor", createPropertyEditorTab());
+        tabs.addTab("StripedList", createStripedListTab());
         tabs.addTab("Animation", createAnimationTab());
         tabs.setSelectedIndex(1);
         
@@ -72,7 +75,7 @@ public class CustomComponentsTest {
         contentPanel.add(tabs, BorderLayout.CENTER);
         
         frame = new JFrame("Test Custom Components");
-        frame.setSize(900, 500);
+        frame.setSize(1000, 500);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(0, 20));
@@ -175,6 +178,16 @@ public class CustomComponentsTest {
 
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         tab.add(propertyEditor);
+        return tab;
+    }
+
+    private JPanel createStripedListTab() {
+        JList<String> list = SwingUtils.createStripedList(
+            ImmutableList.of("First", "Second", "Third", "Fourth", "Fifth"));
+        SwingUtils.setPreferredSize(list, 300, 600);
+
+        JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        tab.add(list);
         return tab;
     }
     

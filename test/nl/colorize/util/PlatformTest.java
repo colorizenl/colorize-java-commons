@@ -6,14 +6,14 @@
 
 package nl.colorize.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PlatformTest {
 
@@ -67,10 +67,11 @@ public class PlatformTest {
         assertFalse(testFile.exists());
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testEmptyAppDir() {
-        Platform.getApplicationData(" ", " ");
-        fail();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Platform.getApplicationData(" ", " ");
+        });
     }
     
     @Test

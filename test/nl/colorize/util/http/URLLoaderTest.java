@@ -12,9 +12,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.swing.Utils2D;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,18 +23,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class URLLoaderTest {
     
     private static SimpleHttpServer server;
     private static String testURL;
     
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         server = new SimpleHttpServer();
         server.start(9090);
@@ -43,7 +44,7 @@ public class URLLoaderTest {
         System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "true");
     }
     
-    @AfterClass
+    @AfterAll
     public static void after() {
         server.stop(true);
     }
@@ -80,10 +81,10 @@ public class URLLoaderTest {
         assertTrue(response.getBody().contains("a=2"));
     }
     
-    @Test(expected=IOException.class)
-    public void test404() throws IOException {
+    @Test
+    public void test404() {
         URLLoader loader = URLLoader.get("http://www.colorize.nl/nothing.jpg", Charsets.UTF_8);
-        loader.sendRequest();
+        assertThrows(IOException.class, () -> loader.sendRequest());
     }
 
     @Test
@@ -135,15 +136,15 @@ public class URLLoaderTest {
         URLResponse response = new URLResponse(HttpStatus.OK);
         response.addHeader("header-name", "test");
 
-        assertEquals("test", response.getHeader("header-name"));
-        assertEquals("test", response.getHeader("Header-Name"));
-        assertEquals(ImmutableSet.of("header-name"), response.getHeaderNames());
+        assertEquals("test", response.getHeaders().getValue("header-name"));
+        assertEquals("test", response.getHeaders().getValue("Header-Name"));
+        assertEquals(ImmutableSet.of("header-name"), response.getHeaders().getNames());
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testDisallowNullHeaders() {
         URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
-        loader.addHeader(null, null);
+        assertThrows(IllegalArgumentException.class, () -> loader.addHeader(null, null));
     }
     
     @Test
@@ -151,25 +152,22 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
         URLResponse response = loader.sendRequest();
 
-        List<String> headers = response.getHeaderNames().stream()
+        List<String> headers = response.getHeaders().getNames().stream()
             .map(header -> header.toLowerCase())
             .sorted()
             .collect(Collectors.toList());
             
-        // Ignore headers that depend on the HTTP version.
-        headers.remove("connection");
-        headers.remove("transfer-encoding");
-
-        assertEquals("text/html; charset=UTF-8", response.getHeader("Content-Type"));
-        assertEquals(ImmutableList.of("accept-ranges", "age", "content-type", "date",
-            "server", "vary", "via", "x-powered-by", "x-varnish"), headers);
+        assertEquals("text/html; charset=UTF-8", response.getHeaders().getValue("Content-Type"));
+        assertEquals("0", response.getHeaders().getValue("Age"));
+        assertEquals("Apache", response.getHeaders().getValue("Server"));
+        assertEquals("Accept-Encoding", response.getHeaders().getValue("Vary"));
     }
     
     @Test
     public void testHttpToHttpsRedirect() throws Exception {
         URLResponse response = URLLoader.get("http://www.twitter.com", Charsets.UTF_8).sendRequest();
         assertEquals(HttpStatus.OK, response.getStatus());
-        assertTrue(response.getHeaderNames().contains("strict-transport-security"));
+        assertTrue(response.getHeaders().getNames().contains("strict-transport-security"));
     }
     
     @Test
@@ -202,7 +200,8 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
         request.setBasicAuthentication("Aladdin", "open sesame");
 
-        assertEquals("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==", request.getHeader(HttpHeaders.AUTHORIZATION));
+        assertEquals("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==",
+            request.getHeaders().getValue(HttpHeaders.AUTHORIZATION));
     }
     
     @Test
@@ -223,7 +222,7 @@ public class URLLoaderTest {
         request.addHeader(HttpHeaders.COOKIE, "name2=value2");
 
         assertEquals(ImmutableList.of("name=value", "name2=value2"),
-            request.getHeaderValues(HttpHeaders.COOKIE));
+            request.getHeaders().getValues(HttpHeaders.COOKIE));
     }
     
     @Test
@@ -269,7 +268,7 @@ public class URLLoaderTest {
         loader.setBody(PostData.create(ImmutableMap.of("a", "2", "b", "3<4")));
         
         assertEquals("application/x-www-form-urlencoded;charset=UTF-8", 
-                loader.getHeader(HttpHeaders.CONTENT_TYPE));
+            loader.getHeaders().getValue(HttpHeaders.CONTENT_TYPE));
         assertEquals("a=2&b=3%3C4", loader.getBody());
     }
     
@@ -278,7 +277,7 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.post("http://www.colorize.nl", Charsets.UTF_8);
         loader.setBody("application/json", "{\"a\":2,\"b\":3}");
         
-        assertEquals("[application/json]", loader.getHeaderValues(HttpHeaders.CONTENT_TYPE).toString());
+        assertEquals("[application/json]", loader.getHeaders().getValues(HttpHeaders.CONTENT_TYPE).toString());
         assertEquals("{\"a\":2,\"b\":3}", loader.getBody());
     }
     
@@ -314,6 +313,18 @@ public class URLLoaderTest {
         Future<URLResponse> future = request.sendRequestAsync();
 
         assertEquals(HttpStatus.OK, future.get().getStatus());
+    }
+
+    @Test
+    public void testSendRequestPromise() throws InterruptedException {
+        List<URLResponse> received = new ArrayList<>();
+
+        URLLoader.get("http://www.colorize.nl", Charsets.UTF_8).sendRequestPromise()
+            .then(response -> received.add(response.get()));
+
+        Thread.sleep(2000);
+
+        assertEquals(1, received.size());
     }
 
     private URLResponse toResponse(HttpStatus status, String contentType, String body) {

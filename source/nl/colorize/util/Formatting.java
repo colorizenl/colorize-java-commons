@@ -23,26 +23,16 @@ import java.util.regex.Pattern;
  * Miscellaneous utility functions for creating formatted strings out of data.
  * Examples are formatting durations, word wrapping text, and formatting a
  * number of bytes in meaningful units.
- * <p>
- * This class defines a number of {@code SimpleDateFormat} patterns for commonly
- * used date notations as constants. These constants are not instances of
- * {@code SimpleDateFormat} itself because that class is (unfortunately) not
- * thread safe. 
  */
 public final class Formatting {
 
     private static DynamicResourceBundle durationsBundle;
 
-    // SimpleDateFormat patterns, see class documentation.
-    public static final String YYYYMMDD = "yyyyMMdd";
-    public static final String YYYY_MM_DD = "yyyy-MM-dd";
-    public static final String YYYY_MM_DD_TIME = "yyyy-MM-dd HH:mm";
-    public static final String YYYY_MM_DD_SECONDS = "yyyy-MM-dd HH:mm:ss";
-    public static final String DD_MM_YYYY = "dd-MM-yyyy";
-    public static final String DD_MM_YYYY_TIME = "dd-MM-yyyy HH:mm";
-    public static final String DD_MM_YYYY_SECONDS = "dd-MM-yyyy HH:mm:ss";
-    public static final String ISO_8601 = "yyyy-MM-dd'T'HH:mm:ss";
-    
+    private static final String YYYYMMDD = "yyyyMMdd";
+    private static final String YYYY_MM_DD = "yyyy-MM-dd";
+    private static final String YYYY_MM_DD_TIME = "yyyy-MM-dd HH:mm";
+    private static final String YYYY_MM_DD_SECONDS = "yyyy-MM-dd HH:mm:ss";
+
     private static final Pattern WORD_SEPARATOR_PATTERN = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR_PATTERN).omitEmptyStrings();
 
@@ -185,7 +175,8 @@ public final class Formatting {
         Map<Integer, String> formats = ImmutableMap.of(
             19, YYYY_MM_DD_SECONDS,
             16, YYYY_MM_DD_TIME,
-            10, YYYY_MM_DD
+            10, YYYY_MM_DD,
+            8, YYYYMMDD
         );
 
         String formatString = formats.get(date.length());

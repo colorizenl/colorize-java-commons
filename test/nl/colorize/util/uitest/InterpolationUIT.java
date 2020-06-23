@@ -35,7 +35,7 @@ import nl.colorize.util.swing.Utils2D;
  * Depicts different interpolation methods intended for animation. This is done
  * using both a graph and a simple example animation.
  */
-public class InterpolationTest extends JPanel implements Animatable {
+public class InterpolationUIT extends JPanel implements Animatable {
     
     private Interpolation selected;
     private Timeline exampleAnim;
@@ -59,11 +59,11 @@ public class InterpolationTest extends JPanel implements Animatable {
     public static void main(String[] args) {
         SwingUtils.initializeSwing();
 
-        InterpolationTest test = new InterpolationTest();
+        InterpolationUIT test = new InterpolationUIT();
         test.createWindow();
     }
     
-    public InterpolationTest() {
+    public InterpolationUIT() {
         super(new BorderLayout());
         
         setPreferredSize(new Dimension(GRAPH_SIZE + 2 * MARGIN, GRAPH_SIZE + MARGIN + 100));

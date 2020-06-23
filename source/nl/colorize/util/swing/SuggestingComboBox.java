@@ -6,6 +6,13 @@
 
 package nl.colorize.util.swing;
 
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
+import javax.swing.MenuElement;
+import javax.swing.MenuSelectionManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -20,14 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.swing.JMenuItem;
-import javax.swing.JPopupMenu;
-import javax.swing.JTextField;
-import javax.swing.MenuElement;
-import javax.swing.MenuSelectionManager;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import java.util.stream.Collectors;
 
 /**
  * Text field that shows suggestions based on the entered text and history,
@@ -163,14 +163,10 @@ public class SuggestingComboBox extends JTextField implements DocumentListener, 
         if (typedText.isEmpty() || suggestionItems.isEmpty()) {
             return Collections.emptyList();
         }
-        
-        List<JMenuItem> valid = new ArrayList<JMenuItem>();
-        for (JMenuItem suggestionItem : suggestionItems) {
-            if (isValidSuggestion(typedText, suggestionItem.getText())) {
-                valid.add(suggestionItem);
-            }
-        }
-        return valid;
+
+        return suggestionItems.stream()
+            .filter(item -> isValidSuggestion(typedText, item.getText()))
+            .collect(Collectors.toList());
     }
 
     private boolean isValidSuggestion(String typedText, String suggestion) {

@@ -16,14 +16,14 @@ import nl.colorize.util.http.URLResponse;
  */
 public interface ResponseSerializer {
 
-    public URLResponse process(RestResponse response);
+    public URLResponse process(RestRequest request, RestResponse response);
 
     /**
      * By default, REST services that already return a HTTP response will be
      * returned directly without further processing. However, it is possible
      * to override this method and add additional behavior for such services.
      */
-    default URLResponse process(URLResponse response) {
+    default URLResponse process(RestRequest request, URLResponse response) {
         return response;
     }
 }

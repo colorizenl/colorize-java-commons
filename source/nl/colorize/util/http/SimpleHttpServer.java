@@ -13,8 +13,6 @@ import com.google.common.net.HttpHeaders;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Tuple;
-import nl.colorize.util.rest.MockRestRequest;
-import nl.colorize.util.rest.RestRequest;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -108,7 +106,7 @@ public class SimpleHttpServer {
         InputStreamReader in = new InputStreamReader(client.getInputStream(), CHARSET);
         PrintWriter out = new PrintWriter(new OutputStreamWriter(client.getOutputStream(), CHARSET));
         
-        RestRequest request = parseRequest(in);
+        SimpleRequest request = parseRequest(in);
         URLResponse response = handleRequest(request);
         sendResponse(response, out);
         
@@ -117,20 +115,18 @@ public class SimpleHttpServer {
         client.close();
     }
 
-    private RestRequest parseRequest(InputStreamReader in) throws IOException {
+    private SimpleRequest parseRequest(InputStreamReader in) throws IOException {
         Tuple<Method, String> requestLine = parseRequestLine(readLine(in));
         Map<String, String> headers = readHeaders(in);
         
-        String body = null;
+        String body = "";
         if (requestLine.getLeft().hasRequestBody()) {
             body = readBody(in, headers);
         }
 
-        MockRestRequest request = new MockRestRequest(requestLine.getLeft(), requestLine.getRight(), body);
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            request.addHeader(entry.getKey(), entry.getValue());
-        }
-
+        SimpleRequest request = new SimpleRequest(requestLine.getLeft(), requestLine.getRight());
+        request.getHeaders().add(headers);
+        request.setBody(body);
         return request;
     }
 
@@ -197,8 +193,8 @@ public class SimpleHttpServer {
         headers.put(matcher.group(1), matcher.group(2));
     }
 
-    private URLResponse handleRequest(RestRequest request) {
-        URLResponse expectedResponse = expected.get(request.getPath());
+    private URLResponse handleRequest(SimpleRequest request) {
+        URLResponse expectedResponse = expected.get(request.path);
         if (expectedResponse != null) {
             return expectedResponse;
         } else {
@@ -206,7 +202,7 @@ public class SimpleHttpServer {
         }
     }
     
-    private URLResponse createDefaultResponse(RestRequest request) {
+    private URLResponse createDefaultResponse(SimpleRequest request) {
         URLResponse response = new URLResponse(HttpStatus.OK, serialize(request), CHARSET);
         response.addHeader(HttpHeaders.CONTENT_TYPE, "text/plain;charset=" + CHARSET.displayName());
         return response;
@@ -216,11 +212,11 @@ public class SimpleHttpServer {
         out.print(serialize(response));
     }
     
-    protected String serialize(RestRequest request) {
+    protected String serialize(SimpleRequest request) {
         StringBuilder buffer = new StringBuilder();
-        buffer.append(request.getMethod() + " " + request.getPath() + " " + PROTOCOL + "\r\n");
-        for (String header : request.getHeaderNames()) {
-            for (String value : request.getHeaderValues(header)) {
+        buffer.append(request.method + " " + request.path + " " + PROTOCOL + "\r\n");
+        for (String header : request.getHeaders().getNames()) {
+            for (String value : request.getHeaders().getValues(header)) {
                 buffer.append(header + ": " + value + "\r\n");
             }
         }
@@ -236,8 +232,8 @@ public class SimpleHttpServer {
         buffer.append(PROTOCOL + " " + response.getStatus().getCode() + " " + 
             response.getStatus().getDescription() + "\r\n");
 
-        for (String header : response.getHeaderNames()) {
-            for (String value : response.getHeaderValues(header)) {
+        for (String header : response.getHeaders().getNames()) {
+            for (String value : response.getHeaders().getValues(header)) {
                 buffer.append(header + ": " + value + "\r\n");
             }
         }
@@ -276,5 +272,19 @@ public class SimpleHttpServer {
     
     public void clearExpected() {
         expected.clear();
+    }
+
+    /**
+     * Basic data structure that represents HTTP requests received by the server.
+     */
+    private static class SimpleRequest extends HttpMessage {
+
+        private Method method;
+        private String path;
+
+        public SimpleRequest(Method method, String path) {
+            this.method = method;
+            this.path = path;
+        }
     }
 }

@@ -6,22 +6,21 @@
 
 package nl.colorize.util;
 
-import java.io.Serializable;
-
 import com.google.common.base.Objects;
+
+import java.util.Map;
 
 /**
  * Data structure that consists of two ordered values, sometimes also referred
  * to as a pair. Tuples are immutable and may contain {@code null} values. 
+ *
  * @param <L> Type of the first (left) element.
  * @param <R> Type of the second (right) element.
  */
-public class Tuple<L, R> implements Serializable {
+public class Tuple<L, R> implements Map.Entry<L, R> {
     
     private L left;
     private R right;
-    
-    private static final long serialVersionUID = 6;
 
     public Tuple(L left, R right) {
         this.left = left;
@@ -35,7 +34,22 @@ public class Tuple<L, R> implements Serializable {
     public R getRight() {
         return right;
     }
-    
+
+    @Override
+    public L getKey() {
+        return left;
+    }
+
+    @Override
+    public R getValue() {
+        return right;
+    }
+
+    @Override
+    public R setValue(R value) {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Returns true if {@code element} is one of this tuple's elements.
      */

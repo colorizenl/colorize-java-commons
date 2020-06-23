@@ -6,12 +6,12 @@
 
 package nl.colorize.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CompactFormatterTest {
 

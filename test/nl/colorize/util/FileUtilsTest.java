@@ -6,16 +6,20 @@
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FileUtilsTest {
 
@@ -105,5 +109,53 @@ public class FileUtilsTest {
         assertEquals("old", FileUtils.getFileExtension(new File("a/test.png.old")));
         assertEquals("", FileUtils.getFileExtension(new File("a/test")));
         assertEquals("", FileUtils.getFileExtension(new File(".project")));
+    }
+
+    @Test
+    public void testRewriteWithFunction() throws IOException {
+        File tempFile = FileUtils.createTempFile("a\nb\nc\nd", Charsets.UTF_8);
+
+        FileUtils.rewrite(tempFile, Charsets.UTF_8, line -> "2" + line);
+
+        assertEquals(ImmutableList.of("2a", "2b", "2c", "2d"),
+            FileUtils.readLines(tempFile, Charsets.UTF_8));
+    }
+
+    @Test
+    public void testRewriteWithMap() throws IOException {
+        File tempFile = FileUtils.createTempFile("a\nb\nc\nd", Charsets.UTF_8);
+
+        FileUtils.rewrite(tempFile, Charsets.UTF_8, ImmutableMap.of("b", "z", "d", "x"));
+
+        assertEquals(ImmutableList.of("a", "z", "c", "x"), FileUtils.readLines(tempFile, Charsets.UTF_8));
+    }
+
+    @Test
+    void copyDirectory() throws IOException {
+        File tempDir = FileUtils.createTempDir();
+        Files.write("test", new File(tempDir, "a.txt"), Charsets.UTF_8);
+        new File(tempDir, "b").mkdir();
+        Files.write("test", new File(tempDir.getAbsolutePath() + "/b/c.txt"), Charsets.UTF_8);
+
+        File outputDir = FileUtils.createTempDir();
+        outputDir = new File(outputDir, "target");
+        FileUtils.copyDirectory(tempDir, outputDir);
+
+        assertTrue(outputDir.exists());
+        assertTrue(new File(outputDir, "a.txt").exists());
+        assertTrue(new File(outputDir, "b").exists());
+        assertTrue(new File(outputDir.getAbsolutePath() + "/b/c.txt").exists());
+    }
+
+    @Test
+    void deleteDirectory() throws IOException {
+        File tempDir = FileUtils.createTempDir();
+        Files.write("test", new File(tempDir, "a.txt"), Charsets.UTF_8);
+        new File(tempDir, "b").mkdir();
+        Files.write("test", new File(tempDir.getAbsolutePath() + "/b/c.txt"), Charsets.UTF_8);
+
+        FileUtils.deleteDirectory(tempDir);
+
+        assertFalse(tempDir.exists());
     }
 }

@@ -9,12 +9,11 @@ package nl.colorize.util;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for the {@code TextUtils} class.
- */
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 public class TextUtilsTest {
     
     @Test
@@ -57,7 +56,7 @@ public class TextUtilsTest {
         Pattern regex = Pattern.compile("\\w(\\w)");
         assertEquals("aa", TextUtils.matchFirst("aa b cc", regex).orNull());
         assertEquals("a", TextUtils.matchFirst("aa b cc", regex, 1).orNull());
-        assertNull("aa", TextUtils.matchFirst("a b", regex).orNull());
+        assertNull(TextUtils.matchFirst("a b", regex).orNull());
     }
 
     @Test

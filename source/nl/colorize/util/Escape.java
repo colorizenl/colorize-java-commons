@@ -9,7 +9,6 @@ package nl.colorize.util;
 import com.google.common.base.CharMatcher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import nl.colorize.util.http.PostData;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -20,7 +19,6 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Map;
 
 /**
  * Contains utility methods for encoding strings to and decoding them from a 
@@ -64,26 +62,6 @@ public final class Escape {
         } catch (UnsupportedEncodingException e) {
             throw new AssertionError(e);
         }
-    }
-    
-    /**
-     * Encodes a number of key/value pairs using URL encoding, as used in the
-     * {@code application/x-www-form-urlencoded} media type.
-     * @deprecated Use {@code PostData.encode(...)} instead.
-     */
-    @Deprecated
-    public static String formEncode(Map<String, String> data, Charset charset) {
-        return PostData.create(data).encode(charset);
-    }
-    
-    /**
-     * Decodes a URL encoded collection of key/value pairs, as used in the
-     * {@code application/x-www-form-urlencoded} media type.
-     * @deprecated Use {@code PostData.parse(...)} instead.
-     */
-    @Deprecated
-    public static Map<String, String> formDecode(String encoded, Charset charset) {
-        return PostData.parse(encoded, charset).getData();
     }
 
     /**

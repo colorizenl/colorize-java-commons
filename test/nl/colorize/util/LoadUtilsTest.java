@@ -8,7 +8,7 @@ package nl.colorize.util;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -24,10 +24,10 @@ import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LoadUtilsTest {
     
@@ -119,19 +119,12 @@ public class LoadUtilsTest {
         assertEquals("test\n", LoadUtils.readToString(fileReader(dest)));
     }
     
-    @Test(expected = IllegalArgumentException.class)
-    public void testToURL() throws MalformedURLException, URISyntaxException {
+    @Test
+    public void testToURL() throws MalformedURLException {
         assertEquals(new URL("http://www.colorize.nl/"), LoadUtils.toURL("http://www.colorize.nl/"));
         assertEquals(new URL("file:///a.txt"), LoadUtils.toURL(new File("/a.txt")));
-        LoadUtils.toURL("kees://invalid");
     }
-    
-    @Test(expected = IllegalArgumentException.class)
-    public void testToURI() throws URISyntaxException {
-        assertEquals(new URI("file:///a.txt"), LoadUtils.toURI("file:///a.txt"));
-        LoadUtils.toURI("\\non/sense!");
-    }
-    
+
     @Test
     public void testFileExtensionFilter() throws Exception {
         FilenameFilter filter = LoadUtils.getFileExtensionFilter("jpg", "png");

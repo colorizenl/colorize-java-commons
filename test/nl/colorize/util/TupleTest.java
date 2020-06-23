@@ -6,22 +6,21 @@
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Unit tests for the {@code Tuple} and associated {@code UnorderedTuple} and 
- * {@code Relation} classes.
- */
 public class TupleTest {
 
     @Test
     public void testTuple() {
         Tuple<String,String> tuple = Tuple.of("first", "second");
+
         assertEquals("first", tuple.getLeft());
         assertEquals("second", tuple.getRight());
         assertEquals("(first, second)", tuple.toString());
@@ -33,6 +32,7 @@ public class TupleTest {
     @Test
     public void testTupleEqualty() {
         Tuple<String, String> tuple = Tuple.of("first", "second");
+
         assertTrue(tuple.equals(new Tuple<String, String>("first", "second")));
         assertFalse(tuple.equals(new Tuple<String, String>("first", "third")));
         assertFalse(tuple.equals(new Tuple<String, String>("second", "first")));

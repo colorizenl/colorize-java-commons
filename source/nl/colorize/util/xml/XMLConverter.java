@@ -6,6 +6,11 @@
 
 package nl.colorize.util.xml;
 
+import com.google.gson.internal.Primitives;
+import nl.colorize.util.ReflectionUtils;
+import org.jdom2.Document;
+import org.jdom2.Element;
+
 import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -14,13 +19,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.google.gson.internal.Primitives;
-
-import org.jdom2.Document;
-import org.jdom2.Element;
-
-import nl.colorize.util.ReflectionUtils;
 
 /**
  * Converts Java object structures into XML elements. This takes the approach
@@ -56,23 +54,18 @@ public class XMLConverter {
         typeConverters.put(type, typeConverter);
     }
     
-    @SuppressWarnings("rawtypes")
     private void registerStandardTypeConverters() {
-        registerTypeConverter(Date.class, new XMLTypeConverter<Date>() {
-            public Element convertObject(Date obj, String elementName) {
-                return XMLHelper.createPropertyElement(elementName,
-                        new SimpleDateFormat(dateFormat).format(obj));
-            }
+        registerTypeConverter(Date.class, (obj, elementName) -> {
+            String formatted = new SimpleDateFormat(dateFormat).format(obj);
+            return XMLHelper.createPropertyElement(elementName, formatted);
         });
         
-        registerTypeConverter(Map.class, new XMLTypeConverter<Map>() {
-            public Element convertObject(Map obj, String elementName) {
-                Element element = new Element(elementName);
-                for (Object key : obj.keySet()) {
-                    element.addContent(serializeObject(obj.get(key), key.toString()));
-                }
-                return element;
+        registerTypeConverter(Map.class, (obj, elementName) -> {
+            Element element = new Element(elementName);
+            for (Object key : obj.keySet()) {
+                element.addContent(serializeObject(obj.get(key), key.toString()));
             }
+            return element;
         });
     }
     

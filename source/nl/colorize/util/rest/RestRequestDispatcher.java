@@ -113,11 +113,11 @@ public class RestRequestDispatcher {
         
         URLResponse response = null;
         if (mappedForPath.isEmpty()) {
-            response = createEmptyResponse(HttpStatus.NOT_FOUND);
+            response = createEmptyResponse(request, HttpStatus.NOT_FOUND);
         } else if (request.getMethod() == Method.OPTIONS) {
-            response = handlePreflightedRequest();
+            response = handlePreflightedRequest(request);
         } else if (mappedForMethod == null) {
-            response = createEmptyResponse(HttpStatus.METHOD_NOT_ALLOWED);
+            response = createEmptyResponse(request, HttpStatus.METHOD_NOT_ALLOWED);
         } else {
             response = dispatch(request, mappedForMethod);
         }
@@ -139,24 +139,24 @@ public class RestRequestDispatcher {
         bindRequest(request, mappedService.config);
         
         if (!authorization.isRequestAuthorized(request, mappedService.config)) {
-            return createEmptyResponse(HttpStatus.UNAUTHORIZED);
+            return createEmptyResponse(request, HttpStatus.UNAUTHORIZED);
         }
         
         try {
             Object result = callService(request, mappedService);
 
             if (result instanceof URLResponse) {
-                return serializer.process((URLResponse) result);
+                return serializer.process(request, (URLResponse) result);
             } else if (result instanceof RestResponse) {
-                return serializer.process((RestResponse) result);
+                return serializer.process(request, (RestResponse) result);
             } else {
                 throw new IllegalStateException("Unknown response type: " + result);
             }
         } catch (BadRequestException e) {
-            return createEmptyResponse(HttpStatus.BAD_REQUEST);
+            return createEmptyResponse(request, HttpStatus.BAD_REQUEST);
         } catch (InternalServerException e) {
             LOGGER.log(Level.SEVERE, "Internal exception while handling service request", e);
-            return createEmptyResponse(HttpStatus.INTERNAL_SERVER_ERROR);
+            return createEmptyResponse(request, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     
@@ -186,15 +186,15 @@ public class RestRequestDispatcher {
         Map<String, String> mergedHeaders = new LinkedHashMap<>();
         mergedHeaders.putAll(DEFAULT_RESPONSE_HEADERS);
 
-        for (String header : response.getHeaderNames()) {
-            for (String value : response.getHeaderValues(header)) {
+        for (String header : response.getHeaders().getNames()) {
+            for (String value : response.getHeaders().getValues(header)) {
                 mergedHeaders.put(header, value);
             }
         }
 
         URLResponse result = new URLResponse(response.getStatus(), response.getBody(),
             response.getEncoding());
-        result.addHeaders(mergedHeaders);
+        result.getHeaders().add(mergedHeaders);
         return result;
     }
     
@@ -234,10 +234,10 @@ public class RestRequestDispatcher {
         return false;
     }
     
-    private URLResponse createEmptyResponse(HttpStatus status) {
+    private URLResponse createEmptyResponse(RestRequest request, HttpStatus status) {
         URLResponse response = new URLResponse(status, new byte[0], Charsets.UTF_8);
         response.addHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
-        return response;
+        return serializer.process(request, response);
     }
     
     /**
@@ -246,8 +246,8 @@ public class RestRequestDispatcher {
      * https://developer.mozilla.org/en-US/docs/HTTP/Access_control_CORS
      * for more information on CORS (Cross Origin Resource Sharing).
      */
-    private URLResponse handlePreflightedRequest() {
-        return createEmptyResponse(HttpStatus.OK);
+    private URLResponse handlePreflightedRequest(RestRequest request) {
+        return createEmptyResponse(request, HttpStatus.OK);
     }
     
     private boolean isMatchingPath(String firstPath, String secondPath) {
@@ -270,8 +270,8 @@ public class RestRequestDispatcher {
 
     private boolean isMatchingPathComponent(String firstPathComponent, String secondPathComponent) {
         return firstPathComponent.equals(secondPathComponent) || 
-                isPathParameter(firstPathComponent) || 
-                isPathParameter(secondPathComponent);
+            isPathParameter(firstPathComponent) ||
+            isPathParameter(secondPathComponent);
     }
     
     private boolean isPathParameter(String pathComponent) {

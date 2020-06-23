@@ -10,11 +10,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.MediaType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpMessageTest {
 
@@ -26,17 +29,17 @@ public class HttpMessageTest {
         message.addHeader("b", "3");
         message.addHeader("b", "3");
 
-        assertTrue(message.hasHeader("a"));
-        assertTrue(message.hasHeader("b"));
-        assertFalse(message.hasHeader("c"));
+        assertTrue(message.getHeaders().has("a"));
+        assertTrue(message.getHeaders().has("b"));
+        assertFalse(message.getHeaders().has("c"));
 
-        assertEquals("1", message.getHeader("a"));
-        assertEquals("2", message.getHeader("b"));
+        assertEquals("1", message.getHeaders().getValue("a"));
+        assertEquals("2", message.getHeaders().getValue("b"));
 
-        assertEquals(ImmutableList.of("1"), message.getHeaderValues("a"));
-        assertEquals(ImmutableList.of("2", "3", "3"), message.getHeaderValues("b"));
+        assertEquals(ImmutableList.of("1"), message.getHeaders().getValues("a"));
+        assertEquals(ImmutableList.of("2", "3", "3"), message.getHeaders().getValues("b"));
 
-        assertEquals(ImmutableSet.of("a", "b"), message.getHeaderNames());
+        assertEquals(ImmutableSet.of("a", "b"), message.getHeaders().getNames());
     }
 
     @Test
@@ -45,22 +48,22 @@ public class HttpMessageTest {
         message.addHeader("Content-Type", "1");
         message.addHeader("content-type", "2");
 
-        assertTrue(message.hasHeader("Content-Type"));
-        assertTrue(message.hasHeader("content-type"));
+        assertTrue(message.getHeaders().has("Content-Type"));
+        assertTrue(message.getHeaders().has("content-type"));
 
-        assertEquals(ImmutableList.of("1", "2"), message.getHeaderValues("Content-Type"));
-        assertEquals(ImmutableList.of("1", "2"), message.getHeaderValues("content-type"));
-        assertEquals(ImmutableSet.of("Content-Type"), message.getHeaderNames());
+        assertEquals(ImmutableList.of("1", "2"), message.getHeaders().getValues("Content-Type"));
+        assertEquals(ImmutableList.of("1", "2"), message.getHeaders().getValues("content-type"));
+        assertEquals(ImmutableSet.of("Content-Type"), message.getHeaders().getNames());
     }
 
     @Test
     public void testReplaceHeader() {
         MockHttpMessage message = new MockHttpMessage();
         message.addHeader("a", "1");
-        message.replaceHeader("a", "2");
+        message.getHeaders().replace("a", "2");
 
-        assertTrue(message.hasHeader("a"));
-        assertEquals(ImmutableList.of("2"), message.getHeaderValues("a"));
+        assertTrue(message.getHeaders().has("a"));
+        assertEquals(ImmutableList.of("2"), message.getHeaders().getValues("a"));
     }
 
     @Test
@@ -69,8 +72,8 @@ public class HttpMessageTest {
         message.setBody(MediaType.PLAIN_TEXT_UTF_8, "Test");
         assertEquals("Test", message.getBody());
         assertEquals(4, ByteStreams.toByteArray(message.openBodyStream()).length);
-        assertTrue(message.hasHeader("Content-Type"));
-        assertEquals("text/plain; charset=utf-8", message.getHeader("Content-Type"));
+        assertTrue(message.getHeaders().has("Content-Type"));
+        assertEquals("text/plain; charset=utf-8", message.getHeaders().getValue("Content-Type"));
 
         MockHttpMessage empty = new MockHttpMessage();
         assertEquals("", empty.getBody());

@@ -7,8 +7,8 @@
 package nl.colorize.util;
 
 import com.google.common.base.Charsets;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -24,15 +24,16 @@ import java.util.Properties;
 import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DynamicResourceBundleTest {
     
     private DynamicResourceBundle bundle;
     private DynamicResourceBundle bundleNL;
     
-    @Before
+    @BeforeEach
     public void before() {
         bundle = new DynamicResourceBundle(LoadUtils.toProperties(
             "key.a", "value",
@@ -127,10 +128,13 @@ public class DynamicResourceBundleTest {
         assertEquals("Hello world", de.getString("a"));
     }
     
-    @Test(expected = MissingResourceException.class)
+    @Test
     public void testExceptionIfLookupFails() throws Exception {
         ResourceFile tempDir = new ResourceFile(LoadUtils.createTempDir());
-        new DynamicResourceBundle("NonExisting", tempDir, Locale.getDefault(), Charsets.UTF_8);
+
+        assertThrows(MissingResourceException.class, () -> {
+            new DynamicResourceBundle("NonExisting", tempDir, Locale.getDefault(), Charsets.UTF_8);
+        });
     }
     
     @Test

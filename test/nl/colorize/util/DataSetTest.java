@@ -11,19 +11,17 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Unit tests for the {@code DataSet} class.
- */
 public class DataSetTest {
     
     private static final float EPSILON = 0.001f;
@@ -285,17 +283,17 @@ public class DataSetTest {
         assertEquals(ImmutableMap.of("first", 0.7, "second", 0.6, "third", 1.0), normalized);
     }
     
-    @Test(expected=IllegalStateException.class)
+    @Test
     public void testCannotCalculateForEmptyDataSet() {
         DataSet<String, String> dataSet = new DataSet<>();
-        dataSet.calculateMax("a");
+        assertThrows(IllegalStateException.class, () -> dataSet.calculateMax("a"));
     }
     
-    @Test(expected=IllegalStateException.class)
+    @Test
     public void testCannotCalculateForEmptySubSet() {
         DataSet<String, String> dataSet = new DataSet<>();
         dataSet.add("first", "a", 2);
-        dataSet.calculateMax("b");
+        assertThrows(IllegalStateException.class, () -> dataSet.calculateMax("b"));
     }
     
     @Test

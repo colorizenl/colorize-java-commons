@@ -7,12 +7,14 @@
 package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.Escape;
 import nl.colorize.util.rest.BadRequestException;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -90,6 +92,9 @@ public class PostData {
         return encode(Charsets.UTF_8);
     }
 
+    /**
+     * Creates a {@code PostData} instance from existing key/value pairs.
+     */
     public static PostData create(Map<String, String> data) {
         Map<String, String> processedData = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : data.entrySet()) {
@@ -104,10 +109,28 @@ public class PostData {
         return new PostData(processedData);
     }
 
-    public static PostData create(String name, String value) {
-        return create(ImmutableMap.of(name, value));
+    /**
+     * Creates a {@code PostData} instance from a number of key/value pairs.
+     * @throws IllegalArgumentException if the number of parameters is not a
+     *         multiple of two.
+     */
+    public static PostData create(String key, String value, String... rest) {
+        Preconditions.checkArgument(rest.length % 2 == 0,
+            "Invalid key/value pairs: " + Arrays.toString(rest));
+
+        Map<String, String> data = new LinkedHashMap<>();
+        data.put(key, value);
+        for (int i = 0; i < rest.length; i += 2) {
+            data.put(rest[i], rest[i + 1]);
+        }
+
+        return new PostData(data);
     }
 
+    /**
+     * Parses {@code PostData} from the specified string. If the data is empty
+     * this will also lead to an empty {@code PostData} instance being returned.
+     */
     public static PostData parse(String encoded, Charset charset) {
         if (encoded.startsWith("?")) {
             encoded = encoded.substring(1);

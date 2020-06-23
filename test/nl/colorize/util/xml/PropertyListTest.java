@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableSet;
 import nl.colorize.util.FileUtils;
 import nl.colorize.util.Formatting;
 import nl.colorize.util.LoadUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,9 +28,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PropertyListTest {
 
@@ -117,6 +118,7 @@ public class PropertyListTest {
         plist.setProperty("other", false);
         byte[] saved = saveToByteArray(plist);
         PropertyList loaded = loadFromByteArray(saved);
+
         assertEquals(date, loaded.getProperty("test", null));
     }
     
@@ -127,6 +129,7 @@ public class PropertyListTest {
         plist.setProperty("test", testdata);
         byte[] saved = saveToByteArray(plist);
         PropertyList loaded = loadFromByteArray(saved);
+
         assertArrayEquals(testdata, loaded.getProperty("test", new byte[0]));
     }
     
@@ -136,6 +139,7 @@ public class PropertyListTest {
         plist.setProperty("test", "eéuü");
         byte[] saved = saveToByteArray(plist);
         PropertyList loaded = loadFromByteArray(saved);
+
         assertEquals("eéuü", loaded.getProperty("test", null));
     }
     
@@ -145,6 +149,7 @@ public class PropertyListTest {
         plist.setProperty("test", "a < b && c > d");
         byte[] saved = saveToByteArray(plist);
         PropertyList loaded = loadFromByteArray(saved);
+
         assertEquals("a < b && c > d", loaded.getProperty("test", null));
     }
     
@@ -165,7 +170,8 @@ public class PropertyListTest {
         xml.append("</plist>\n");
         
         PropertyList plist = PropertyList.load(toStream(xml));
-        List<?> array = (List<?>) plist.getProperty("Lines", null);
+        List<?> array = plist.getProperty("Lines", null);
+
         assertEquals(2, array.size());
         assertEquals("It is a tale told", array.get(0));
         assertEquals("by an idiot", array.get(1));
@@ -187,7 +193,8 @@ public class PropertyListTest {
         xml.append("</plist>\n");
         
         PropertyList plist = PropertyList.load(toStream(xml));
-        List<?> array = (List<?>) plist.getProperty("array", null);
+        List<?> array = plist.getProperty("array", null);
+
         assertEquals(3, array.size());
         assertEquals("test", array.get(0));
         assertEquals(Integer.valueOf(2), array.get(1));
@@ -248,10 +255,13 @@ public class PropertyListTest {
                 plist.getProperty("Some dict 2", ImmutableMap.of("default", "default")));
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testCannotStorePropertyDataType() throws Exception {
         PropertyList plist = new PropertyList();
-        plist.setProperty("a", new URL("http://www.colorize.nl"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            plist.setProperty("a", new URL("http://www.colorize.nl"));
+        });
     }
     
     @Test
@@ -375,11 +385,12 @@ public class PropertyListTest {
         assertEquals(expected, FileUtils.read(tempFile, Charsets.UTF_8));
     }
     
-    @Test(expected = ClassCastException.class)
+    @Test
     public void testIncompatibleDefaultValue() {
         PropertyList plist = new PropertyList();
         plist.setProperty("a", "test");
-        plist.getProperty("a", 123);
+
+        assertThrows(ClassCastException.class, () -> plist.getProperty("a", 123));
     }
     
     @Test

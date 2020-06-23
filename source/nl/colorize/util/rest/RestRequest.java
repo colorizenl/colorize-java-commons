@@ -132,7 +132,7 @@ public class RestRequest extends HttpMessage {
         }
 
         String body = getBody();
-        String contentType = getHeader(HttpHeaders.CONTENT_TYPE, null);
+        String contentType = getHeaders().getValue(HttpHeaders.CONTENT_TYPE, null);
 
         if (contentType != null && contentType.startsWith("application/json")) {
             return PostData.create(parseJsonRequestBody(body));
@@ -172,5 +172,10 @@ public class RestRequest extends HttpMessage {
 
     public HttpServletRequest getHttpRequest() {
         return httpRequest;
+    }
+
+    @Override
+    public String toString() {
+        return method + " " + path;
     }
 }

@@ -6,16 +6,11 @@
 
 package nl.colorize.util;
 
-import static org.junit.Assert.*;
-
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Unit test for the {@code Escape} class.
- */
 public class EscapeTest {
 
     @Test
@@ -27,26 +22,7 @@ public class EscapeTest {
     public void testUrlDecode() {
         assertEquals("john doe", Escape.urlDecode("john%20doe", Charsets.UTF_8));
     }
-    
-    @Test
-    public void testFormEncode() {
-        assertEquals("", Escape.formEncode(ImmutableMap.<String, String>of(), Charsets.UTF_8));
-        assertEquals("a=2", Escape.formEncode(ImmutableMap.of("a", "2"), Charsets.UTF_8));
-        assertEquals("a=2&b=3", Escape.formEncode(ImmutableMap.of("a", "2", "b", "3"), Charsets.UTF_8));
-        assertEquals("a=2&b=", Escape.formEncode(ImmutableMap.of("a", "2", "b", ""), Charsets.UTF_8));
-        assertEquals("a=3%3E4", Escape.formEncode(ImmutableMap.of("a", "3>4"), Charsets.UTF_8));
-    }
-    
-    @Test
-    public void testFormDecode() {
-        assertEquals(ImmutableMap.of(), Escape.formDecode("", Charsets.UTF_8));
-        assertEquals(ImmutableMap.of("a", "2"), Escape.formDecode("a=2", Charsets.UTF_8));
-        assertEquals(ImmutableMap.of("a", "", "b", "4"), Escape.formDecode("a=&b=4", Charsets.UTF_8));
-        assertEquals(ImmutableMap.of("a", "3>4"), Escape.formDecode("a=3%3E4", Charsets.UTF_8));
-        assertEquals(ImmutableMap.of(), Escape.formDecode("?", Charsets.UTF_8));
-        assertEquals(ImmutableMap.of("a", "7"), Escape.formDecode("?a=7", Charsets.UTF_8));
-    }
-    
+
     @Test
     public void testEscapeCSV() {
         assertEquals("colorize", Escape.escapeCSV("colorize"));

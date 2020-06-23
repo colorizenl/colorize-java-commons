@@ -158,7 +158,7 @@ public final class MacIntegration {
         UIDefaults swingDefaults = UIManager.getDefaults();
         Font systemFont = new Font(SwingUtils.findAvailableFontFamily(fontFamilies), Font.PLAIN, 13);
                 
-        List<Object> fontKeys = new ArrayList<Object>();
+        List<Object> fontKeys = new ArrayList<>();
         for (Map.Entry<Object, Object> entry : swingDefaults.entrySet()) {
             if (entry.getKey().toString().endsWith(".font")) {
                 fontKeys.add(entry.getKey());

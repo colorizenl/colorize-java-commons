@@ -6,6 +6,11 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.Charsets;
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.ResourceFile;
+import org.junit.jupiter.api.Test;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Transparency;
@@ -16,18 +21,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 
-import nl.colorize.util.LoadUtils;
-import nl.colorize.util.ResourceFile;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import static org.junit.Assert.*;
-
-/**
- * Unit test for the {@code Utils2D} class.
- */
-@RunWith(HeadlessTestRunner.class)
 public class Utils2DTest {
     
     @Test
@@ -54,22 +52,12 @@ public class Utils2DTest {
     public void testSaveImageJPEG() throws IOException {
         File tempFile = LoadUtils.getTempFile(".jpg");
         BufferedImage image = new BufferedImage(200, 200, BufferedImage.TYPE_INT_BGR);
-        Utils2D.saveJPEG(image, new FileOutputStream(tempFile), 1f);
+        Utils2D.saveJPEG(image, new FileOutputStream(tempFile));
         BufferedImage loaded = Utils2D.loadImage(new ResourceFile(tempFile));
         assertEquals(image.getWidth(), loaded.getWidth());
         assertEquals(image.getHeight(), loaded.getHeight());
     }
-    
-    @Test
-    public void testMakeImageCompatible() {
-        BufferedImage image = new BufferedImage(200, 300, BufferedImage.TYPE_4BYTE_ABGR);
-        BufferedImage compatible = Utils2D.makeImageCompatible(image);
-        assertEquals(200, compatible.getWidth());
-        assertEquals(300, compatible.getHeight());
-        
-        Utils2D.makeImageCompatible(new BufferedImage(200, 300, BufferedImage.TYPE_3BYTE_BGR));
-    }
-    
+
     @Test
     public void testImageTransparency() throws IOException {
         BufferedImage original = new BufferedImage(200, 200, BufferedImage.TYPE_INT_ARGB);
@@ -83,8 +71,7 @@ public class Utils2DTest {
         
         BufferedImage png = Utils2D.loadImage(new FileInputStream(pngFile));
         assertEquals(Transparency.TRANSLUCENT, png.getTransparency());
-        assertEquals(Transparency.TRANSLUCENT, Utils2D.makeImageCompatible(png).getTransparency());
-        
+
         original = new BufferedImage(200, 200, BufferedImage.TYPE_INT_BGR);
         g2 = original.createGraphics();
         g2.setColor(Color.RED);
@@ -92,11 +79,10 @@ public class Utils2DTest {
         g2.dispose();
         
         File jpgFile = LoadUtils.getTempFile(".jpg");
-        Utils2D.saveJPEG(original, jpgFile, 1f);
+        Utils2D.saveJPEG(original, jpgFile);
         
         BufferedImage jpg = Utils2D.loadImage(new FileInputStream(jpgFile));
         assertEquals(Transparency.OPAQUE, jpg.getTransparency());
-        assertEquals(Transparency.OPAQUE, Utils2D.makeImageCompatible(jpg).getTransparency());
     }
     
     @Test
@@ -159,8 +145,34 @@ public class Utils2DTest {
         assertEquals(new Color(128, 128, 128), Utils2D.interpolateColor(Color.WHITE, Color.BLACK, 0.5f));
         assertEquals(new Color(0, 0, 0), Utils2D.interpolateColor(Color.WHITE, Color.BLACK, 1f));
     }
-    
+
+    @Test
+    void toDataURL() {
+        BufferedImage image = new BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB);
+        image.setRGB(0, 0, Color.RED.getRGB());
+        image.setRGB(1, 0, Color.BLUE.getRGB());
+
+        assertEquals("data:image/png;base64," +
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0k" +
+            "AAAAEElEQVR4XmP4z8AAQkAMBQAz3gP9NSox0gAAAABJRU5ErkJggg==",
+            Utils2D.toDataURL(image));
+    }
+
+    @Test
+    void fromDataURL() throws IOException {
+        String base64 = "data:image/png;base64," +
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0k" +
+            "AAAAEElEQVR4XmP4z8AAQkAMBQAz3gP9NSox0gAAAABJRU5ErkJggg==";
+
+        BufferedImage image = Utils2D.fromDataURL(base64);
+
+        assertEquals(Color.RED.getRGB(), image.getRGB(0, 0));
+        assertEquals(Color.BLUE.getRGB(), image.getRGB(1, 0));
+        assertEquals(0, image.getRGB(0, 1));
+        assertEquals(0, image.getRGB(1, 1));
+    }
+
     private BufferedImage image(int width, int height) {
-        return Utils2D.createImage(width, height, true);
+        return new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
     }
 }

@@ -6,39 +6,45 @@
 
 package nl.colorize.util;
 
-import java.io.Serializable;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Joiner;
-import com.google.common.primitives.Ints;
+import java.util.stream.Collectors;
 
 /**
  * Represents a version number with arbitrary precision. Examples of version
  * numbers that can be represented by this class are "1.0" and "1.6.0b31".  
  */
-public final class Version implements Comparable<Version>, Serializable {
+public final class Version implements Comparable<Version> {
 
     private String versionString;
-    private int[] digits;
+    private List<Integer> digits;
+
+    public static final Version UNKNOWN = new Version("0.0.0", ImmutableList.of(0, 0, 0));
     
     private static final Pattern VERSION_STRING_PATTERN = Pattern.compile("(\\d[\\.\\d]*)(.*)");
-    private static final long serialVersionUID = 9;
-    
-    private Version(String versionString, int[] digits) {
+    private static final Splitter VERSION_SPLITTER = Splitter.on(".").omitEmptyStrings();
+    private static final Joiner VERSION_JOINER = Joiner.on(".");
+
+    private Version(String versionString, List<Integer> digits) {
         this.versionString = versionString;
-        this.digits = digits;
+        this.digits = ImmutableList.copyOf(digits);
     }
-    
+
     /**
      * Returns the digit at the specified position. If no digit exists at that
      * position this will return 0.
      */
-    public int getDigit(int position) {
-        if (position >= digits.length) {
+    protected int getDigit(int position) {
+        if (position >= digits.size()) {
             return 0;
         }
-        return digits[position];
+        return digits.get(position);
     }
     
     /**
@@ -51,8 +57,9 @@ public final class Version implements Comparable<Version>, Serializable {
      *   <li>0 if both versions are equal
      * </ul>
      */
+    @Override
     public int compareTo(Version other) {
-        int precision = Math.max(digits.length, other.digits.length);
+        int precision = Math.max(digits.size(), other.digits.size());
         return compareTo(other, precision);
     }
     
@@ -63,10 +70,8 @@ public final class Version implements Comparable<Version>, Serializable {
      * @throws IllegalArgumentException if {@code precision} is 0 or less.
      */
     public int compareTo(Version other, int precision) {
-        if (precision <= 0) {
-            throw new IllegalArgumentException("Invalid precision: " + precision);
-        }
-        
+        Preconditions.checkArgument(precision > 0, "Invalid precision: " + precision);
+
         for (int i = 0; i < precision; i++) {
             int thisDigit = getDigit(i);
             int otherDigit = other.getDigit(i);
@@ -81,9 +86,6 @@ public final class Version implements Comparable<Version>, Serializable {
         return 0;
     }
     
-    /**
-     * Returns true if this version is equal to or newer than {@code other}.
-     */
     public boolean isAtLeast(Version other) {
         return compareTo(other) >= 0;
     }
@@ -104,16 +106,13 @@ public final class Version implements Comparable<Version>, Serializable {
      * @throws IllegalArgumentException if there is not at least 1 digit left.
      */
     public Version truncate(int maxDigits) {
-        if (maxDigits < 1) {
-            throw new IllegalArgumentException("Must keep at least 1 digit");
-        }
-        
-        int[] truncatedDigits = new int[Math.min(maxDigits, digits.length)];
-        for (int i = 0; i < truncatedDigits.length; i++) {
-            truncatedDigits[i] = digits[i];
-        }
-        
-        return parse(Joiner.on(".").join(Ints.asList(truncatedDigits)));
+        Preconditions.checkArgument(maxDigits >= 1, "Must keep at least 1 digit");
+
+        List<Integer> truncatedDigits = digits.stream()
+            .limit(Math.min(maxDigits, digits.size()))
+            .collect(Collectors.toList());
+
+        return new Version(VERSION_JOINER.join(truncatedDigits), truncatedDigits);
     }
     
     @Override
@@ -135,6 +134,9 @@ public final class Version implements Comparable<Version>, Serializable {
      */
     @Override
     public String toString() {
+        if (equals(UNKNOWN)) {
+            return "UNKNOWN";
+        }
         return versionString;
     }
     
@@ -143,21 +145,17 @@ public final class Version implements Comparable<Version>, Serializable {
      * @throws IllegalArgumentException if the version string cannot be parsed.
      */
     public static Version parse(String versionString) {
-        if (versionString == null) {
-            throw new IllegalArgumentException("Version string is empty");
-        }
-        
+        Preconditions.checkArgument(versionString != null, "Version string is empty");
+
         Matcher matcher = VERSION_STRING_PATTERN.matcher(versionString);
         if (!matcher.matches()) {
             throw new IllegalArgumentException("Cannot parse version string: " + versionString);
         }
-        
-        String[] parts = matcher.group(1).split("\\.");
-        int[] digits = new int[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            digits[i] = Integer.parseInt(parts[i]);
-        }
-        
+
+        List<Integer> digits = VERSION_SPLITTER.splitToList(matcher.group(1)).stream()
+            .map(Integer::parseInt)
+            .collect(Collectors.toList());
+
         return new Version(versionString, digits); 
     }
     

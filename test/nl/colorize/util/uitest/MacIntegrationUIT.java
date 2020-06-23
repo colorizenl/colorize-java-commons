@@ -34,20 +34,20 @@ import java.util.logging.Logger;
  * a number of macOS specific features for Swing applications. For obvious reasons
  * this test should only be run when running on macOS.
  */
-public class MacIntegrationTest implements ApplicationMenuListener {
+public class MacIntegrationUIT implements ApplicationMenuListener {
     
     private JFrame window;
     private JLabel message;
     private JLabel iconLabel;
 
-    private static final Logger LOGGER = LogHelper.getLogger(MacIntegrationTest.class);
+    private static final Logger LOGGER = LogHelper.getLogger(MacIntegrationUIT.class);
 
     public static void main(String[] args) {
         if (!Platform.isMac()) {
             throw new UnsupportedOperationException("Test must run on macOS");
         }
 
-        MacIntegrationTest test = new MacIntegrationTest();
+        MacIntegrationUIT test = new MacIntegrationUIT();
         test.createWindow();
     }
     
@@ -109,7 +109,7 @@ public class MacIntegrationTest implements ApplicationMenuListener {
     
     @SuppressWarnings("deprecation")
     private void setDockIcon() {
-        BufferedImage icon = Utils2D.createImage(32, 32, true);
+        BufferedImage icon = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = Utils2D.createGraphics(icon, true, false);
         g2.setColor(Color.GREEN);
         g2.fillRect(0, 0, 32, 32);

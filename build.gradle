@@ -1,8 +1,8 @@
-apply plugin: "java"
+apply plugin: "java-library"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2020.1"
+version = "2020.1.10"
 sourceCompatibility = "11"
 targetCompatibility = "11"
 compileJava.options.encoding = "UTF-8"
@@ -15,13 +15,25 @@ repositories {
 }
 
 dependencies {
-    compile "com.google.guava:guava:28.2-jre"
-    compile "org.jdom:jdom2:2.0.6"
-    compile "jaxen:jaxen:1.2.0"
-    compile "com.google.code.gson:gson:2.8.6"
+    api "com.google.guava:guava:29.0-jre"
+    api "org.jdom:jdom2:2.0.6"
+    api "jaxen:jaxen:1.2.0"
+    api "com.google.code.gson:gson:2.8.6"
     compileOnly "javax.servlet:javax.servlet-api:3.1.0"
-    testCompile "junit:junit:4.12"
-    testCompile "javax.servlet:javax.servlet-api:3.1.0"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.2"
+    testImplementation "javax.servlet:javax.servlet-api:3.1.0"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.from = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ["**/swing/**"])
+        })
+    }
 }
 
 task coverage(dependsOn: ["test", "jacocoTestReport"]) {

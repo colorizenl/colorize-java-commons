@@ -6,6 +6,9 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,23 +16,31 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import com.google.common.base.Preconditions;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for loading data from and saving data to files. Unless stated
  * otherwise, all methods in this class will throw an {@code IOException} if
  * an I/O error occurs while interacting with the file.
  * <p>
- * When using Java 7 or newer, most of the convenience methods in this class
- * are obsolete and can be replaced with {@link java.nio.file.Files}.
+ * When using Java 7 or newer, some of the convenience methods in this class
+ * are no longer needed and can be replaced with {@link java.nio.file.Files}.
  */
 public final class FileUtils {
+
+    private static final Logger LOGGER = LogHelper.getLogger(FileUtils.class);
 
     private FileUtils() {
     }
@@ -105,6 +116,30 @@ public final class FileUtils {
     public static void write(List<String> lines, Charset encoding, File dest) throws IOException {
         Files.write(dest.toPath(), lines, encoding);
     }
+
+    /**
+     * Reads all files in a file, rewrites them using the provided callback
+     * function, then overwrites the original file with the result.
+     */
+    public static void rewrite(File file, Charset charset, Function<String, String> lineCallback)
+            throws IOException {
+        List<String> originalLines = FileUtils.readLines(file, charset);
+
+        try (PrintWriter writer = new PrintWriter(file, charset)) {
+            for (String line : originalLines) {
+                writer.println(lineCallback.apply(line));
+            }
+        }
+    }
+
+    /**
+     * Reads all files in a file, rewrites them based on a mapping, then overwrites
+     * the original file with the result.
+     */
+    public static void rewrite(File file, Charset charset, Map<String, String> mapping)
+            throws IOException {
+        rewrite(file, charset, line -> mapping.getOrDefault(line, line));
+    }
     
     /**
      * Creates a directory. Unlike {@link File#mkdir()}, an exception will be
@@ -131,12 +166,71 @@ public final class FileUtils {
             }
         }
     }
-    
+
+    /**
+     * Copies a directory to the specified location.
+     *
+     * @throws IllegalStateException if the target directory already exists.
+     * @throws IOException if an I/O error occurs while copying the files.
+     */
+    public static void copyDirectory(File source, File target) throws IOException {
+        Preconditions.checkState(!target.exists(),
+            "Target directory already exists: " + target.getAbsolutePath());
+
+        List<Path> contents = Files.walk(source.toPath())
+            .collect(Collectors.toList());
+
+        for (Path childPath : contents) {
+            Path relativePath = source.toPath().relativize(childPath);
+            Path targetPath = target.toPath().resolve(relativePath);
+            Files.copy(childPath, targetPath, StandardCopyOption.COPY_ATTRIBUTES);
+        }
+    }
+
+    /**
+     * Deletes a directory and all of its contents. If the directory does not
+     * exist this method does nothing.
+     *
+     * @throws IOException if an I/O error occurs while deleting.
+     * @throws IllegalArgumentException if the argument is not a directory.
+     */
+    public static void deleteDirectory(File dir) throws IOException {
+        Preconditions.checkArgument(!dir.isFile(),
+            dir.getAbsolutePath() + " is not a directory");
+
+        // Always log when deleting directories, for traceability
+        // reasons.
+        LOGGER.info("Deleting directory " + dir.getAbsolutePath());
+
+        for (File child : getDirectoryContents(dir)) {
+            if (child.isDirectory()) {
+                deleteDirectory(child);
+            } else {
+                delete(child);
+            }
+        }
+
+        delete(dir);
+    }
+
+    private static List<File> getDirectoryContents(File dir) {
+        File[] contents = dir.listFiles();
+        if (contents == null) {
+            return Collections.emptyList();
+        }
+        return ImmutableList.copyOf(contents);
+    }
+
     /**
      * Returns {@code file}'s path relative to {@code base}. For example, the path
      * "/a/b/c/d.txt" relative to "/a/b" would return "c/d.txt". If both paths do
      * not share a common base {@code file}'s absolute path will be returned.
+     *
+     * @deprecated Use {@code Path.relativize} instead. This can be used even when
+     *             when working with APIs still using {@link File} instances:
+     *             {@code base.toPath().relativize(file.toPath)}.
      */
+    @Deprecated
     public static String getRelativePath(File file, File base) {
         String path = file.getAbsolutePath();
         String basePath = base.getAbsolutePath();
@@ -153,12 +247,18 @@ public final class FileUtils {
         return relativePath;
     }
 
+    /**
+     * Returns the file extension of the specified file, excluding the dot. So
+     * the file "test.png" would return "png". Note that the file extension will
+     * be returned as lowercase, even if the original file name was not. If the
+     * file does not have a file extension this will return an aempty string.
+     */
     public static String getFileExtension(File file) {
         String fileName = file.getName();
         if (fileName.indexOf('.') <= 0) {
             return "";
         }
-        return fileName.substring(fileName.lastIndexOf('.') + 1);
+        return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
     }
     
     private static File createTempFile() throws IOException {

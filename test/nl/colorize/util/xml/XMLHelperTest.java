@@ -6,18 +6,19 @@
 
 package nl.colorize.util.xml;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 
 import com.google.common.base.Charsets;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import nl.colorize.util.FileUtils;
 import nl.colorize.util.LoadUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Unit test for working with XML using the JDOM library and the {@code XMLHelper}

@@ -8,6 +8,7 @@ package nl.colorize.util.swing;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
@@ -29,7 +30,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
-import java.awt.Transparency;
 import java.awt.font.FontRenderContext;
 import java.awt.font.LineBreakMeasurer;
 import java.awt.font.TextAttribute;
@@ -139,21 +139,16 @@ public final class Utils2D {
     
     /**
      * Encodes the specified image as a JPEG and writes it to a stream.
-     * @param quality JPEG compression quality, between 0 and 1 (1 is best).
      * @throws IOException if an I/O error occurs while writing.
      */
-    public static void saveJPEG(BufferedImage image, OutputStream output, float quality) throws IOException {
-        if (image.getType() != BufferedImage.TYPE_INT_BGR) {
-            image = convertImage(image, BufferedImage.TYPE_INT_BGR);
-        }
-        
+    public static void saveJPEG(BufferedImage image, OutputStream output) throws IOException {
         ImageWriter writer = ImageIO.getImageWritersByFormatName("JPEG").next();
         ImageOutputStream ios = ImageIO.createImageOutputStream(output);
         try {
             writer.setOutput(ios);
             ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            param.setCompressionQuality(quality);
+            param.setCompressionQuality(1f);
             writer.write(null, new IIOImage(image, null, null), param);
             ios.flush();
             writer.dispose();
@@ -164,12 +159,11 @@ public final class Utils2D {
     
     /**
      * Encodes the specified image as a JPEG and writes it to a file.
-     * @param quality JPEG compression quality, between 0 and 1 (1 is best).
      * @throws IOException if an I/O error occurs while writing.
      */
-    public static void saveJPEG(BufferedImage image, File dest, float quality) throws IOException {
+    public static void saveJPEG(BufferedImage image, File dest) throws IOException {
         FileOutputStream stream = new FileOutputStream(dest);
-        saveJPEG(image, stream, quality);
+        saveJPEG(image, stream);
     }
     
     private static void closeQuietely(ImageOutputStream stream) {
@@ -181,20 +175,7 @@ public final class Utils2D {
             // Ignore
         }
     }
-    
-    /**
-     * Creates a {@code BufferedImage} in the image format preferred by the
-     * graphics environment.
-     * @return alpha True returns a translucent image, false an opaque one.
-     */
-    public static BufferedImage createImage(int width, int height, boolean alpha) {
-        int transparency = alpha ? Transparency.TRANSLUCENT : Transparency.OPAQUE;
-        return GraphicsEnvironment.getLocalGraphicsEnvironment()
-                .getDefaultScreenDevice()
-                .getDefaultConfiguration()
-                .createCompatibleImage(width, height, transparency);
-    }
-    
+
     /**
      * Converts a {@code BufferedImage} to the specified image format. If the image
      * already has the correct type this method does nothing.
@@ -226,7 +207,7 @@ public final class Utils2D {
             return original;
         } else {
             BufferedImage compatibleImage = graphicsConfig.createCompatibleImage(
-                    original.getWidth(), original.getHeight(), original.getTransparency());
+                original.getWidth(), original.getHeight(), original.getTransparency());
             Graphics2D g2 = compatibleImage.createGraphics();
             g2.drawImage(original, 0, 0, null);
             g2.dispose();
@@ -325,8 +306,8 @@ public final class Utils2D {
         try {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             Utils2D.savePNG(image, buffer);
-            String base64 = Base64.getUrlEncoder().encodeToString(buffer.toByteArray());
-            return "data:image/png;base64," + base64;
+            byte[] base64 = Base64.getEncoder().encode(buffer.toByteArray());
+            return "data:image/png;base64," + new String(base64, Charsets.UTF_8);
         } catch (IOException e) {
             throw new UnsupportedOperationException("Unable to convert image to PNG", e);
         }
@@ -338,7 +319,7 @@ public final class Utils2D {
      *         that is not supported by Java2D.
      */
     public static BufferedImage fromDataURL(String dataURL) throws IOException {
-        byte[] imageData = Base64.getUrlDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
+        byte[] imageData = Base64.getDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
 
         try (InputStream stream = new ByteArrayInputStream(imageData)) {
             return loadImage(stream);
@@ -349,7 +330,7 @@ public final class Utils2D {
      * Saves an image that is represented by a data URL to a file.
      */
     public static void saveDataURL(String dataURL, File file) throws IOException {
-        byte[] imageData = Base64.getUrlDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
+        byte[] imageData = Base64.getDecoder().decode(dataURL.substring(dataURL.indexOf(",") + 1));
         Files.write(imageData, file);
     }
     

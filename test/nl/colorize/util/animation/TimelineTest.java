@@ -7,15 +7,16 @@
 package nl.colorize.util.animation;
 
 import nl.colorize.util.swing.AnimatedColor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.util.Iterator;
 import java.util.SortedSet;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TimelineTest {
 
@@ -75,10 +76,11 @@ public class TimelineTest {
         assertEquals(0.1f, timeline.getPlayhead(), EPSILON);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testNoZeroTimeline() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
-        timeline.setPlayhead(1f);
+
+        assertThrows(IllegalStateException.class, () -> timeline.setPlayhead(1f));
     }
 
     @Test
@@ -106,9 +108,9 @@ public class TimelineTest {
         assertEquals(10f, keyframe.getValue(), 0.01f);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testKeyFrameWithNegativePosition() {
-        new KeyFrame(-1f, 0f);
+        assertThrows(IllegalArgumentException.class, () -> new KeyFrame(-1f, 0f));
     }
 
     @Test
@@ -156,17 +158,19 @@ public class TimelineTest {
         assertEquals(5f, timeline.getValue(), 0.01f);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testNoKeyFrames() {
         Timeline timeline = new Timeline();
-        timeline.getValue();
+
+        assertThrows(IllegalStateException.class, () -> timeline.getValue());
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testAddKeyFrameTwice() {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(new KeyFrame(1f, 2f));
-        timeline.addKeyFrame(new KeyFrame(1f, 3f));
+
+        assertThrows(IllegalArgumentException.class, () -> timeline.addKeyFrame(new KeyFrame(1f, 3f)));
     }
 
     @Test

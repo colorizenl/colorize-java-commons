@@ -11,7 +11,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -23,22 +22,21 @@ import java.util.List;
  * <p>
  * This class implements the {@link java.lang.Iterable} interface, so ranges can 
  * be used directly in foreach loops:
+ *
  * <pre>
- * for (Integer i : new Range(1, 4)) {
- *     System.out.println(i); // Prints 1, 2, 3, 4
- * }
+ *     for (Integer i : new Range(1, 4)) {
+ *         System.out.println(i); // Prints 1, 2, 3, 4
+ *     }
  * </pre>
  */
-public final class Range implements Iterable<Integer>, Comparable<Range>, Serializable {
+public final class Range implements Iterable<Integer>, Comparable<Range> {
 
     private int start;
     private int end;
     private boolean backwards;
     
     private List<Integer> cachedList;
-    
-    private static final long serialVersionUID = 7;
-    
+
     /**
      * Creates a range with all integers between {@code start} (inclusive) and 
      * {@code end} (also inclusive). If {@code start} and {@code end} are equal

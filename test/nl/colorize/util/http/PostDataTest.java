@@ -8,14 +8,14 @@ package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.http.PostData;
 import nl.colorize.util.rest.BadRequestException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PostDataTest {
 
@@ -48,11 +48,11 @@ public class PostDataTest {
         assertEquals("3", postData.getRequiredParameter("b"));
     }
 
-    @Test(expected = BadRequestException.class)
+    @Test
     public void testGetRequiredMissing() {
         PostData postData = PostData.create(ImmutableMap.of("a", "2", "b", "3"));
 
-        postData.getRequiredParameter("c");
+        assertThrows(BadRequestException.class, () -> postData.getRequiredParameter("c"));
     }
 
     @Test
@@ -80,5 +80,17 @@ public class PostDataTest {
 
         assertEquals("2", emptyName.toString());
         assertEquals("b=", emptyValue.toString());
+    }
+
+    @Test
+    public void testCreateVarArgs() {
+        PostData postData = PostData.create("1", "2", "3", "4", "5", "6");
+
+        assertEquals("1=2&3=4&5=6", postData.toString());
+    }
+
+    @Test
+    public void testWrongNumberOfVarArgs() {
+        assertThrows(IllegalArgumentException.class, () -> PostData.create("1", "2", "3"));
     }
 }

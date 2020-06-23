@@ -10,7 +10,7 @@ import nl.colorize.util.Formatting;
 import nl.colorize.util.Version;
 import org.jdom2.Document;
 import org.jdom2.Element;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,7 +18,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class XMLConverterTest {
     
@@ -80,10 +81,10 @@ public class XMLConverterTest {
         assertEquals(expected, toXmlString(xml));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testSerializeNullNotAllowed() {
         XMLConverter converter = new XMLConverter();
-        converter.toXML(null, "a");
+        assertThrows(NullPointerException.class, () -> converter.toXML(null, "a"));
     }
     
     @Test
