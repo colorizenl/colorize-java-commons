@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -17,10 +17,17 @@ import java.util.Set;
 /**
  * A set where all elements are tuples with the same types. Even though a relation
  * is a set it behaves like a {@link java.util.List}, allowing duplicate elements
- * and maintaining the order in which elements were inserted. 
+ * and maintaining the order in which elements were inserted.
+ *
  * @param <L> Type of the tuples' first (left) element.
  * @param <R> Type of the tuples' second (right) element.
+ *
+ * @deprecated With the addition of streams in Java 8, it is preferable to use
+ *             a conventional list of tuples instead of using this class, since
+ *             operations such as {@link #domain()} or {@link #range()} can
+ *             be easily replicated using streams.
  */
+@Deprecated
 public class Relation<L, R> extends ForwardingList<Tuple<L, R>> {
     
     private List<Tuple<L, R>> tuples;
@@ -36,7 +43,7 @@ public class Relation<L, R> extends ForwardingList<Tuple<L, R>> {
      * Creates a relation that is based on a {@link java.util.ArrayList}.
      */
     public Relation() {
-        this.tuples = new ArrayList<Tuple<L, R>>();
+        this.tuples = new ArrayList<>();
     }
 
     @Override

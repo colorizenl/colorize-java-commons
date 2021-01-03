@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -70,6 +70,7 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         contentPanel.add(createButton("Show notification",  e -> showNotification()));
         contentPanel.add(createButton("Open browser", e -> openURL()));
         contentPanel.add(createButton("Open file",  e -> openFile()));
+        contentPanel.add(createButton("Fullscreen",  e -> goFullScreen()));
         contentPanel.add(message);
         contentPanel.add(iconLabel);
         
@@ -79,7 +80,7 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setLayout(new BorderLayout());
         window.add(contentPanel, BorderLayout.CENTER);
-        MacIntegration.setApplicationMenuListener(this, true);
+        MacIntegration.setApplicationMenuListener(this);
         window.setVisible(true);
 
         return window;
@@ -103,11 +104,15 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
     }
 
     @Override
+    public boolean hasPreferencesMenu() {
+        return true;
+    }
+
+    @Override
     public void onPreferences() {
         message.setText("Preferences");
     }
     
-    @SuppressWarnings("deprecation")
     private void setDockIcon() {
         BufferedImage icon = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = Utils2D.createGraphics(icon, true, false);
@@ -125,7 +130,7 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
     private void bounceDockIcon() {
         try { 
             Thread.sleep(3000); 
-            MacIntegration.bounceDockIcon(true);
+            MacIntegration.bounceDockIcon();
         } catch (Exception e) { 
             throw new AssertionError(e);
         }
@@ -135,12 +140,10 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         MacIntegration.showNotification("Test", "This is a notification");
     }
     
-    @SuppressWarnings("deprecation")
     private void openURL() {
         MacIntegration.openBrowser("http://www.colorize.nl");
     }
     
-    @SuppressWarnings("deprecation")
     private void openFile() {
         ComboFileDialog fileDialog = new ComboFileDialog();
         fileDialog.setTitle("Select a file to open");
@@ -148,5 +151,9 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         if (selectedFile != null) {
             MacIntegration.openFile(selectedFile);
         }
+    }
+
+    private void goFullScreen() {
+        MacIntegration.goFullScreen(window);
     }
 }

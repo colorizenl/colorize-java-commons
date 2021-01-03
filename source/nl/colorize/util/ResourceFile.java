@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ public final class ResourceFile {
      * @throws IOException if an I/O error occurs while reading the file.
      */
     public InputStream openStream() throws IOException {
-        return Platform.getCurrentPlatform().openResourceFile(path);
+        return Platform.openResourceFile(path);
     }
     
     /**

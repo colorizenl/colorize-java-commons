@@ -1,30 +1,26 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
-
-import java.awt.FileDialog;
-import java.io.File;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Properties;
-
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.filechooser.FileFilter;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Chars;
-
 import nl.colorize.util.DynamicResourceBundle;
-import nl.colorize.util.LoadUtils;
 import nl.colorize.util.Platform;
+
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.filechooser.FileFilter;
+import java.awt.FileDialog;
+import java.io.File;
+import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * A wrapper around both AWT's {@link java.awt.FileDialog} and Swing's
@@ -273,7 +269,7 @@ public class ComboFileDialog {
     }
     
     private File getDefaultStartDirectory() {
-        return Platform.getUserDataDir();
+        return Platform.getUserDataDirectory();
     }
     
     /**

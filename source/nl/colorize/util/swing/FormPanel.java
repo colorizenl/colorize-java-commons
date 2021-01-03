@@ -1,23 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Insets;
-import java.awt.LayoutManager;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
+import nl.colorize.util.Platform;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -28,8 +17,17 @@ import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-
-import nl.colorize.util.Platform;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.LayoutManager;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 /**
  * Panel that arranges components in a 2 x N grid. This layout is similar to how 
@@ -66,7 +64,7 @@ public class FormPanel extends JPanel implements LayoutManager {
         
         // Platform-dependent layout options.
         horizontalMargin = 10;
-        verticalMargin = Platform.isMac() ? 4 : 4;
+        verticalMargin = 4;
         rightAlignLabels = Platform.isMac();
         
         setLayout(this);
@@ -179,17 +177,16 @@ public class FormPanel extends JPanel implements LayoutManager {
      */
     public void addRow(String label, final String initialValueLabel, String actionButtonText, 
             final Callable<String> action) {
-        final JLabel textLabel = new JLabel(label);
-        final JLabel valueLabel = new JLabel(initialValueLabel);
+        JLabel textLabel = new JLabel(label);
+        JLabel valueLabel = new JLabel(initialValueLabel);
+
         JButton actionButton = new JButton(actionButtonText);
-        actionButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    JLabel target = initialValueLabel == null ? textLabel : valueLabel;
-                    target.setText(action.call());
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
+        actionButton.addActionListener(e -> {
+            try {
+                JLabel target = initialValueLabel == null ? textLabel : valueLabel;
+                target.setText(action.call());
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
             }
         });
         
@@ -223,7 +220,28 @@ public class FormPanel extends JPanel implements LayoutManager {
     public void addRow(String labelText) {
         addRow(new JLabel(labelText));
     }
-    
+
+    /**
+     * Adds a row with a text label and an ellipsis button (...) that when
+     * invoked will trigger a callback action, which will in turn update
+     * the label.
+     */
+    public void addEllipsesRow(Supplier<String> labelProvider, Runnable callback) {
+        JLabel label = new JLabel(labelProvider.get());
+        label.setHorizontalAlignment(JLabel.CENTER);
+
+        JButton button = new JButton("...");
+        button.addActionListener(e -> {
+            callback.run();
+            label.setText(labelProvider.get());
+        });
+
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        panel.add(label, BorderLayout.CENTER);
+        panel.add(button, BorderLayout.EAST);
+        addRow(panel);
+    }
+
     /**
      * Adds a row that only consists of a single text label with a bold font 
      * that spans the entire width of the row. 

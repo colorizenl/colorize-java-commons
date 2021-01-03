@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -21,6 +21,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -46,6 +47,7 @@ import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Image;
@@ -188,7 +190,8 @@ public final class SwingUtils {
     
     /**
      * Returns true if the current display is a "retina" display (a display with
-     * a pixel density higher than 1). 
+     * a pixel density higher than 1).
+     *
      * @deprecated This method relies on Apple-specific AWT properties, which 
      *             remain from the old Apple JDK but will be removed from the
      *             JDK in Java 9. 
@@ -211,9 +214,23 @@ public final class SwingUtils {
         }
         return description;
     }
-    
+
+    /**
+     * Enables full-screen mode for the specified window.
+     */
+    public static void goFullScreen(JFrame window) {
+        if (Platform.isMac()) {
+            MacIntegration.goFullScreen(window);
+        } else {
+            GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            GraphicsDevice graphicsDevice = environment.getDefaultScreenDevice();
+            graphicsDevice.setFullScreenWindow(window);
+        }
+    }
+
     /**
      * Loads an icon from the specified file.
+     *
      * @throws RuntimeException if no icon could be created from the file's contents.
      */
     public static ImageIcon loadIcon(ResourceFile source) {
@@ -223,6 +240,7 @@ public final class SwingUtils {
     /**
      * Loads an icon from the specified file, for use in 
      * {@code javax.swing.JFrame#setIconImage(Image)}.
+     *
      * @throws RuntimeException if no icon could be created from the file's contents.
      */
     public static Image loadIconImage(ResourceFile source) {
@@ -230,7 +248,8 @@ public final class SwingUtils {
     }
     
     /**
-     * Loads a TrueType font and returns it as an AWT font. 
+     * Loads a TrueType font and returns it as an AWT font.
+     *
      * @throws IOException if the font could not be loaded from the file.
      * @throws FontFormatException if the file is not a valid TrueType font.
      */
@@ -247,6 +266,7 @@ public final class SwingUtils {
 
     /**
      * Loads a TrueType font and returns it as an AWT font.
+     *
      * @throws IOException if the font could not be loaded from the file.
      * @throws FontFormatException if the file is not a valid TrueType font.
      */
@@ -260,6 +280,7 @@ public final class SwingUtils {
     /**
      * Creates a new {@code JMenuItem} with the specified label and (optional)
      * keyboard shortcut, and adds it to a menu.
+     *
      * @param parent The new menu item will be added to this menu.
      * @param label The menu item's text label.
      * @param keycode One of the {@code KeyEvent.VK_X} fields, or -1 for none. 
@@ -277,6 +298,7 @@ public final class SwingUtils {
     /**
      * Returns a keystroke for a key that uses the platform-specific modifier key
      * for menu shortcuts.
+     *
      * @param keycode One of the {@code KeyEvent.VK_X} fields, or -1 for none.
      */
     public static KeyStroke getKeyStroke(int keycode, boolean shift) {
@@ -290,6 +312,7 @@ public final class SwingUtils {
     /**
      * Returns a keystroke for a key that uses the platform-specific modifier key
      * for menu shortcuts.
+     *
      * @param keycode One of the {@code KeyEvent.VK_X} fields, or -1 for none.
      */
     public static KeyStroke getKeyStroke(int keycode) {
@@ -299,6 +322,7 @@ public final class SwingUtils {
     /**
      * Opens the platform's default browser with the specified URL. If the platform
      * has no browser or doesn't allow access to it this method does nothing.
+     *
      * @return True if the browser was opened.
      * @throws IllegalArgumentException if {@code uri} is not a valid URI.
      */
@@ -322,6 +346,7 @@ public final class SwingUtils {
     /**
      * Copies the specified text to the system clipboard. If the platform does
      * not have a clipboard or doesn't allow access to it this method does nothing.
+     *
      * @return True if the text was copied to the clipboard.
      */
     public static boolean copyToClipboard(String text) {
@@ -380,6 +405,7 @@ public final class SwingUtils {
     /**
      * Creates a {@link javax.swing.JPanel} without any visible contents and a
      * transparent background.
+     *
      * @param width Preferred width, or -1 for default.
      * @param height Preferred height, or -1 for default.
      */
@@ -390,6 +416,7 @@ public final class SwingUtils {
     /**
      * Creates a {@link javax.swing.JPanel} without any visible contents and a
      * colored background.
+     *
      * @param width Preferred width, or -1 for default.
      * @param height Preferred height, or -1 for default.
      */
@@ -522,6 +549,7 @@ public final class SwingUtils {
     
     /**
      * Removes the platform's default look-and-feel from a button.
+     *
      * @param keepPadding If true, retains the padding the look-and-feel would
      *        normally leave around the button's text and icon.
      */
@@ -569,6 +597,7 @@ public final class SwingUtils {
     /**
      * Returns an {@link java.awt.event.ActionListener} that will invoke the
      * specified callback function.
+     *
      * @param arg The argument that will be passed to the callback function.
      */
     public static <T> ActionListener toActionListener(Consumer<T> callback, T arg) {
@@ -768,6 +797,7 @@ public final class SwingUtils {
                 super.paintComponent(g);
 
                 Graphics2D g2 = Utils2D.createGraphics(g, true, false);
+                g2.setColor(getBackground());
                 callback.accept(g2, getSize());
             }
         };
@@ -795,10 +825,10 @@ public final class SwingUtils {
         if (row % 2 == 0) {
             return STANDARD_ROW_COLOR;
         } else {
-            if (Platform.isMac() && !MacIntegration.isAtLeast(MacIntegration.MACOS_YOSEMITE)) {
-                return AQUA_ROW_COLOR;
-            } else {
+            if (Platform.isMac()) {
                 return YOSEMITE_ROW_COLOR;
+            } else {
+                return AQUA_ROW_COLOR;
             }
         }
     }

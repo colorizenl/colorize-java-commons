@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,7 +8,6 @@ package nl.colorize.util;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.junit.jupiter.api.Test;
 
@@ -122,15 +121,6 @@ public class FileUtilsTest {
     }
 
     @Test
-    public void testRewriteWithMap() throws IOException {
-        File tempFile = FileUtils.createTempFile("a\nb\nc\nd", Charsets.UTF_8);
-
-        FileUtils.rewrite(tempFile, Charsets.UTF_8, ImmutableMap.of("b", "z", "d", "x"));
-
-        assertEquals(ImmutableList.of("a", "z", "c", "x"), FileUtils.readLines(tempFile, Charsets.UTF_8));
-    }
-
-    @Test
     void copyDirectory() throws IOException {
         File tempDir = FileUtils.createTempDir();
         Files.write("test", new File(tempDir, "a.txt"), Charsets.UTF_8);
@@ -157,5 +147,22 @@ public class FileUtilsTest {
         FileUtils.deleteDirectory(tempDir);
 
         assertFalse(tempDir.exists());
+    }
+
+    @Test
+    void createTempDirWithName() throws IOException {
+        File tempDir = FileUtils.createTempDir("abc");
+
+        assertTrue(tempDir.exists());
+        assertTrue(tempDir.isDirectory());
+        assertEquals("abc", tempDir.getName());
+    }
+
+    @Test
+    void rewriteWithReplacement() throws IOException {
+        File tempFile = FileUtils.createTempFile("a\nb\nc", Charsets.UTF_8);
+        FileUtils.rewriteLine(tempFile, "b", "d", Charsets.UTF_8);
+
+        assertEquals("a\nd\nc\n", FileUtils.read(tempFile, Charsets.UTF_8));
     }
 }

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -23,16 +23,6 @@ public class PlatformTest {
         assertFalse(Platform.isGoogleCloud());
         assertFalse(Platform.isAndroid());
         assertFalse(Platform.isTeaVM());
-    }
-
-    @Test
-    public void testPlatformSupport() {
-        Class<?> platformImplClass = Platform.getCurrentPlatform().getClass();
-        if (Platform.isMac()) {
-            assertTrue(platformImplClass.getName().contains("MacPlatform"));
-        } else {
-            assertTrue(platformImplClass.getName().contains("LinuxPlatform"));
-        }
     }
 
     @Test

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ import java.util.function.Supplier;
  * If a platform is not explicitly supported this class can still be used, but
  * the platform's conventions might not be followed.
  */
-public abstract class Platform {
+public final class Platform {
 
     private static AtomicBoolean teaVM = new AtomicBoolean(false);
 
@@ -72,77 +72,17 @@ public abstract class Platform {
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
         .put("10.15", "Catalina")
-        .put("11.0", "Big Sur")
+        // Big Sur is both 10.16 and 11.0
+        .put("10.16", "Big Sur")
+        .put("11.", "Big Sur")
         .build();
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("11.0.0");
     private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
 
-    /**
-     * Creates a new platform implementation. Applications should use the static
-     * methods in this class to access platform-specific information, this
-     * constructor only exists to create subclasses to support additional
-     * platforms. 
-     */
-    protected Platform() {
+    private Platform() {
     }
-    
-    /**
-     * Opens the resource file located at the specified path.
-     * @throws IOException if the file cannot be located.
-     */
-    protected InputStream openResourceFile(String path) throws IOException {
-        InputStream inClassPath = Platform.class.getClassLoader().getResourceAsStream(path);
-        if (inClassPath != null) {
-            return inClassPath;
-        }
-        
-        File inFileSystem = new File(path);
-        if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
-            return new FileInputStream(inFileSystem);
-        }
-        
-        throw new FileNotFoundException("Resource file not found: " + path);
-    }
-    
-    /**
-     * Returns the platform's directory for storing application data, for the
-     * application with the specified name.
-     * @throws IllegalArgumentException If the application name cannot be used
-     *         as a directory name.
-     * @throws UnsupportedOperationException if the platform does not allow
-     *         application data (e.g. Google App Engine).
-     */
-    protected abstract File getApplicationDataDirectory(String app);
-    
-    /**
-     * Returns the platform's standard directory for storing user data (e.g. "My
-     * Documents" on Windows). 
-     * @throws UnsupportedOperationException if the platform does not allow access
-     *         to user files (e.g. Google App Engine).
-     */
-    protected abstract File getUserDataDirectory();
-    
-    /**
-     * Returns the implementation that should be used for the current platform.
-     * This will first check for the specific platform version, then for the
-     * platform family. If the current platform is not explicitly supported a
-     * reasonable default implementation will be used.
-     */
-    public static Platform getCurrentPlatform() {
-        if (isWindows()) {
-            return new WindowsPlatform();
-        } else if (isMac()) {
-            return new MacPlatform();
-        } else if (isGoogleCloud()) {
-            return new LimitedPlatform();
-        } else if (isAndroid()) {
-            return new LimitedPlatform();
-        } else {
-            return new LinuxPlatform();
-        }
-    }
-    
+
     /**
      * Returns the platform's human-readable name, such as "Windows 10" or
      * "macOS Catalina". For platform-specific logic, it is more reliable to
@@ -256,6 +196,10 @@ public abstract class Platform {
         return getPlatformName().startsWith("Android");
     }
 
+    private static boolean isLimitedPlatform() {
+        return isGoogleCloud() || isAWS() || isAndroid();
+    }
+
     /**
      * Marks the current platform as running in the browser via TeaVM. Unlike
      * other platforms, it is not possible to detect this automatically, so
@@ -316,9 +260,7 @@ public abstract class Platform {
     /**
      * Returns the system's processor architecture as described by the "os.arch"
      * system property.
-     * @deprecated Applications should not depend on processor architecture.
      */
-    @Deprecated
     public static String getSystemArchitecture() {
         return System.getProperty("os.arch");
     }
@@ -368,6 +310,7 @@ public abstract class Platform {
     
     /**
      * Returns a {@code File} that points to the current working directory.
+     *
      * @throws UnsupportedOperationException on platforms that do not have the
      *         concept of a working directory.
      */
@@ -381,6 +324,7 @@ public abstract class Platform {
         
     /**
      * Returns the name of the current user.
+     *
      * @throws UnsupportedOperationException on platforms that do not support
      *         user accounts. Examples are Android and Google App Engine.
      */
@@ -410,6 +354,7 @@ public abstract class Platform {
      * Note that this method is only available on desktop platforms, and that even
      * then some platforms might not allow applications to write directly to the
      * user's desktop.
+     *
      * @throws UnsupportedOperationException if the user desktop is not available
      *         or not accessible.
      */
@@ -429,11 +374,39 @@ public abstract class Platform {
     }
 
     /**
+     * Returns the platform's directory for storing application data, for the
+     * application with the specified name.
+     *
+     * @throws IllegalArgumentException If the application name cannot be used
+     *         as a directory name.
+     * @throws UnsupportedOperationException if the platform does not allow
+     *         application data (e.g. Google App Engine).
+     */
+    protected static File getApplicationDataDirectory(String app) {
+        if (isWindows()) {
+            File applicationDataRoot = new File(System.getenv("APPDATA"));
+            return new File(applicationDataRoot, app);
+        } else if (isMacAppSandboxEnabled()) {
+            return new File(System.getenv("HOME"));
+        } else if (isMac()) {
+            // These directory names are always in English, regardless
+            // of the language of the user interface.
+            File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
+            return new File(applicationSupport, app);
+        } else if (isLimitedPlatform()) {
+            throw new UnsupportedOperationException();
+        } else {
+            return new File(getUserHomeDir(), "." + app);
+        }
+    }
+
+    /**
      * Returns a {@code File} handle that points to a file inside the the platform's
      * directory for storing application data, for the application with the specified
      * name. If the application data directory does not already exist it will be
      * created.
      * @param app Name of the application for which to create the directory.
+     *
      * @throws IllegalArgumentException If the application name cannot be used
      *         as a directory name, if the path is empty, or if an absolute path
      *         is used instead of a relative path.
@@ -445,7 +418,7 @@ public abstract class Platform {
             throw new IllegalArgumentException("Invalid path: " + path);
         }
         
-        File appDataDir = getCurrentPlatform().getApplicationDataDirectory(app);
+        File appDataDir = getApplicationDataDirectory(app);
         try {
             FileUtils.mkdir(appDataDir);
         } catch (IOException e) {
@@ -454,21 +427,48 @@ public abstract class Platform {
         
         return new File(appDataDir.getAbsolutePath() + "/" + path);
     }
-    
+
     /**
      * Returns the platform's standard directory for storing user data (e.g. "My
-     * Documents" on Windows). This method is identical to 
-     * {@link #getUserDataDirectory()} but allows for static access.
-     * @throws UnsupportedOperationException if the platform does not allow 
-     *         access to user files (e.g. Google App Engine).
+     * Documents" on Windows).
+     *
+     * @throws UnsupportedOperationException if the platform does not allow access
+     *         to user files (e.g. Google App Engine).
      */
-    public static File getUserDataDir() {
-        return getCurrentPlatform().getUserDataDirectory();
+    public static File getUserDataDirectory() {
+        if (isWindows()) {
+            return getWindowsMyDocumentsDirectory();
+        } else if (isMacAppSandboxEnabled()) {
+            return new File(System.getenv("HOME"));
+        } else if (isMac()) {
+            // The "Documents" directory has the same name on non-English
+            // versions of macOS, according to Apple's documentation.
+            return new File(System.getenv("HOME") + "/Documents");
+        } else if (isLimitedPlatform()) {
+            throw new UnsupportedOperationException();
+        } else {
+            return getUserHomeDir();
+        }
     }
-    
+
+    private static File getWindowsMyDocumentsDirectory() {
+        // There is no API for this other than using the Swing file dialog.
+        // This has to be done through reflection since this class is also
+        // used on Android and Google App Engine.
+        try {
+            Class<?> fileSystemViewClass = Class.forName("javax.swing.filechooser.FileSystemView");
+            Object fileSystemView = fileSystemViewClass.getMethod("getFileSystemView").invoke(null);
+            return (File) fileSystemView.getClass().getMethod("getDefaultDirectory")
+                .invoke(fileSystemView);
+        } catch (Exception e) {
+            return getUserHomeDir();
+        }
+    }
+
     /**
      * Returns a {@code File} handle that points to a file in the platform's 
      * standard directory for storing user data (e.g. "My Documents" on Windows).
+     *
      * @throws IllegalArgumentException if the path is absolute. 
      * @throws UnsupportedOperationException if the platform does not allow access
      *         to user files (e.g. Google App Engine).
@@ -478,7 +478,7 @@ public abstract class Platform {
             throw new IllegalArgumentException("Invalid path: " + path);
         }
         
-        File dir = getCurrentPlatform().getUserDataDirectory();    
+        File dir = getUserDataDirectory();
         return new File(dir.getAbsolutePath() + "/" + path);
     }
     
@@ -498,6 +498,7 @@ public abstract class Platform {
     
     /**
      * Returns the platform's directory for temporary files.
+     *
      * @throws UnsupportedOperationException if the platform has no writable
      *         file system. An example is Google App Engine.
      */
@@ -516,99 +517,23 @@ public abstract class Platform {
     public static String getLineSeparator() {
         return System.lineSeparator();
     }
-    
+
     /**
-     * Support for Windows, including all desktop and server versions from
-     * Windows XP to Windows 10, but not the mobile version of Windows 10.
+     * Opens the resource file located at the specified path.
+     *
+     * @throws IOException if the file cannot be located.
      */
-    private static class WindowsPlatform extends Platform {
-        
-        @Override
-        protected File getApplicationDataDirectory(String app) {
-            File applicationDataRoot = new File(System.getenv("APPDATA"));
-            return new File(applicationDataRoot, app);
+    protected static InputStream openResourceFile(String path) throws IOException {
+        InputStream inClassPath = Platform.class.getClassLoader().getResourceAsStream(path);
+        if (inClassPath != null) {
+            return inClassPath;
         }
-        
-        @Override
-        protected File getUserDataDirectory() {
-            // There is no API for this other than using the Swing file dialog. 
-            // This has to be done through reflection since this class is also 
-            // used on Android and Google App Engine.
-            try {
-                Class<?> fileSystemViewClass = Class.forName("javax.swing.filechooser.FileSystemView");
-                Object fileSystemView = fileSystemViewClass.getMethod("getFileSystemView").invoke(null);
-                return (File) fileSystemView.getClass().getMethod("getDefaultDirectory")
-                    .invoke(fileSystemView);
-            } catch (Exception e) {
-                return getUserHomeDir();
-            }
+
+        File inFileSystem = new File(path);
+        if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
+            return new FileInputStream(inFileSystem);
         }
-    }
-    
-    /**
-     * Support for all versions of macOS (formerly known as OS X). Behavior
-     * will be different depending on how the application is distributed
-     * (non-signed application, Developer ID, Mac App Store). 
-     */
-    private static class MacPlatform extends Platform {
-        
-        @Override
-        protected File getApplicationDataDirectory(String app) {
-            if (isMacAppSandboxEnabled()) {
-                return new File(System.getenv("HOME"));
-            } else {
-                // These directory names are always in English, regardless
-                // of the language of the user interface.
-                File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
-                return new File(applicationSupport, app);
-            }
-        }
-        
-        @Override
-        protected File getUserDataDirectory() {
-            if (isMacAppSandboxEnabled()) {
-                return new File(System.getenv("HOME"));
-            } else {
-                // The "Documents" directory has the same name on non-English 
-                // versions of macOS, according to Apple's documentation.
-                return new File(System.getenv("HOME") + "/Documents");
-            }
-        }
-    }
-    
-    /**
-     * Support for Linux. Because Linux is used as the foundation for a wide
-     * variety of desktop, server, cloud, and mobile operating systems, this
-     * class can only assume readonable default behavior. Subclasses should
-     * be created to respect the conventions of specific platforms.  
-     */
-    private static class LinuxPlatform extends Platform {
-        
-        @Override
-        protected File getApplicationDataDirectory(String app) {
-            return new File(getUserHomeDir(), "." + app);
-        }
-        
-        @Override
-        protected File getUserDataDirectory() {
-            return getUserHomeDir();
-        }
-    }
-    
-    /**
-     * Support for platforms that do not have the concept of a file system that
-     * is accessible by applications.
-     */
-    private static class LimitedPlatform extends LinuxPlatform {
-        
-        @Override
-        protected File getApplicationDataDirectory(String app) {
-            throw new UnsupportedOperationException();
-        }
-        
-        @Override
-        protected File getUserDataDirectory() {
-            throw new UnsupportedOperationException();
-        }
+
+        throw new FileNotFoundException("Resource file not found: " + path);
     }
 }

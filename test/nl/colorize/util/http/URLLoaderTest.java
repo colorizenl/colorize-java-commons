@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,14 +33,14 @@ public class URLLoaderTest {
     
     private static SimpleHttpServer server;
     private static String testURL;
+
+    private static final String TEST_HTTPS_URL = "https://www.gazzetta.it";
     
     @BeforeAll
     public static void before() {
         server = new SimpleHttpServer();
         server.start(9090);
         testURL = "http://localhost:9090";
-
-        System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "true");
     }
     
     @AfterAll
@@ -113,11 +112,11 @@ public class URLLoaderTest {
     
     @Test
     public void testHttps() throws Exception {
-        String response = URLLoader.get("https://twitter.com", Charsets.UTF_8)
+        String response = URLLoader.get(TEST_HTTPS_URL, Charsets.UTF_8)
             .sendRequest()
             .getBody();
 
-        assertTrue(response.contains("Twitter"));
+        assertTrue(response.toLowerCase().contains("gazzetta"));
     }
     
     @Test
@@ -152,11 +151,6 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
         URLResponse response = loader.sendRequest();
 
-        List<String> headers = response.getHeaders().getNames().stream()
-            .map(header -> header.toLowerCase())
-            .sorted()
-            .collect(Collectors.toList());
-            
         assertEquals("text/html; charset=UTF-8", response.getHeaders().getValue("Content-Type"));
         assertEquals("0", response.getHeaders().getValue("Age"));
         assertEquals("Apache", response.getHeaders().getValue("Server"));
@@ -165,7 +159,7 @@ public class URLLoaderTest {
     
     @Test
     public void testHttpToHttpsRedirect() throws Exception {
-        URLResponse response = URLLoader.get("http://www.twitter.com", Charsets.UTF_8).sendRequest();
+        URLResponse response = URLLoader.get(TEST_HTTPS_URL, Charsets.UTF_8).sendRequest();
         assertEquals(HttpStatus.OK, response.getStatus());
         assertTrue(response.getHeaders().getNames().contains("strict-transport-security"));
     }
@@ -178,6 +172,7 @@ public class URLLoaderTest {
         assertNull(response.getContentType(null));
     }
 
+    @Test
     public void testAddQueryParams() {
         URLLoader loader = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
         loader.addQueryParam("a", "2");
@@ -291,10 +286,10 @@ public class URLLoaderTest {
 
     @Test
     public void testCertificatesForHTTPS() throws IOException {
-        URLLoader request = URLLoader.get("https://twitter.com", Charsets.UTF_8);
+        URLLoader request = URLLoader.get(TEST_HTTPS_URL, Charsets.UTF_8);
         URLResponse response = request.sendRequest();
 
-        assertEquals(2, response.getCertificates().size());
+        assertEquals(3, response.getCertificates().size());
     }
 
     @Test
@@ -316,15 +311,25 @@ public class URLLoaderTest {
     }
 
     @Test
-    public void testSendRequestPromise() throws InterruptedException {
+    public void testSendBackgroundRequest() throws InterruptedException {
         List<URLResponse> received = new ArrayList<>();
 
-        URLLoader.get("http://www.colorize.nl", Charsets.UTF_8).sendRequestPromise()
-            .then(response -> received.add(response.get()));
+        URLLoader.get("http://www.colorize.nl", Charsets.UTF_8).sendBackgroundRequest()
+            .then(received::add);
 
         Thread.sleep(2000);
 
         assertEquals(1, received.size());
+    }
+
+    @Test
+    void mergeWithExistingQueryParameters() {
+        URLLoader request = URLLoader.get("http://www.colorize.nl?a=2", Charsets.UTF_8);
+        request.addQueryParam("b", "3");
+
+        assertEquals(2, request.getQueryParams().getData().size());
+        assertEquals("2", request.getQueryParams().getData().get("a"));
+        assertEquals("3", request.getQueryParams().getData().get("b"));
     }
 
     private URLResponse toResponse(HttpStatus status, String contentType, String body) {

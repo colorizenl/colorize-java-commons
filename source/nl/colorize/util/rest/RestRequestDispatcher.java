@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ public class RestRequestDispatcher {
     public void registerServices(Object serviceObject) {
         ReflectionUtils.getMethodsWithAnnotation(serviceObject, Rest.class).stream()
             .map(m -> new MappedService(serviceObject, m.getName(), m.getAnnotation(Rest.class)))
-            .forEach(mappedService -> registerService(mappedService));
+            .forEach(this::registerService);
     }
 
     /**
@@ -75,18 +75,18 @@ public class RestRequestDispatcher {
     protected void registerServices(Object serviceObject, Rest config) {
         ReflectionUtils.getMethodsWithAnnotation(serviceObject, Rest.class).stream()
             .map(m -> new MappedService(serviceObject, m.getName(), config))
-            .forEach(mappedService -> registerService(mappedService));
+            .forEach(this::registerService);
     }
 
     private void registerService(MappedService mappedService) {
         if (!mappedService.config.path().startsWith("/")) {
             throw new IllegalArgumentException("Method is annotated with @Rest, " +
-                    "path must have a leading slash: " + mappedService.toString());
+                "path must have a leading slash: " + mappedService.toString());
         }
         
         if (getMappedServices(mappedService.config.path()).containsKey(mappedService.config.method())) {
             throw new IllegalStateException("Mapping already exists: " + 
-                    mappedService.config.method() + " " + mappedService.config.path());
+                mappedService.config.method() + " " + mappedService.config.path());
         }
         
         mappedServices.add(mappedService);

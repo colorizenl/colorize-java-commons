@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -93,11 +93,13 @@ public class CustomComponentsUIT {
     }
 
     private JPanel createFormPanelTab() {
-        final JPanel customHeightLabel = new JPanel();
+        JPanel customHeightLabel = new JPanel();
         customHeightLabel.setBackground(new Color(255, 200, 200));
         SwingUtils.setPreferredHeight(customHeightLabel, 50);
+
+        List<String> labels = Arrays.asList("text label");
         
-        final FormPanel form = new FormPanel();
+        FormPanel form = new FormPanel();
         form.addRow("Row with textfield:", new JTextField());
         form.addRow("Row with other component:", new JButton("Button"));
         form.addRow("Custom height:", customHeightLabel);
@@ -105,22 +107,23 @@ public class CustomComponentsUIT {
         form.addEmptyRow();
         form.addRow(new JCheckBox("Row with checkbox"));
         form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
+        form.addEllipsesRow(() -> labels.get(0), () -> labels.set(0, "something else"));
         return form;
     }
 
     private JPanel createMultiLabelTab() {
         String text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sit " +
-                "amet gravida justo. Nunc nec elit a orci facilisis fermentum. Aliquam placerat " +
-                "rutrum ornare. Donec fermentum pellentesque egestas. Morbi posuere consequat " +
-                "augue ac convallis. In et arcu ante, sed vestibulum nibh.\n\n" +
-                "Phasellus tincidunt arcu at elit fermentum vehicula. Cras a orci est. Aenean " +
-                "pulvinar nunc ut felis ultrices posuere. Integer odio purus, tempor imperdiet " +
-                "semper in, congue adipiscing turpis. Nulla sed ligula urna, vitae sodales " +
-                "justo. Fusce mi nisl, imperdiet in venenatis id, tempor quis turpis. Fusce " +
-                "tempor facilisis tincidunt. Aenean libero dolor, varius id feugiat molestie, " +
-                "blandit sit amet lectus. Cras rhoncus, purus vel posuere malesuada, sapien " +
-                "libero imperdiet quam, quis cursus purus velit non mauris.";
-        
+            "amet gravida justo. Nunc nec elit a orci facilisis fermentum. Aliquam placerat " +
+            "rutrum ornare. Donec fermentum pellentesque egestas. Morbi posuere consequat " +
+            "augue ac convallis. In et arcu ante, sed vestibulum nibh.\n\n" +
+            "Phasellus tincidunt arcu at elit fermentum vehicula. Cras a orci est. Aenean " +
+            "pulvinar nunc ut felis ultrices posuere. Integer odio purus, tempor imperdiet " +
+            "semper in, congue adipiscing turpis. Nulla sed ligula urna, vitae sodales " +
+            "justo. Fusce mi nisl, imperdiet in venenatis id, tempor quis turpis. Fusce " +
+            "tempor facilisis tincidunt. Aenean libero dolor, varius id feugiat molestie, " +
+            "blandit sit amet lectus. Cras rhoncus, purus vel posuere malesuada, sapien " +
+            "libero imperdiet quam, quis cursus purus velit non mauris.";
+
         MultiLabel multiLabel = new MultiLabel(text, 300);
         multiLabel.setBackground(Color.WHITE);
         multiLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));

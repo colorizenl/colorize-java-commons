@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -92,5 +92,22 @@ public class PostDataTest {
     @Test
     public void testWrongNumberOfVarArgs() {
         assertThrows(IllegalArgumentException.class, () -> PostData.create("1", "2", "3"));
+    }
+
+    @Test
+    void merge() {
+        PostData a = PostData.create("a", "2");
+        PostData b = PostData.create("b", "3");
+        PostData merged = a.merge(b);
+
+        assertEquals(ImmutableMap.of("a", "2", "b", "3"), merged.getData());
+    }
+
+    @Test
+    void cannotMergeIfSameParameter() {
+        PostData a = PostData.create("a", "2");
+        PostData b = PostData.create("a", "3");
+
+        assertThrows(IllegalArgumentException.class, () -> a.merge(b));
     }
 }

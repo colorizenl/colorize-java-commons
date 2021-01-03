@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -291,12 +291,7 @@ public class Timeline implements Animatable {
     }
     
     private boolean hasKeyFrameAtPosition(KeyFrame keyframe, float position) {
-        return hasKeyFrameAtPosition(keyframe, position, EPSILON);
-    }
-    
-    private boolean hasKeyFrameAtPosition(KeyFrame keyframe, float position, float tolerance) {
-        return keyframe.getTime() >= position - tolerance && 
-                keyframe.getTime() <= position + tolerance;
+        return keyframe.getTime() >= position - EPSILON && keyframe.getTime() <= position + EPSILON;
     }
 
     /**

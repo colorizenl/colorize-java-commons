@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -113,6 +113,10 @@ public final class Version implements Comparable<Version> {
             .collect(Collectors.toList());
 
         return new Version(VERSION_JOINER.join(truncatedDigits), truncatedDigits);
+    }
+
+    public boolean isUnknown() {
+        return equals(UNKNOWN);
     }
     
     @Override

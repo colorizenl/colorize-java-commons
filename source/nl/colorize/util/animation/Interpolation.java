@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -75,11 +75,13 @@ public enum Interpolation {
 
     /**
      * Returns the interpolated value between {@code x0} and {@code x1}.
+     *
+     * @param delta A number between 0 and 1 describing how much of the
+     *              animation has been completed.
+     *
      * @return The value of {@code x}, which is somewhere between {@code x0}
      *         and {@code x1} depending on how much of the animation has been
      *         completed.
-     * @param delta A number between 0 and 1 describing how much of the
-     *        animation has been completed. 
      */
     public float interpolate(float x0, float x1, float delta) {
         delta = Math.max(delta, 0f);

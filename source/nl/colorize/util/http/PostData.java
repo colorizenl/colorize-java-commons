@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -70,6 +70,10 @@ public class PostData {
         return data;
     }
 
+    public boolean isEmpty() {
+        return data.isEmpty();
+    }
+
     public String encode(Charset charset) {
         StringBuilder buffer = new StringBuilder();
 
@@ -85,6 +89,26 @@ public class PostData {
         }
 
         return buffer.toString();
+    }
+
+    /**
+     * Creates a new {@code PostData} instance by merging all parameters from
+     * this instance with another one.
+     *
+     * @throws IllegalArgumentException if both instances contain a parameter
+     *         with the same name.
+     */
+    public PostData merge(PostData other) {
+        Map<String, String> merged = new LinkedHashMap<>();
+        merged.putAll(data);
+
+        for (Map.Entry<String, String> entry : other.data.entrySet()) {
+            Preconditions.checkArgument(!merged.containsKey(entry.getKey()),
+                "Duplicate entry: " + entry.getKey());
+            merged.put(entry.getKey(), entry.getValue());
+        }
+
+        return new PostData(merged);
     }
 
     @Override
@@ -111,6 +135,7 @@ public class PostData {
 
     /**
      * Creates a {@code PostData} instance from a number of key/value pairs.
+     *
      * @throws IllegalArgumentException if the number of parameters is not a
      *         multiple of two.
      */
@@ -141,6 +166,7 @@ public class PostData {
         }
 
         Map<String, String> data = new LinkedHashMap<>();
+
         for (String param : POST_DATA_SPLITTER.split(encoded)) {
             String paramName = param.substring(0, param.indexOf('='));
             String paramValue = param.substring(param.indexOf('=') + 1);

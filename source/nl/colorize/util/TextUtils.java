@@ -1,10 +1,16 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
+
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,12 +22,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
 
 /**
  * Miscellaneous utility and convenience versions for working with text.
@@ -204,7 +204,7 @@ public final class TextUtils {
     public static List<String> matchLines(String input, Pattern regex) {
         return matchLines(input, regex, 0);
     }
-    
+
     /**
      * Removes all text between and including {@code from} and {@code to}. If the
      * string does not contain both markers this does nothing and returns the 

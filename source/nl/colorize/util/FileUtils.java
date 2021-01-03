@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -25,7 +25,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -118,29 +117,36 @@ public final class FileUtils {
     }
 
     /**
-     * Reads all files in a file, rewrites them using the provided callback
-     * function, then overwrites the original file with the result.
+     * Reads all lines in a file, then used the provided callback function to
+     * rewrite the lines. The result is then used to overwrite the original file.
      */
-    public static void rewrite(File file, Charset charset, Function<String, String> lineCallback)
+    public static void rewrite(File file, Charset charset, Function<String, String> lineProcessor)
             throws IOException {
         List<String> originalLines = FileUtils.readLines(file, charset);
 
         try (PrintWriter writer = new PrintWriter(file, charset)) {
             for (String line : originalLines) {
-                writer.println(lineCallback.apply(line));
+                writer.println(lineProcessor.apply(line));
             }
         }
     }
 
     /**
-     * Reads all files in a file, rewrites them based on a mapping, then overwrites
-     * the original file with the result.
+     * Reads all lines in a file, then replaced all matching lines with the
+     * specified replacement. The result is then used to overwrite the original
+     * file.
      */
-    public static void rewrite(File file, Charset charset, Map<String, String> mapping)
+    public static void rewriteLine(File file, String original, String replacement, Charset charset)
             throws IOException {
-        rewrite(file, charset, line -> mapping.getOrDefault(line, line));
+        rewrite(file, charset, line -> {
+            if (line.trim().equalsIgnoreCase(original.trim())) {
+                return replacement;
+            } else {
+                return line;
+            }
+        });
     }
-    
+
     /**
      * Creates a directory. Unlike {@link File#mkdir()}, an exception will be
      * thrown if the directory could not be created. If the directory already 
@@ -260,15 +266,18 @@ public final class FileUtils {
         }
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
     }
-    
+
+    /**
+     * Creates a temporary file without any contents. The file will be created in
+     * the platform's default location for storing temporary files.
+     */
     private static File createTempFile() throws IOException {
         return Files.createTempFile("temp-" + System.currentTimeMillis(), ".tmp").toFile();
     }
     
     /**
      * Creates a temporary file with the specified contents. The file will be
-     * located in the platform's default temp file directory.
-     * @return A reference to the temporary file that was created.
+     * created in the platform's default location for storing temporary files.
      */
     public static File createTempFile(byte[] data) throws IOException {
         File tempFile = createTempFile();
@@ -278,8 +287,8 @@ public final class FileUtils {
     
     /**
      * Creates a temporary file with the specified text as contents. The file 
-     * will be located in the platform's default temp file directory.
-     * @return A reference to the temporary file that was created.
+     * will be created in the platform's default location for storing temporary
+     * files.
      */
     public static File createTempFile(String text, Charset encoding) throws IOException {
         File tempFile = createTempFile();
@@ -288,11 +297,21 @@ public final class FileUtils {
     }
     
     /**
-     * Creates a temporary directory within the platform's default directory
-     * for storing temporary files.
-     * @return A reference to the directory that was created.
+     * Creates a temporary directory within the platform's default location for
+     * storing temporary files.
      */
     public static File createTempDir() throws IOException {
         return Files.createTempDirectory("temp-" + System.currentTimeMillis()).toFile();
+    }
+
+    /**
+     * Creates a temporary directory with the specified name. The directory will
+     * be created in the platform's default location for storing temporary files.
+     */
+    public static File createTempDir(String name) throws IOException {
+        File parentDir = createTempDir();
+        File tempDir = new File(parentDir, name);
+        mkdir(tempDir);
+        return tempDir;
     }
 }

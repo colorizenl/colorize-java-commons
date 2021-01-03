@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ import org.jdom2.Element;
  * be used to extend or change how objects are serialized by {@code XMLConverter}. 
  * @param <T> The type of object to serialize to XML.
  */
+@FunctionalInterface
 public interface XMLTypeConverter<T> {
 
     /**

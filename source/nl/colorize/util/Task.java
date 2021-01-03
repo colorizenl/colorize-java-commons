@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -11,7 +11,9 @@ import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Represents the result of a task that is being executed by an asynchronous
@@ -27,8 +29,11 @@ public final class Task<T> {
 
     private OperationState state;
     private T result;
-    private RuntimeException failure;
-    private List<Consumer<Supplier<T>>> callbacks;
+    private Exception failure;
+    private List<Consumer<T>> resultCallbacks;
+    private List<Consumer<Exception>> failureCallbacks;
+
+    private static final Logger LOGGER = LogHelper.getLogger(Task.class);
 
     private static enum OperationState {
         PENDING,
@@ -39,66 +44,30 @@ public final class Task<T> {
 
     public Task() {
         this.state = OperationState.PENDING;
-        this.callbacks = new ArrayList<>();
-    }
-
-    /**
-     * Returns the result of the asynchronous operation. If the operation has
-     * succeeded, this will return the result. If the operation has failed,
-     * this will throw the corresponding exception. If the operation has been
-     * cancelled, this will also throw an exception.
-     *
-     * @throws IllegalStateException if the operation is still pending, or if
-     *         the operation has been cancelled.
-     * @throws RuntimeException if the operation has failed with an exception.
-     */
-    public T get() {
-        return getResult();
-    }
-
-    /**
-     * Adds the specified callback that should be notified once the asynchronous
-     * operation has either completed or failed. Even if this is already the
-     * case at the moment when the callback is added, it will still be notified.
-     */
-    public void then(Consumer<Supplier<T>> callback) {
-        callbacks.add(callback);
-
-        if (state != OperationState.PENDING) {
-            callback.accept(this::get);
-        }
+        this.resultCallbacks = new ArrayList<>();
+        this.failureCallbacks = new ArrayList<>();
     }
 
     /**
      * Indicates the asynchronous operation has been successfully completed, and
-     * will use the provided value for all calls to {@link #get()}.
+     * will notify all registered callback functions with the results.
      *
      * @throws IllegalStateException if the operation has already completed or
      *         failed.
      */
     public void complete(T value) {
         resolve(value, null);
-        notifyCallbacks();
     }
 
     /**
-     * Indicates that the asynchronous operation has failed. Afterwards, calls
-     * to {@link #get()} will throw the provided exception.
+     * Indicates that the asynchronous operation has failed, and will notify all
+     * registered failure callback function with the exception.
      *
      * @throws IllegalStateException if the operation has already completed or
      *         failed.
      */
     public void fail(Exception failure) {
-        resolve(null, wrapException(failure));
-        notifyCallbacks();
-    }
-
-    private RuntimeException wrapException(Exception failure) {
-        if (failure instanceof RuntimeException) {
-            return (RuntimeException) failure;
-        } else {
-            return new RuntimeException("Asynchronous operation failed", failure);
-        }
+        resolve(null, failure);
     }
 
     /**
@@ -112,13 +81,7 @@ public final class Task<T> {
         resolve(null, null);
     }
 
-    private void notifyCallbacks() {
-        for (Consumer<Supplier<T>> callback : callbacks) {
-            callback.accept(this::get);
-        }
-    }
-
-    private synchronized void resolve(T result, RuntimeException failure) {
+    private synchronized void resolve(T result, Exception failure) {
         Preconditions.checkState(state == OperationState.PENDING,
             "Asynchronous operation has already been completed: " + state);
 
@@ -127,21 +90,94 @@ public final class Task<T> {
 
         if (result != null) {
             state = OperationState.COMPLETED;
+            resultCallbacks.forEach(callback -> callback.accept(result));
         } else if (failure != null) {
             state = OperationState.FAILED;
+            failureCallbacks.forEach(callback -> callback.accept(failure));
         } else {
             state = OperationState.CANCELLED;
         }
     }
 
-    private synchronized T getResult() {
-        Preconditions.checkState(state != OperationState.PENDING, "Operating is still pending");
-        Preconditions.checkState(state != OperationState.CANCELLED, "Operating has been cancelled");
+    /**
+     * Returns the result of the asynchronous operation. If the operation has
+     * succeeded, this will return the result. If the operation has failed,
+     * this will throw the corresponding exception. If the operation has been
+     * cancelled, this will also throw an exception.
+     * <p>
+     * In general, it is preferred to obtain the task's results by registering
+     * a callback function using {@link #then(Consumer, Consumer)}, instead of
+     * accessing the result in a synchronous way using this method.
+     *
+     * @throws IllegalStateException if the operation is still pending, or if
+     *         the operation has been cancelled.
+     */
+    public T get() {
+        return getResult();
+    }
 
-        if (failure != null) {
-            throw failure;
-        }
+    private synchronized T getResult() {
+        Preconditions.checkState(state != OperationState.PENDING, "Operation is still pending");
+        Preconditions.checkState(state != OperationState.CANCELLED, "Operation has been cancelled");
+        Preconditions.checkState(state != OperationState.FAILED, "Operation has failed");
 
         return result;
+    }
+
+    /**
+     * Adds the specified callbacks that should be notified when the asynchronous
+     * operation has either completed or failed. Even if this is already the
+     * case at the moment when the callback is added, it will still be notified.
+     *
+     * @return This task, for method chaining.
+     */
+    public Task<T> then(Consumer<T> resultCallback, Consumer<Exception> failureCallback) {
+        resultCallbacks.add(resultCallback);
+        failureCallbacks.add(failureCallback);
+
+        if (state == OperationState.COMPLETED) {
+            resultCallback.accept(result);
+        } else if (state == OperationState.FAILED) {
+            failureCallback.accept(failure);
+        }
+
+        return this;
+    }
+
+    /**
+     * Adds the specified callback that should be notified when the asynchronous
+     * operation has completed. Even if this is already the case at the moment
+     * when the callback is added, it will still be notified.
+     *
+     * @return This task, for method chaining.
+     */
+    public Task<T> then(Consumer<T> resultCallback) {
+        return then(resultCallback,
+            e -> LOGGER.log(Level.WARNING, "Asynchronous operation failed", e));
+    }
+
+    /**
+     * Adds the specified callback that will be notified when the asynchronous
+     * operation has failed.
+     *
+     * @return This task, for method chaining.
+     */
+    public Task<T> error(Consumer<Exception> failureCallback) {
+        Consumer<T> noOpCallback = result -> {};
+        return then(noOpCallback, failureCallback);
+    }
+
+    /**
+     * Converts the result of this task using the specified function, and wraps
+     * this into a new {@code Task} instance that can be used to process the
+     * result.
+     *
+     * @return The new task that can be used to process the converted value.
+     */
+    public <U> Task<U> pipe(Function<T, U> converter) {
+        Task<U> pipedTask = new Task<>();
+        then(response -> pipedTask.complete(converter.apply(response)));
+        error(pipedTask::fail);
+        return pipedTask;
     }
 }

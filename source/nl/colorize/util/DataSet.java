@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -592,12 +592,10 @@ public final class DataSet<R, C> {
     
     @Override
     public String toString() {
-        StringBuilder buffer = new StringBuilder();
-        buffer.append("DataSet");
-        buffer.append("\n    Rows: ").append(NAME_JOINER.join(getRows()));
-        buffer.append("\n    Columns: ").append(NAME_JOINER.join(getColumns()));
-        buffer.append("\n");
-        return buffer.toString();
+        return "DataSet" +
+            "\n    Rows: " + NAME_JOINER.join(getRows()) +
+            "\n    Columns: " + NAME_JOINER.join(getColumns()) +
+            "\n";
     }
     
     /**

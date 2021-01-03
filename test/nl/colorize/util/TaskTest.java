@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -54,13 +54,15 @@ class TaskTest {
     }
 
     @Test
-    void completeAsync() {
+    void completeAsync() throws InterruptedException {
         List<String> results = new ArrayList<>();
         Task<String> task = new Task<>();
-        task.then(t -> results.add(t.get()));
+        task.then(results::add);
 
         Thread thread = new Thread(() -> task.complete("abc"));
         thread.start();
+
+        Thread.sleep(500);
 
         assertEquals(ImmutableList.of("abc"), results);
     }
@@ -69,7 +71,7 @@ class TaskTest {
     void failAsync() {
         List<String> results = new ArrayList<>();
         Task<String> task = new Task<>();
-        task.then(t -> results.add(t.get()));
+        task.then(results::add);
 
         Thread thread = new Thread(() -> task.fail(new RuntimeException("fail")));
         thread.start();
@@ -81,8 +83,45 @@ class TaskTest {
     void cancelAsync() {
         List<String> results = new ArrayList<>();
         Task<String> task = new Task<>();
-        task.then(t -> results.add(t.get()));
+        task.then(results::add);
 
         assertEquals(Collections.emptyList(), results);
+    }
+
+    @Test
+    void onlyErrorCallback() {
+        List<String> results = new ArrayList<>();
+        List<Exception> failed = new ArrayList<>();
+
+        Task<String> task = new Task<>();
+        task.error(failed::add);
+        task.fail(new RuntimeException("failed"));
+
+        assertEquals(0, results.size());
+        assertEquals(1, failed.size());
+    }
+
+    @Test
+    void pipe() {
+        List<String> results = new ArrayList<>();
+
+        Task<String> task = new Task<>();
+        task.pipe(result -> result + "ABC").then(results::add);
+        task.complete("123");
+
+        assertEquals(ImmutableList.of("123ABC"), results);
+    }
+
+    @Test
+    void pipeWithFailure() {
+        List<String> results = new ArrayList<>();
+        List<Exception> failed = new ArrayList<>();
+
+        Task<String> task = new Task<>();
+        task.pipe(result -> result + "ABC").then(results::add, failed::add);
+        task.fail(new RuntimeException());
+
+        assertEquals(0, results.size());
+        assertEquals(1, failed.size());
     }
 }

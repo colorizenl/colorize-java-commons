@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -28,12 +28,13 @@ import java.net.URI;
 import java.net.URLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -49,6 +50,10 @@ import java.util.logging.Logger;
  * on all platforms, and the legacy {@link java.net.HttpURLConnection} which has
  * an inconvenient API but is supported everywhere.
  * <p>
+ * The automatic detection can be overruled by using the system property
+ * {@code colorize.urlloader.classic}. Setting this to true or false will force
+ * the usage of the old or new HTTP client respectively.
+ * <p>
  * Instances of this class can be obtained using either
  * {@link #create(Method, String, Charset)}, or one of the convenience versions
  * such as {@link #get(String, Charset)} or {@link #post(String, Charset)}. All
@@ -62,12 +67,12 @@ public abstract class URLLoader extends HttpMessage {
 
     private Method method;
     private URI url;
-    private Map<String, String> queryParameters;
+    private PostData queryParameters;
 
     private int timeout;
     private boolean certificateVerification;
 
-    public static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
+    private static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
 
     private static final List<String> SUPPORTED_PROTOCOLS = ImmutableList.of("http", "https");
     private static final int DEFAULT_TIMEOUT = 30_000;
@@ -87,14 +92,33 @@ public abstract class URLLoader extends HttpMessage {
             "URL protocol not supported: " + url);
 
         this.method = method;
-        this.url = url;
-        this.queryParameters = new LinkedHashMap<>();
+        this.url = stripURL(url);
+        this.queryParameters = PostData.empty();
 
         this.timeout = DEFAULT_TIMEOUT;
         this.certificateVerification = true;
         
         // Default request headers
         addHeader(HttpHeaders.ACCEPT_CHARSET, encoding.displayName());
+
+        initQueryParameters(url);
+    }
+
+    private URI stripURL(URI url) {
+        if (url.toString().indexOf('?') == -1) {
+            return url;
+        }
+
+        String baseURL = url.toString().substring(0, url.toString().indexOf('?'));
+        return URI.create(baseURL);
+    }
+
+    private void initQueryParameters(URI url) {
+        if (url.toString().indexOf('?') != -1) {
+            String queryString = url.toString().substring(url.toString().indexOf('?'));
+            PostData data = PostData.parse(queryString, getEncoding());
+            queryParameters = queryParameters.merge(data);
+        }
     }
 
     public Method getMethod() {
@@ -110,7 +134,7 @@ public abstract class URLLoader extends HttpMessage {
             return url;
         }
 
-        String queryString = PostData.create(queryParameters).encode(getEncoding());
+        String queryString = queryParameters.encode(getEncoding());
         return URI.create(url + "?" + queryString);
     }
 
@@ -125,13 +149,13 @@ public abstract class URLLoader extends HttpMessage {
         Preconditions.checkArgument(name != null && value != null,
             "Invalid query parameter: " + name + "=" + value);
 
-        Preconditions.checkState(!queryParameters.containsKey(name),
+        Preconditions.checkState(!queryParameters.getData().containsKey(name),
             "Request already contains query parameter: " + name);
 
-        queryParameters.put(name, value);
+        queryParameters = queryParameters.merge(PostData.create(name, value));
     }
 
-    public Map<String, String> getQueryParams() {
+    public PostData getQueryParams() {
         return queryParameters;
     }
 
@@ -180,6 +204,24 @@ public abstract class URLLoader extends HttpMessage {
         return certificateVerification;
     }
 
+    protected SSLContext getDisabledSSLContext() throws GeneralSecurityException {
+        X509TrustManager trustManager = new X509TrustManager() {
+            public void checkClientTrusted(X509Certificate[] chain, String auth) {
+            }
+
+            public void checkServerTrusted(X509Certificate[] chain, String auth) {
+            }
+
+            public X509Certificate[] getAcceptedIssuers() {
+                return new X509Certificate[0];
+            }
+        };
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, new X509TrustManager[] { trustManager }, new SecureRandom());
+        return sslContext;
+    }
+
     /**
      * Sends the HTTP request and returns the response. The request headers and
      * body are derived from the current configuration of this class.
@@ -203,11 +245,9 @@ public abstract class URLLoader extends HttpMessage {
 
     /**
      * Sends the HTTP request asynchronously, and returns a {@link Task} that
-     * can be used to obtain the result. This method is similar to
-     * {@link #sendRequestAsync()}, but does not block the calling thread when
-     * retrieving the value.
+     * can be used to obtain the result.
      */
-    public Task<URLResponse> sendRequestPromise() {
+    public Task<URLResponse> sendBackgroundRequest() {
         Task<URLResponse> task = new Task<>();
 
         Runnable backgroundRequest = () -> {
@@ -262,6 +302,23 @@ public abstract class URLLoader extends HttpMessage {
     }
 
     /**
+     * Enables the use of the classic HTTP client {@code HttpURLConnection},
+     * instead of the new HTTP client introduced in Java 11. This method is
+     * the programmatic version of using the system property
+     * {@code colorize.urlloader.classic}.
+     *
+     * @deprecated Existing code should be migrated to support the new HTTP
+     *             client, as newer featurs such as HTTP/2 will not be
+     *             supported by {@code HttpURLConnection}. Unfortunately,
+     *             the new HTTP client is not 100% compatible with the old
+     *             behavior, so this might require changes in application logic.
+     */
+    @Deprecated
+    public static void useClassicHttpClient() {
+        System.setProperty(CLASSIC_LOADER_PROPERTY, "true");
+    }
+
+    /**
      * Sends URL requests using the classic {@link java.net.HttpURLConnection}
      * API which is available since Java 1.0 and supported by all platforms.
      */
@@ -311,7 +368,7 @@ public abstract class URLLoader extends HttpMessage {
             HttpStatus status = readHttpStatus(connection);
 
             if (status.isClientError() || status.isServerError()) {
-                throw new IOException(String.format("HTTP status %d for URL %s", status.getCode(), toString()));
+                throw new IOException(String.format("HTTP status %d for URL %s", status.getCode(), target));
             } else if (status.isRedirection()) {
                 return followRedirect(status, connection);
             } else {
@@ -321,28 +378,11 @@ public abstract class URLLoader extends HttpMessage {
 
         private void disableCertificateVerification(HttpsURLConnection connection) {
             try {
-                SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, new X509TrustManager[] { getNoOpTrustMaster() }, new SecureRandom());
-
-                connection.setSSLSocketFactory(sslContext.getSocketFactory());
+                connection.setSSLSocketFactory(getDisabledSSLContext().getSocketFactory());
                 connection.setHostnameVerifier((host, session) -> true);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Cannot disable HTTPS certificate verification", e);
             }
-        }
-
-        private X509TrustManager getNoOpTrustMaster() {
-            return new X509TrustManager() {
-                public void checkClientTrusted(X509Certificate[] chain, String auth) {
-                }
-
-                public void checkServerTrusted(X509Certificate[] chain, String auth) {
-                }
-
-                public X509Certificate[] getAcceptedIssuers() {
-                    return new X509Certificate[0];
-                }
-            };
         }
 
         /**
@@ -461,15 +501,11 @@ public abstract class URLLoader extends HttpMessage {
 
         @Override
         public URLResponse sendRequest() throws IOException {
-            HttpClient httpClient = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.ALWAYS)
-                .connectTimeout(Duration.ofMillis(getTimeout()))
-                .build();
-
             try {
+                HttpClient httpClient = createClient();
                 HttpRequest request = createRequest();
                 URLResponse response = convertResponse(httpClient.send(request,
-                    java.net.http.HttpResponse.BodyHandlers.ofByteArray()));
+                    HttpResponse.BodyHandlers.ofByteArray()));
 
                 if (response.getStatus().isClientError() || response.getStatus().isServerError()) {
                     throw new IOException("URL " + getFullURL() +
@@ -477,9 +513,21 @@ public abstract class URLLoader extends HttpMessage {
                 }
 
                 return response;
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Sending HTTP request interrupted");
+            } catch (GeneralSecurityException | InterruptedException e) {
+                throw new RuntimeException("Sending HTTP request failed", e);
             }
+        }
+
+        private HttpClient createClient() throws GeneralSecurityException {
+            HttpClient.Builder builder = HttpClient.newBuilder();
+            builder.followRedirects(HttpClient.Redirect.ALWAYS);
+            builder.connectTimeout(Duration.ofMillis(getTimeout()));
+
+            if (!hasCertificateVerification()) {
+                builder.sslContext(getDisabledSSLContext());
+            }
+
+            return builder.build();
         }
 
         private HttpRequest createRequest() {

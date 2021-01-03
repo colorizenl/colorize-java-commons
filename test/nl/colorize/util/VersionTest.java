@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -122,8 +122,14 @@ public class VersionTest {
     @Test
     public void testUnknown() {
         assertEquals("UNKNOWN", Version.UNKNOWN.toString());
-        assertTrue(Version.UNKNOWN.equals(Version.UNKNOWN));
+        assertEquals(Version.UNKNOWN, Version.UNKNOWN);
         assertTrue(Version.parse("1.0.0").isNewerThan(Version.UNKNOWN));
         assertTrue(Version.parse("0.1.0").isNewerThan(Version.UNKNOWN));
+    }
+
+    @Test
+    void isUnknown() {
+        assertFalse(Version.parse("1.0.0").isUnknown());
+        assertTrue(Version.UNKNOWN.isUnknown());
     }
 }

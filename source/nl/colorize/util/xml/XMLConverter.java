@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2020 Colorize
+// Copyright 2007-2021 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ public class XMLConverter {
     private String collectionElementName;
     
     public XMLConverter() {
-        typeConverters = new LinkedHashMap<Class<?>, XMLTypeConverter<?>>();
+        typeConverters = new LinkedHashMap<>();
         dateFormat = "yyyy-MM-dd HH:mm:ss";
         collectionElementName = "element";
         
