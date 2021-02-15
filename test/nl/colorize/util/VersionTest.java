@@ -8,6 +8,10 @@ package nl.colorize.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -131,5 +135,21 @@ public class VersionTest {
     void isUnknown() {
         assertFalse(Version.parse("1.0.0").isUnknown());
         assertTrue(Version.UNKNOWN.isUnknown());
+    }
+
+    @Test
+    void versionNumberWithLeadingZero() {
+        List<Version> versions = new ArrayList<>();
+        versions.add(Version.parse("3.11.0"));
+        versions.add(Version.parse("3.11.09"));
+        versions.add(Version.parse("3.11.1"));
+        versions.add(Version.parse("3.11.10"));
+
+        Collections.sort(versions);
+
+        assertEquals("3.11.0", versions.get(0).toString());
+        assertEquals("3.11.1", versions.get(1).toString());
+        assertEquals("3.11.09", versions.get(2).toString());
+        assertEquals("3.11.10", versions.get(3).toString());
     }
 }

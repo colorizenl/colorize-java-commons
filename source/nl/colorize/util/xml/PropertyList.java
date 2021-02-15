@@ -6,6 +6,14 @@
 
 package nl.colorize.util.xml;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.BaseEncoding;
+import nl.colorize.util.ResourceFile;
+import nl.colorize.util.TextUtils;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -18,22 +26,13 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.BaseEncoding;
-import com.google.common.io.Closeables;
-
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.JDOMException;
-
-import nl.colorize.util.ResourceFile;
-import nl.colorize.util.TextUtils;
+import java.util.function.Supplier;
 
 /**
  * Property lists serialize data to {@code .plist} XML files. Property lists are 
@@ -43,6 +42,7 @@ import nl.colorize.util.TextUtils;
  * version 1.0</a>.
  * <p>
  * Properties stored in a property list can have one of the following types:
+ *
  * <ul>
  *   <li>&lt;string&gt; (represented by java.lang.String)
  *   <li>&lt;integer&gt; (represented by java.lang.Integer)
@@ -100,8 +100,10 @@ public class PropertyList {
     /**
      * Returns the value of the property located at the specified path. The path
      * refers to named properties in the root dictionary, nested properties are
-     * separated by dots. 
+     * separated by dots.
+     *
      * @return The property's value, or {@code defaultValue} if it doesn't exist.
+     *
      * @throws ClassCastException if the property's value is of a type that is
      *         not compatible with {@code defaultType}.
      */
@@ -130,6 +132,7 @@ public class PropertyList {
     /**
      * Returns the value of the array property located at the specified path, or
      * an empty list if it doesn't exist.
+     *
      * @throws ClassCastException if the property exists but is not &lt;array&gt;.
      */
     public <T> List<T> getArrayProperty(String path) {
@@ -139,6 +142,7 @@ public class PropertyList {
     /**
      * Returns the value of the dictionary property located at the specified path, or
      * an empty map if it doesn't exist.
+     *
      * @throws ClassCastException if the property exists but is not &lt;dict&gt;.
      */
     public <K,V> Map<K,V> getDictProperty(String path) {
@@ -176,6 +180,7 @@ public class PropertyList {
 
     /**
      * Changes the value of the property located at the specified path.
+     *
      * @throws IllegalArgumentException if the value is of a type that cannot be
      *         stored in a property list.
      * @throws ClassCastException if a nested property's parent is not a &lt;dict&gt;.
@@ -240,6 +245,7 @@ public class PropertyList {
     /**
      * Writes this property list to an {@code .plist} XML file. The stream is
      * closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public void save(OutputStream stream) throws IOException {
@@ -249,6 +255,7 @@ public class PropertyList {
     
     /**
      * Writes this property list to an {@code .plist} XML file.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public void save(File plistFile) throws IOException {
@@ -264,13 +271,15 @@ public class PropertyList {
     
     private Element serializeProperty(Object property) {
         PropType type = getPropType(property);
-        switch (type) {
-            case ARRAY : return serializeArrayProperty((List<?>) property);
-            case DICT : return serializeDictProperty((Map<?,?>) property);
-            default :
-                Element propertyElement = new Element(type.getTagName(property));
-                propertyElement.addContent(serializePropertyValue(property));
-                return propertyElement;
+
+        if (type == PropType.ARRAY) {
+            return serializeArrayProperty((List<?>) property);
+        } else if (type == PropType.DICT) {
+            return serializeDictProperty((Map<?,?>) property);
+        } else {
+            Element propertyElement = new Element(type.getTagName(property));
+            propertyElement.addContent(serializePropertyValue(property));
+            return propertyElement;
         }
     }
     
@@ -294,7 +303,9 @@ public class PropertyList {
     }
 
     private String serializePropertyValue(Object value) {
-        switch (getPropType(value)) {
+        PropType type = getPropType(value);
+
+        switch (type) {
             case BOOLEAN : return "";
             case DATE : return new SimpleDateFormat(ISO_8601_DATE_FORMAT).format((Date) value);
             case DATA : return BaseEncoding.base64Url().encode((byte[]) value);
@@ -306,22 +317,23 @@ public class PropertyList {
     /**
      * Writes this property list to a {@code .properties} file. The property
      * list is converted as described in {@link #toProperties()}.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public void saveAsProperties(OutputStream stream) throws IOException {
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(stream, Charsets.UTF_8));
-        try {
+
+        try (writer) {
             for (Map.Entry<String,String> entry : toMap().entrySet()) {
                 writer.println(entry.getKey() + "=" + entry.getValue());
             }
-        } finally {
-            Closeables.close(writer, true);
         }
     }
     
     /**
      * Writes this property list to a {@code .properties} file. The property
      * list is converted as described in {@link #toProperties()}.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public void saveAsProperties(File propertiesFile) throws IOException {
@@ -331,10 +343,11 @@ public class PropertyList {
     /**
      * Loads a property list from a {@code .plist} XML file. The stream is
      * closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static PropertyList load(InputStream stream) throws IOException {
-        try {
+        try (stream) {
             Document xml = XMLHelper.parse(stream);
             if (!isPropertyListXmlFile(xml)) {
                 throw new IOException("XML file is not a property list");
@@ -345,8 +358,6 @@ public class PropertyList {
             return plist;
         } catch (JDOMException e) {
             throw new IOException("XML parse error", e);
-        } finally {
-            Closeables.close(stream, true);
         }
     }
     
@@ -359,17 +370,19 @@ public class PropertyList {
 
     private static Object parsePropertyElement(Element element) {
         String value = element.getText();
-        switch (getTypeForTag(element.getName(), value)) {
-            case STRING : return value;
-            case INTEGER : return Integer.parseInt(value);
-            case REAL : return Float.parseFloat(value);
-            case BOOLEAN : return "true".equals(element.getName());
-            case DATE : return parseDate(value);
-            case DATA : return BaseEncoding.base64Url().decode(value);
-            case ARRAY : return parseArrayElement(element);
-            case DICT : return parseDictElement(element);
-            default : throw new IllegalStateException();
-        }
+        PropType type = getTypeForTag(element.getName(), value);
+
+        Map<PropType, Supplier<Object>> mapping = new HashMap<>();
+        mapping.put(PropType.STRING, () -> value);
+        mapping.put(PropType.INTEGER, () -> Integer.parseInt(value));
+        mapping.put(PropType.REAL, () -> Float.parseFloat(value));
+        mapping.put(PropType.BOOLEAN, () -> "true".equals(element.getName()));
+        mapping.put(PropType.DATE, () -> parseDate(value));
+        mapping.put(PropType.DATA, () -> BaseEncoding.base64Url().decode(value));
+        mapping.put(PropType.ARRAY, () -> parseArrayElement(element));
+        mapping.put(PropType.DICT, () -> parseDictElement(element));
+
+        return mapping.get(type).get();
     }
     
     private static Date parseDate(String value) {
@@ -411,6 +424,7 @@ public class PropertyList {
 
     /**
      * Loads a property list from a {@code .plist} XML file.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static PropertyList load(File plistFile) throws IOException {
@@ -419,6 +433,7 @@ public class PropertyList {
     
     /**
      * Loads a property list from a {@code .plist} XML file.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static PropertyList load(ResourceFile plistFile) throws IOException {

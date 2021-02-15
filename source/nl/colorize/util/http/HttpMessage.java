@@ -101,6 +101,10 @@ public abstract class HttpMessage {
         setBody(contentType, body.encode(encoding));
     }
 
+    /**
+     * Shorthand method that simultaneously sets the body and changes the
+     * content type to application/json.
+     */
     public void setJsonBody(String json) {
         setBody(MediaType.JSON_UTF_8.toString(), body);
     }

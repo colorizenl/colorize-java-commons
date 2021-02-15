@@ -6,13 +6,13 @@
 
 package nl.colorize.util.xml;
 
-import java.util.List;
-
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.filter.Filters;
 import org.jdom2.xpath.XPathExpression;
 import org.jdom2.xpath.XPathFactory;
+
+import java.util.List;
 
 /**
  * XPath expression that can be used to query XML documents parsed with JDOM.
@@ -77,6 +77,7 @@ public class XPath {
     
     /**
      * Creates an {@code XPath} instance from an XPath expression in text form.
+     *
      * @throws IllegalArgumentException if the expression is not valid XPath.
      */
     public static XPath parse(String expression) {

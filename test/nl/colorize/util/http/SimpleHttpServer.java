@@ -32,23 +32,23 @@ import java.util.regex.Pattern;
 
 /**
  * Simple implementation of an embedded HTTP server that can be used for testing.
- * When running, the server will open a socket on the requested port and will 
+ * When running, the server will open a socket on the requested port and will
  * listen for requests.
  * <p>
- * This server is purely intended for testing and lacks support for 
+ * This server is purely intended for testing and lacks support for
  * several features that can be expected from real HTTP servers beyond simple
  * request/response interaction, such as sessions or multipart requests or HTTPS
- * connections. Although this class is thread safe and can be accessed from 
- * multiple threads. Handling requests is done from a single thread, meaning that 
+ * connections. Although this class is thread safe and can be accessed from
+ * multiple threads. Handling requests is done from a single thread, meaning that
  * the server is only able to handle one request at a time.
  */
 @VisibleForTesting
 public class SimpleHttpServer {
-    
+
     private ServerSocket serverSocket;
     private AtomicBoolean running;
     private Map<String, URLResponse> expected;
-    
+
     private static final String PROTOCOL = "HTTP/1.1";
     private static final Pattern REQUEST_LINE_PATTERN = Pattern.compile("(\\w+)\\s+(\\S+)\\s+(\\S+)");
     private static final Pattern HEADER_PATTERN = Pattern.compile("([\\w-]+)[:]\\s*(\\S.*)");
@@ -61,27 +61,27 @@ public class SimpleHttpServer {
         running = new AtomicBoolean(false);
         expected = new ConcurrentHashMap<>();
     }
-    
+
     public void start(final int port) {
         if (serverSocket != null) {
             throw new IllegalStateException("HTTP server is already running");
         }
-        
+
         LOGGER.info("Starting simple HTTP server on port " + port);
 
         Thread serverThread = new Thread(() -> listenForRequests(port), "SimpleHttpServer");
         serverThread.start();
     }
-    
+
     public void stop(boolean blockUntilShutdown) {
         LOGGER.info("Stopping simple HTTP server");
         LoadUtils.closeAndIgnore(serverSocket);
-        
+
         if (blockUntilShutdown) {
             while (running.get());
         }
     }
-    
+
     private void listenForRequests(int port) {
         try {
             serverSocket = new ServerSocket(port);
@@ -100,16 +100,16 @@ public class SimpleHttpServer {
             running.set(false);
         }
     }
-    
+
     private void handleRequest(Socket client) throws IOException {
         client.setSoTimeout(READ_TIMEOUT);
         InputStreamReader in = new InputStreamReader(client.getInputStream(), CHARSET);
         PrintWriter out = new PrintWriter(new OutputStreamWriter(client.getOutputStream(), CHARSET));
-        
+
         SimpleRequest request = parseRequest(in);
         URLResponse response = handleRequest(request);
         sendResponse(response, out);
-        
+
         out.close();
         in.close();
         client.close();
@@ -118,7 +118,7 @@ public class SimpleHttpServer {
     private SimpleRequest parseRequest(InputStreamReader in) throws IOException {
         Tuple<Method, String> requestLine = parseRequestLine(readLine(in));
         Map<String, String> headers = readHeaders(in);
-        
+
         String body = "";
         if (requestLine.getLeft().hasRequestBody()) {
             body = readBody(in, headers);
@@ -141,13 +141,13 @@ public class SimpleHttpServer {
         }
         return headers;
     }
-    
+
     private String readBody(InputStreamReader in, Map<String, String> headers) throws IOException {
         long contentLength = Long.parseLong(headers.get(HttpHeaders.CONTENT_LENGTH));
         if (contentLength <= 0) {
             throw new IOException("Unknown request body length");
         }
-        
+
         StringBuilder body = new StringBuilder();
         for (long i = 0; i < contentLength; i++) {
             int c = in.read();
@@ -156,7 +156,7 @@ public class SimpleHttpServer {
             }
             body.append((char) c);
         }
-        
+
         return body.toString();
     }
 
@@ -171,20 +171,20 @@ public class SimpleHttpServer {
         }
         return CharMatcher.is('\r').trimTrailingFrom(buffer.toString());
     }
-    
+
     private Tuple<Method, String> parseRequestLine(String line) throws IOException {
         Matcher matcher = REQUEST_LINE_PATTERN.matcher(line);
         if (!matcher.matches()) {
             throw new IOException("Invalid request line: " + line);
         }
-        
+
         if (!PROTOCOL.equals(matcher.group(3))) {
             throw new IOException("Protocol not supported: " + matcher.group(3));
         }
-        
-        return Tuple.of(Method.parse(matcher.group(1)), matcher.group(2)); 
+
+        return Tuple.of(Method.parse(matcher.group(1)), matcher.group(2));
     }
-    
+
     private void parseHeaderLine(String line, Map<String, String> headers) throws IOException {
         Matcher matcher = HEADER_PATTERN.matcher(line);
         if (!matcher.matches()) {
@@ -201,7 +201,7 @@ public class SimpleHttpServer {
             return createDefaultResponse(request);
         }
     }
-    
+
     private URLResponse createDefaultResponse(SimpleRequest request) {
         URLResponse response = new URLResponse(HttpStatus.OK, serialize(request), CHARSET);
         response.addHeader(HttpHeaders.CONTENT_TYPE, "text/plain;charset=" + CHARSET.displayName());
@@ -211,7 +211,7 @@ public class SimpleHttpServer {
     private void sendResponse(URLResponse response, PrintWriter out) {
         out.print(serialize(response));
     }
-    
+
     protected String serialize(SimpleRequest request) {
         StringBuilder buffer = new StringBuilder();
         buffer.append(request.method + " " + request.path + " " + PROTOCOL + "\r\n");
@@ -226,11 +226,10 @@ public class SimpleHttpServer {
         }
         return buffer.toString();
     }
-    
+
     protected String serialize(URLResponse response) {
         StringBuilder buffer = new StringBuilder();
-        buffer.append(PROTOCOL + " " + response.getStatus().getCode() + " " + 
-            response.getStatus().getDescription() + "\r\n");
+        buffer.append(PROTOCOL + " " + response.getStatus() + "\r\n");
 
         for (String header : response.getHeaders().getNames()) {
             for (String value : response.getHeaders().getValues(header)) {
@@ -250,26 +249,26 @@ public class SimpleHttpServer {
     public void expect(String forPath, URLResponse response) {
         expected.put(forPath, response);
     }
-    
-    public void expect(String forPath, HttpStatus status, String contentType, String body) {
+
+    public void expect(String forPath, int status, String contentType, String body) {
         URLResponse response = new URLResponse(status, body, CHARSET);
         response.addHeader(HttpHeaders.CONTENT_TYPE, contentType);
         expected.put(forPath, response);
     }
-    
-    public void expect(String forPath, HttpStatus status, String body) {
+
+    public void expect(String forPath, int status, String body) {
         URLResponse response = new URLResponse(status, body, CHARSET);
         expected.put(forPath, response);
     }
-    
+
     public void expect(String forPath, String body) {
         expect(forPath, HttpStatus.OK, body);
     }
-    
+
     public void expect(String forPath, String contentType, String body) {
         expect(forPath, HttpStatus.OK, contentType, body);
     }
-    
+
     public void clearExpected() {
         expected.clear();
     }

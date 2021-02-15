@@ -23,14 +23,14 @@ import java.util.List;
  */
 public class URLResponse extends HttpMessage {
 
-    private HttpStatus status;
+    private int status;
     private List<Certificate> certificates;
 
-    public URLResponse(HttpStatus status, String body, Charset encoding) {
+    public URLResponse(int status, String body, Charset encoding) {
         this(status, body.getBytes(encoding), encoding);
     }
 
-    public URLResponse(HttpStatus status, byte[] body, Charset encoding) {
+    public URLResponse(int status, byte[] body, Charset encoding) {
         super(encoding);
 
         this.status = status;
@@ -38,12 +38,12 @@ public class URLResponse extends HttpMessage {
         setBody(body);
     }
 
-    public URLResponse(HttpStatus status) {
+    public URLResponse(int status) {
         super();
         this.status = status;
     }
 
-    public HttpStatus getStatus() {
+    public int getStatus() {
         return status;
     }
 

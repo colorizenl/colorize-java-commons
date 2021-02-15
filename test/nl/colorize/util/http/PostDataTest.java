@@ -8,7 +8,6 @@ package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.rest.BadRequestException;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -52,7 +51,7 @@ public class PostDataTest {
     public void testGetRequiredMissing() {
         PostData postData = PostData.create(ImmutableMap.of("a", "2", "b", "3"));
 
-        assertThrows(BadRequestException.class, () -> postData.getRequiredParameter("c"));
+        assertThrows(IllegalStateException.class, () -> postData.getRequiredParameter("c"));
     }
 
     @Test

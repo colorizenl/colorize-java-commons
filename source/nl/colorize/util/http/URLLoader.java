@@ -6,6 +6,7 @@
 
 package nl.colorize.util.http;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
@@ -70,6 +71,7 @@ public abstract class URLLoader extends HttpMessage {
     private PostData queryParameters;
 
     private int timeout;
+    private boolean allowErrorStatus;
     private boolean certificateVerification;
 
     private static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
@@ -81,6 +83,7 @@ public abstract class URLLoader extends HttpMessage {
     /**
      * This constructor is intended to be used by subclasses. Refer to the class
      * documentation for instructions on how to obtain an instance of this class.
+     *
      * @throws IllegalArgumentException if the URL protocol is not supported,
      *         including relative URLs for which the protocol cannot be determined.
      */
@@ -96,6 +99,7 @@ public abstract class URLLoader extends HttpMessage {
         this.queryParameters = PostData.empty();
 
         this.timeout = DEFAULT_TIMEOUT;
+        this.allowErrorStatus = false;
         this.certificateVerification = true;
         
         // Default request headers
@@ -140,6 +144,7 @@ public abstract class URLLoader extends HttpMessage {
 
     /**
      * Adds a query parameter that will be added to the request URL.
+     *
      * @throws IllegalArgumentException if the parameter name and/or value
      *         is {@code null}.
      * @throws IllegalStateException if the request already contains a query
@@ -173,15 +178,25 @@ public abstract class URLLoader extends HttpMessage {
 
     /**
      * Sets the request timeout to the specified value, in milliseconds.
-     * @return This, for method chaining.
      */
-    public URLLoader setTimeout(int timeout) {
+    public void setTimeout(int timeout) {
         this.timeout = timeout;
-        return this;
     }
     
     protected int getTimeout() {
         return timeout;
+    }
+
+    /**
+     * Allows response error codes (HTTP status 4xx and 5xx) without throwing
+     * an exception.
+     */
+    public void allowErrorStatus() {
+        allowErrorStatus = true;
+    }
+
+    protected boolean isAllowErrorStatus() {
+        return allowErrorStatus;
     }
 
     /**
@@ -193,11 +208,9 @@ public abstract class URLLoader extends HttpMessage {
      * you can no longer assume communication to be secure. It is strongly
      * recommended to correct the SSL certificate itself, rather than using
      * HTTPS with an insecure certificate.
-     * @return This, for method chaining.
      */
-    public URLLoader disableCertificateVerification() {
+    public void disableCertificateVerification() {
         certificateVerification = false;
-        return this;
     }
 
     protected boolean hasCertificateVerification() {
@@ -288,17 +301,33 @@ public abstract class URLLoader extends HttpMessage {
     public static URLLoader get(String url, Charset requestCharset) {
         return create(Method.GET, url, requestCharset);
     }
+
+    public static URLLoader get(String url) {
+        return get(url, Charsets.UTF_8);
+    }
     
     public static URLLoader post(String url, Charset requestCharset) {
         return create(Method.POST, url, requestCharset);
+    }
+
+    public static URLLoader post(String url) {
+        return post(url, Charsets.UTF_8);
     }
     
     public static URLLoader put(String url, Charset requestCharset) {
         return create(Method.PUT, url, requestCharset);
     }
+
+    public static URLLoader put(String url) {
+        return put(url, Charsets.UTF_8);
+    }
     
     public static URLLoader delete(String url, Charset requestCharset) {
         return create(Method.DELETE, url, requestCharset);
+    }
+
+    public static URLLoader delete(String url) {
+        return delete(url, Charsets.UTF_8);
     }
 
     /**
@@ -365,11 +394,11 @@ public abstract class URLLoader extends HttpMessage {
                 postWriter.close();
             }
 
-            HttpStatus status = readHttpStatus(connection);
+            int status = readHttpStatus(connection);
 
-            if (status.isClientError() || status.isServerError()) {
-                throw new IOException(String.format("HTTP status %d for URL %s", status.getCode(), target));
-            } else if (status.isRedirection()) {
+            if (!isAllowErrorStatus() && HttpStatus.isError(status)) {
+                throw new IOException(String.format("HTTP status %d for URL %s", status, target));
+            } else if (HttpStatus.isRedirect(status)) {
                 return followRedirect(status, connection);
             } else {
                 return connection;
@@ -391,7 +420,7 @@ public abstract class URLLoader extends HttpMessage {
          * method will perform additional redirects if the HTTP status indicates that
          * one should be performed.
          */
-        private HttpURLConnection followRedirect(HttpStatus status, HttpURLConnection connection)
+        private HttpURLConnection followRedirect(int status, HttpURLConnection connection)
                 throws IOException {
             URLResponse head = new URLResponse(status, new byte[0], getEncoding());
             readResponseHeaders(connection, head);
@@ -426,7 +455,7 @@ public abstract class URLLoader extends HttpMessage {
                 // internally, and the stream will block in case of Keep-Alive
                 // connections.
                 byte[] body = responseStream.readAllBytes();
-                HttpStatus status = readHttpStatus(connection);
+                int status = readHttpStatus(connection);
                 response = new URLResponse(status, body, getEncoding());
                 readResponseHeaders(connection, response);
 
@@ -450,15 +479,14 @@ public abstract class URLLoader extends HttpMessage {
          * Downloads the HTTP status from the specified connection.
          * @throws IOException if an I/O error occurs while downloading the response.
          */
-        private HttpStatus readHttpStatus(URLConnection connection) throws IOException {
+        private int readHttpStatus(URLConnection connection) throws IOException {
             try {
                 if (connection instanceof HttpURLConnection) {
                     HttpURLConnection httpConnection  = (HttpURLConnection) connection;
-                    int statusCode = httpConnection.getResponseCode();
-                    return HttpStatus.parse(statusCode);
+                    return httpConnection.getResponseCode();
                 } else {
                     // This class has limited support for non-HTTP URLs.
-                    return HttpStatus.OK;
+                    return 200;
                 }
             } catch (IllegalArgumentException e) {
                 // In these cases the URL produces a numeric HTTP status,
@@ -507,7 +535,7 @@ public abstract class URLLoader extends HttpMessage {
                 URLResponse response = convertResponse(httpClient.send(request,
                     HttpResponse.BodyHandlers.ofByteArray()));
 
-                if (response.getStatus().isClientError() || response.getStatus().isServerError()) {
+                if (!isAllowErrorStatus() && HttpStatus.isError(response.getStatus())) {
                     throw new IOException("URL " + getFullURL() +
                         " returns HTTP status " + response.getStatus());
                 }
@@ -550,8 +578,7 @@ public abstract class URLLoader extends HttpMessage {
         }
 
         private URLResponse convertResponse(java.net.http.HttpResponse<byte[]> response) {
-            HttpStatus status = HttpStatus.parse(response.statusCode());
-            URLResponse result = new URLResponse(status, response.body(), getEncoding());
+            URLResponse result = new URLResponse(response.statusCode(), response.body(), getEncoding());
 
             for (Map.Entry<String, List<String>> entry : response.headers().map().entrySet()) {
                 if (!entry.getKey().equals(":status")) {

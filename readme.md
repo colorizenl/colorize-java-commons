@@ -1,17 +1,16 @@
 Colorize Java Commons
 =====================
 
-Library containing utility classes for web, desktop, and mobile applications. It is used by all
-Java-based applications and libraries developed by [Colorize](http://www.colorize.nl/en/). The 
-library includes the following features:
+Java library containing utility classes for web, desktop, and mobile applications. It is used by 
+all Java-based applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
+The library provides the following features:
 
-- assists in creating and sending HTTP requests
 - an animation framework that includes scheduling and keyframe animation
-- a lightweight REST API framework that can be used in environments with limited resources
-- a framework for managing, selecting, filtering, sorting, and performing calculations on data sets
 - a component library for Swing applications
-- automatic logger configuration
-- working with Apple's Property List file format
+- assists in sending HTTP requests from applications
+- a framework for working with data sets
+- reading and writing CSV
+- automatic application logging configuration
 - various other utility classes
 
 The library focuses on portability, and supports a wide variety of platforms and environments:
@@ -22,8 +21,8 @@ The library focuses on portability, and supports a wide variety of platforms and
 - Google Cloud (cloud)
 - AWS (cloud)
 - Android
-- iOS via [RoboVM](http://robovm.mobidevelop.com)
-- Browser via [TeaVM](http://teavm.org)
+- iOS (via [RoboVM](http://robovm.mobidevelop.com))
+- Browser (via [TeaVM](http://teavm.org))
 
 Usage
 -----
@@ -34,13 +33,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2021.1.1</version>
+        <version>2021.2</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2021.1.1"
+        compile "nl.colorize:colorize-java-commons:2021.2"
     }
 
 Build instructions

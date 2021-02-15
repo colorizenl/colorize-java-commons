@@ -7,6 +7,7 @@
 package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import nl.colorize.util.CommandRunner;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
@@ -15,8 +16,10 @@ import nl.colorize.util.Version;
 import javax.swing.JFrame;
 import javax.swing.UIDefaults;
 import javax.swing.UIManager;
+import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Taskbar;
 import java.awt.Window;
@@ -26,6 +29,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,9 +56,19 @@ public final class MacIntegration {
     private static AppleJavaExtensionsProxy appleExtensionsProxy;
     
     private static final Version MACOS_YOSEMITE = Version.parse("10.10");
+    private static final Version MACOS_BIG_SUR = Version.parse("10.16");
+
+    /**
+     * System property to enforce the use of Apple's San Fransisco font, which
+     * is the default in newer macOS versions. However, Swing's font rendering
+     * has some issues with this font, which is why Helvetica Neue is instead
+     * used in the Swing look-and-feel. Setting this system property to true
+     * will enforce the use of the San Fransisco font in Swing.
+     */
+    public static final String SYSTEM_PROPERTY_FONT = "colorize.useAppleSystemFont";
 
     // Apple-specific system properties
-    protected static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
+    private static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
     
     // Apple-specific Swing client properties
     public static final String AQUA_SIZE = "JComponent.sizeVariant";
@@ -138,18 +152,27 @@ public final class MacIntegration {
     }
 
     /**
-     * Changes the default Swing look-and-feel to look more like native macOS
-     * applications. This includes different look-and-feels for different versions
-     * of macOS.
+     * Augments the Swing look-and-feel to look more like native macOS applications.
+     * This includes different look-and-feels for different versions of macOS.
      * <p>
      * This method is called by {@link SwingUtils#initializeSwing()}, meaning
      * there is normally no reason for calling this method from application code.
      */
     protected static void augmentLookAndFeel() {
         if (isAtLeast(MACOS_YOSEMITE)) {
-            //TODO macOS now uses the San Fransisco font, which is not
-            //     available to the user.
-            changeSwingSystemFont("Helvetica Neue");
+            GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            Set<String> systemFonts = ImmutableSet.copyOf(environment.getAvailableFontFamilyNames());
+
+            if (systemFonts.contains(".AppleSystemUIFont") &&
+                    System.getProperty(SYSTEM_PROPERTY_FONT, "").equals("true")) {
+                changeSwingSystemFont(".AppleSystemUIFont");
+            } else {
+                changeSwingSystemFont("Helvetica Neue");
+            }
+        }
+
+        if (isAtLeast(MACOS_BIG_SUR)) {
+            UIManager.put("TabbedPane.foreground", Color.BLACK);
         }
     }
     

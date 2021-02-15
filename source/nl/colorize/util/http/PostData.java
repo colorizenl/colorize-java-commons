@@ -11,7 +11,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.Escape;
-import nl.colorize.util.rest.BadRequestException;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -44,12 +43,12 @@ public class PostData {
 
     /**
      * Returns the value of the parameter with the specified name.
-     * @throws BadRequestException if no parameter with that name exists.
+     * @throws IllegalStateException if no parameter with that name exists.
      */
     public String getRequiredParameter(String name) {
         String value = data.get(name);
         if (value == null || value.isEmpty()) {
-            throw new BadRequestException("Missing required post data: " + name);
+            throw new IllegalStateException("Missing required post data: " + name);
         }
         return value;
     }

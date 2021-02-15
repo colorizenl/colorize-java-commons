@@ -382,6 +382,7 @@ public class PropertyListTest {
         
         File tempFile = LoadUtils.getTempFile(".properties");
         plist.saveAsProperties(tempFile);
+
         assertEquals(expected, FileUtils.read(tempFile, Charsets.UTF_8));
     }
     

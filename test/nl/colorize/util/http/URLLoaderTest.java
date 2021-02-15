@@ -183,33 +183,22 @@ public class URLLoaderTest {
     }
 
     @Test
-    public void testDisableCertificateVerification() throws Exception {
-        URLResponse response = URLLoader.get("https://html5.validator.nu", Charsets.UTF_8)
-                .disableCertificateVerification()
-                .sendRequest();
+    public void testDisableCertificateVerification() throws IOException {
+        URLLoader request = URLLoader.get("https://html5.validator.nu", Charsets.UTF_8);
+        request.disableCertificateVerification();
+        URLResponse response = request.sendRequest();
         assertEquals(HttpStatus.OK, response.getStatus());
     }
     
     @Test
-    public void testSetBasicAuthentication() throws Exception {
+    public void testSetBasicAuthentication() {
         URLLoader request = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
         request.setBasicAuthentication("Aladdin", "open sesame");
 
         assertEquals("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==",
             request.getHeaders().getValue(HttpHeaders.AUTHORIZATION));
     }
-    
-    @Test
-    public void testHttpStatus() throws Exception {
-        HttpStatus status = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
-                .sendRequest().getStatus();
-        assertEquals(HttpStatus.OK, status);
-        assertEquals(200, status.getCode());
-        assertEquals("200 OK", status.toString());
-        assertFalse(status.isClientError());
-        assertFalse(status.isServerError());
-    }
-    
+
     @Test
     public void testMultipleHeadersWithTheSameName() {
         URLLoader request = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8);
@@ -332,7 +321,7 @@ public class URLLoaderTest {
         assertEquals("3", request.getQueryParams().getData().get("b"));
     }
 
-    private URLResponse toResponse(HttpStatus status, String contentType, String body) {
+    private URLResponse toResponse(int status, String contentType, String body) {
         URLResponse response = new URLResponse(status, body, Charsets.UTF_8);
         response.addHeader(HttpHeaders.CONTENT_TYPE, contentType);
         return response;
