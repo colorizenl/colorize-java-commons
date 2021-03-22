@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PostDataTest {
 
@@ -108,5 +109,36 @@ public class PostDataTest {
         PostData b = PostData.create("a", "3");
 
         assertThrows(IllegalArgumentException.class, () -> a.merge(b));
+    }
+
+    @Test
+    void parseFromJson() {
+        PostData postData = PostData.parseJSON("{\"a\":\"2\",\"b\":\"3\"}");
+
+        assertEquals("2", postData.getRequiredParameter("a"));
+        assertEquals("3", postData.getRequiredParameter("b"));
+    }
+
+    @Test
+    void testParseFromJsonWithNonStringValues() {
+        PostData postData = PostData.parseJSON("{\"a\":2,\"b\":true}");
+
+        assertEquals("2.0", postData.getRequiredParameter("a"));
+        assertEquals("true", postData.getRequiredParameter("b"));
+    }
+
+    @Test
+    void testParseEmptyJsonString() {
+        PostData postData = PostData.parseJSON("");
+
+        assertTrue(postData.isEmpty());
+    }
+
+    @Test
+    void serializeToJson() {
+        PostData postData = PostData.create("a", "2", "b", "3");
+        String json = postData.toJSON();
+
+        assertEquals("{\"a\":\"2\",\"b\":\"3\"}", json);
     }
 }

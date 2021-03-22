@@ -6,22 +6,30 @@
 
 package nl.colorize.util;
 
+import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TextUtilsTest {
     
     @Test
-    public void testCountOccurrences() throws Exception {
+    public void testCountOccurrences() {
         assertEquals(5, TextUtils.countOccurrences("aa ab aab c", "a"));
         assertEquals(2, TextUtils.countOccurrences("aa ab aab c", "aa"));
         assertEquals(1, TextUtils.countOccurrences("aa ab aab c", "aab"));
         assertEquals(0, TextUtils.countOccurrences("aa ab aab c", "aaab"));
+    }
+
+    @Test
+    public void testCountOccurrencesWithOverlappingPattern() {
+        assertEquals(2, TextUtils.countOccurrences("abababab", "abab"));
     }
     
     @Test
@@ -54,9 +62,9 @@ public class TextUtilsTest {
     @Test
     public void testMatchFirst() {
         Pattern regex = Pattern.compile("\\w(\\w)");
-        assertEquals("aa", TextUtils.matchFirst("aa b cc", regex).orNull());
-        assertEquals("a", TextUtils.matchFirst("aa b cc", regex, 1).orNull());
-        assertNull(TextUtils.matchFirst("a b", regex).orNull());
+        assertEquals("aa", TextUtils.matchFirst("aa b cc", regex).orElse(null));
+        assertEquals("a", TextUtils.matchFirst("aa b cc", regex, 1).orElse(null));
+        assertNull(TextUtils.matchFirst("a b", regex).orElse(null));
     }
 
     @Test
@@ -100,11 +108,34 @@ public class TextUtilsTest {
     public void testFuzzyMatch() {
         assertEquals(Arrays.asList("john smith", "john smit"), TextUtils.fuzzyMatch("john smith", 
                 Arrays.asList("john smith", "john smit", "john", "pete"), 0.2f));
-        assertEquals(Arrays.asList(), TextUtils.fuzzyMatch("john smith", Arrays.<String>asList(), 0.1f));
+        assertEquals(Arrays.asList(), TextUtils.fuzzyMatch("john smith", Arrays.asList(), 0.1f));
         assertEquals(Arrays.asList("aaa", "aab"), TextUtils.fuzzyMatch("aaa", 
                 Arrays.asList("aaa", "aab", "abb"), 0.35f));
         assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", 
                 Arrays.asList("aaa", "aab", "abb"), 0.1f));
         assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", Arrays.asList("aaa"), 0f));
+    }
+
+    @Test
+    void startsWith() {
+        assertTrue(TextUtils.startsWith("abc", ImmutableList.of("a", "b")));
+        assertTrue(TextUtils.startsWith("bbb", ImmutableList.of("a", "b")));
+        assertFalse(TextUtils.startsWith("zabc", ImmutableList.of("a", "b")));
+        assertFalse(TextUtils.startsWith("zzz", ImmutableList.of("a", "b")));
+    }
+
+    @Test
+    void endsWith() {
+        assertTrue(TextUtils.endsWith("abc", ImmutableList.of("c", "a")));
+        assertTrue(TextUtils.endsWith("bba", ImmutableList.of("c", "a")));
+        assertFalse(TextUtils.endsWith("abc", ImmutableList.of("a", "b")));
+        assertFalse(TextUtils.endsWith("zzz", ImmutableList.of("a", "b")));
+    }
+
+    @Test
+    void contains() {
+        assertTrue(TextUtils.contains("abc", ImmutableList.of("a", "b")));
+        assertTrue(TextUtils.contains("bc", ImmutableList.of("a", "b")));
+        assertFalse(TextUtils.contains("zz", ImmutableList.of("a", "b")));
     }
 }

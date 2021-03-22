@@ -12,6 +12,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,18 +27,13 @@ import java.util.stream.Collectors;
 public class CSVRecord {
 
     private List<String> cells;
-    private String delimiter;
 
     private static final Splitter RECORD_SPLITTER = Splitter.on("\n").omitEmptyStrings();
     private static final Joiner RECORD_JOINER = Joiner.on("\n");
 
-    private CSVRecord(List<String> cells, String delimiter) {
+    private CSVRecord(List<String> cells) {
         Preconditions.checkArgument(!cells.isEmpty(), "CSV record is empty");
-        Preconditions.checkArgument(delimiter.length() == 1,
-            "Invalid CSV delimiter: " + delimiter);
-
         this.cells = ImmutableList.copyOf(cells);
-        this.delimiter = delimiter;
     }
 
     public int getCellCount() {
@@ -55,32 +54,80 @@ public class CSVRecord {
         return Float.parseFloat(get(index));
     }
 
+    public double getDouble(int index) {
+        return Double.parseDouble(get(index));
+    }
+
     public boolean getBoolean(int index) {
         return get(index).equals("true");
     }
 
-    public String toCSV() {
+    public Date getDate(int index, String dateFormat) {
+        try {
+            return new SimpleDateFormat(dateFormat).parse(get(index));
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Malformed date: " + get(index));
+        }
+    }
+
+    /**
+     * Serializes this record to CSV using the specified delimiter. For creating
+     * CSV files consisting of multiple records, use {@link #toCSV(List, String)}
+     * or {@link #toCSV(List, List, String)}.
+     */
+    protected String toCSV(String delimiter) {
+        Preconditions.checkArgument(delimiter.length() == 1,
+            "Invalid CSV delimiter: " + delimiter);
+
         CharMatcher escaper = CharMatcher.anyOf("\r\n" + delimiter);
 
         List<String> normalizedCells = cells.stream()
-            .map(cell -> escaper.removeFrom(cell))
+            .map(escaper::removeFrom)
             .collect(Collectors.toList());
 
         Joiner cellJoiner = Joiner.on(delimiter).useForNull("");
         return cellJoiner.join(normalizedCells);
     }
 
-    public static CSVRecord create(List<String> cells, String delimiter) {
-        return new CSVRecord(cells, delimiter);
+    @Override
+    public String toString() {
+        return toCSV(";");
     }
 
+    /**
+     * Creates a CSV record from the specified list of cells.
+     *
+     * @throws IllegalArgumentException when trying to create a record without
+     *         any cells.
+     */
+    public static CSVRecord create(List<String> cells) {
+        return new CSVRecord(cells);
+    }
+
+    /**
+     * Creates a CSV record from the specified array of cells.
+     *
+     * @throws IllegalArgumentException when trying to create a record without
+     *         any cells.
+     */
+    public static CSVRecord create(String... cells) {
+        return new CSVRecord(ImmutableList.copyOf(cells));
+    }
+
+    /**
+     * Parses an individual CSV record, using the specified delimiter.
+     */
     public static CSVRecord parseRecord(String csv, String delimiter) {
         Splitter cellSplitter = Splitter.on(delimiter);
         List<String> cells = cellSplitter.splitToList(csv);
-
-        return new CSVRecord(cells, delimiter);
+        return new CSVRecord(cells);
     }
 
+    /**
+     * Parses a number of CSV records, using the specified delimiter. If
+     * {@code hasHeaders} is true, the first record is assumed to be the
+     * headers and will not be included in the results.
+     */
     public static List<CSVRecord> parseRecords(String csv, String delimiter, boolean hasHeaders) {
         List<CSVRecord> records = RECORD_SPLITTER.splitToList(csv).stream()
             .map(row -> parseRecord(row, delimiter))
@@ -93,22 +140,35 @@ public class CSVRecord {
         return records;
     }
 
-    public static String toCSV(List<CSVRecord> records) {
-        Preconditions.checkArgument(records.size() > 0, "No records");
-
+    /**
+     * Serializes a list of records to CSV, using the specified cell delimiter.
+     * If the list of records is empty this will return an empty string.
+     */
+    public static String toCSV(List<CSVRecord> records, String delimiter) {
         List<String> rows = records.stream()
-            .map(record -> record.toCSV())
+            .map(record -> record.toCSV(delimiter))
             .collect(Collectors.toList());
 
         return RECORD_JOINER.join(rows);
     }
 
-    public static String toCSV(List<CSVRecord> records, List<String> headers) {
-        Preconditions.checkArgument(records.size() > 0, "No records");
+    /**
+     * Serializes a list of records to CSV, using the specified cell delimiter
+     * and list of row headers.
+     *
+     * @throws IllegalArgumentException if the number of headers does not match
+     *         the number of cells.
+     */
+    public static String toCSV(List<CSVRecord> records, List<String> headers, String delimiter) {
+        List<CSVRecord> all = new ArrayList<>();
+        all.add(new CSVRecord(headers));
 
-        String delimiter = records.get(0).delimiter;
-        CSVRecord headersRecord = create(headers, delimiter);
+        for (CSVRecord record : records) {
+            Preconditions.checkArgument(record.getCellCount() == headers.size(),
+                "Expected " + headers.size() + " cells but got " + record);
+            all.add(record);
+        }
 
-        return headersRecord.toCSV() + "\n" + toCSV(records);
+        return toCSV(all, delimiter);
     }
 }

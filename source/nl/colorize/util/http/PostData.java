@@ -10,6 +10,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
 import nl.colorize.util.Escape;
 
 import java.nio.charset.Charset;
@@ -36,6 +38,7 @@ public class PostData {
 
     private static final Splitter POST_DATA_SPLITTER = Splitter.on("&");
     private static final PostData EMPTY = new PostData(Collections.emptyMap());
+    private static final TypeToken<Map<String, Object>> JSON_MAP_TYPE = new TypeToken<>() {};
 
     private PostData(Map<String, String> data) {
         this.data = ImmutableMap.copyOf(data);
@@ -110,6 +113,18 @@ public class PostData {
         return new PostData(merged);
     }
 
+    /**
+     * Serializes this {@code PostData} to a JSON map.
+     */
+    public String toJSON() {
+        if (data.isEmpty()) {
+            return "{}";
+        }
+
+        Gson gson = new Gson();
+        return gson.toJson(data);
+    }
+
     @Override
     public String toString() {
         return encode(Charsets.UTF_8);
@@ -173,6 +188,27 @@ public class PostData {
         }
 
         return new PostData(data);
+    }
+
+    /**
+     * Parses {@code PostData} from a JSON map. This can be used in environments
+     * that mix traditional form-encoded requests with JSON-based requests.
+     */
+    public static PostData parseJSON(String json) {
+        if (json == null || json.isEmpty()) {
+            return empty();
+        }
+
+        Gson gson = new Gson();
+        Map<String, Object> jsonMap = gson.fromJson(json, JSON_MAP_TYPE.getType());
+        Map<String, String> data = new LinkedHashMap<>();
+
+        for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
+            String value = entry.getValue() != null ? entry.getValue().toString() : null;
+            data.put(entry.getKey(), value);
+        }
+
+        return create(data);
     }
 
     public static PostData empty() {

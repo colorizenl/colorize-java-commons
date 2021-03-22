@@ -33,14 +33,19 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2021.2</version>
+        <version>2021.4</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2021.2"
+        compile "nl.colorize:colorize-java-commons:2021.4"
     }
+    
+Documentation
+-------------
+
+- [JavaDoc](http://api.clrz.nl/colorize-java-commons/)
 
 Build instructions
 ------------------

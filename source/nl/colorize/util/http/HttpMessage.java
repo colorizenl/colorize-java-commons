@@ -104,9 +104,15 @@ public abstract class HttpMessage {
     /**
      * Shorthand method that simultaneously sets the body and changes the
      * content type to application/json.
+     *
+     * @deprecated This method's name creates the (wrong) impression that it
+     *             will serialize the body in some way, which is mistake prone.
+     *             Use the more explicit {@link #setBody(MediaType, String)}
+     *             instead.
      */
+    @Deprecated
     public void setJsonBody(String json) {
-        setBody(MediaType.JSON_UTF_8.toString(), body);
+        setBody(MediaType.JSON_UTF_8.toString(), json);
     }
 
     public void setBody(String body) {

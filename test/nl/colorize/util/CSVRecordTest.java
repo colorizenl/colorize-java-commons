@@ -10,9 +10,12 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CSVRecordTest {
 
@@ -24,38 +27,38 @@ public class CSVRecordTest {
         assertEquals("a", record.get(0));
         assertEquals(2, record.getInt(1));
         assertEquals(3.4, record.getFloat(2), 0.01f);
-        assertEquals(false, record.getBoolean(3));
+        assertFalse(record.getBoolean(3));
     }
 
     @Test
     public void testSerialize() {
         CSVRecord record = CSVRecord.parseRecord("a;2", ";");
 
-        assertEquals("a;2", record.toCSV());
+        assertEquals("a;2", record.toCSV(";"));
     }
 
     @Test
     public void testSerializeMultiple() {
-        CSVRecord first = CSVRecord.create(Arrays.asList("a", "2"), ";");
-        CSVRecord second = CSVRecord.create(Arrays.asList("b", "3"), ";");
+        CSVRecord first = CSVRecord.create(Arrays.asList("a", "2"));
+        CSVRecord second = CSVRecord.create(Arrays.asList("b", "3"));
 
-        assertEquals("a;2\nb;3", CSVRecord.toCSV(ImmutableList.of(first, second)));
+        assertEquals("a;2\nb;3", CSVRecord.toCSV(ImmutableList.of(first, second), ";"));
     }
 
     @Test
     public void testSerializeMultipleWithHeaders() {
-        CSVRecord first = CSVRecord.create(Arrays.asList("a", "2"), ";");
-        CSVRecord second = CSVRecord.create(Arrays.asList("b", "3"), ";");
+        CSVRecord first = CSVRecord.create(Arrays.asList("a", "2"));
+        CSVRecord second = CSVRecord.create(Arrays.asList("b", "3"));
 
         assertEquals("h1;h2\na;2\nb;3",
-            CSVRecord.toCSV(ImmutableList.of(first, second), ImmutableList.of("h1", "h2")));
+            CSVRecord.toCSV(ImmutableList.of(first, second), ImmutableList.of("h1", "h2"), ";"));
     }
 
     @Test
     public void testEscape() {
-        CSVRecord record = CSVRecord.create(Arrays.asList("a", "b;c", "d\ne"), ";");
+        CSVRecord record = CSVRecord.create(Arrays.asList("a", "b;c", "d\ne"));
 
-        assertEquals("a;bc;de", record.toCSV());
+        assertEquals("a;bc;de", record.toCSV(";"));
     }
 
     @Test
@@ -65,5 +68,20 @@ public class CSVRecordTest {
         assertEquals(2, records.size());
         assertEquals("a", records.get(0).get(0));
         assertEquals("b", records.get(1).get(0));
+    }
+
+    @Test
+    void returnEmptyStringIfNoRecords() {
+        assertEquals("", CSVRecord.toCSV(Collections.emptyList(), ";"));
+    }
+
+    @Test
+    void doNotAllowDifferentHeaderLength() {
+        CSVRecord record = CSVRecord.create("a", "b");
+        List<String> headers = ImmutableList.of("a", "b", "c");
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            CSVRecord.toCSV(ImmutableList.of(record), headers, ";");
+        });
     }
 }

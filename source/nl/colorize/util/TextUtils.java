@@ -7,7 +7,6 @@
 package nl.colorize.util;
 
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
@@ -20,6 +19,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +36,7 @@ public final class TextUtils {
     /**
      * Returns the number of occurrences of the string {@code needle} within the
      * string {@code haystack}.
+     *
      * @throws IllegalArgumentException if {@code needle} is an empty string.
      */
     public static int countOccurrences(String haystack, String needle) {
@@ -49,7 +50,7 @@ public final class TextUtils {
             if (occurrenceIndex == -1) {
                 break;
             }
-            index = occurrenceIndex + 1;
+            index = occurrenceIndex + needle.length();
             count++;
         }
         
@@ -97,6 +98,30 @@ public final class TextUtils {
         str = removeTrailing(str, trailing);
         return str;
     }
+
+    public static boolean startsWith(String str, Collection<String> alternatives) {
+        Preconditions.checkArgument(!alternatives.isEmpty(),
+            "Must provide at least one alternative");
+
+        return alternatives.stream()
+            .anyMatch(str::startsWith);
+    }
+
+    public static boolean endsWith(String str, Collection<String> alternatives) {
+        Preconditions.checkArgument(!alternatives.isEmpty(),
+            "Must provide at least one alternative");
+
+        return alternatives.stream()
+            .anyMatch(str::endsWith);
+    }
+
+    public static boolean contains(String str, Collection<String> alternatives) {
+        Preconditions.checkArgument(!alternatives.isEmpty(),
+            "Must provide at least one alternative");
+
+        return alternatives.stream()
+            .anyMatch(str::contains);
+    }
     
     /**
      * Returns all matches for a regular expression.
@@ -127,7 +152,7 @@ public final class TextUtils {
         if (matcher.find()) {
             return Optional.of(matcher.group(group));
         } else {
-            return Optional.absent();
+            return Optional.empty();
         }
     }
     
@@ -141,6 +166,7 @@ public final class TextUtils {
     /**
      * Reads all lines, and returns only the lines that match a regular expression.
      * The reader is closed afterwards.
+     *
      * @param group Adds the specified capture group to the list of results.
      * @throws IOException if an I/O error occurs while reading.
      */
@@ -158,6 +184,7 @@ public final class TextUtils {
     /**
      * Reads all lines, and returns only the lines that match a regular expression. 
      * The reader is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static List<String> matchLines(Reader input, Pattern regex) throws IOException {

@@ -122,11 +122,11 @@ public class URLLoaderTest {
     @Test
     public void testContentType() {
         assertEquals("text/html", toResponse(HttpStatus.OK, 
-                "text/html", "").getContentType(null).toString());
+            "text/html", "").getContentType(null).toString());
         assertEquals("text/html; charset=utf-8", toResponse(HttpStatus.OK, 
-                "text/html; charset=UTF-8", "").getContentType(null).toString());
+            "text/html; charset=UTF-8", "").getContentType(null).toString());
         assertEquals("text/html", toResponse(HttpStatus.OK, 
-                "text/html; charset=UTF-8", "").getContentType(null).withoutParameters().toString());
+            "text/html; charset=UTF-8", "").getContentType(null).withoutParameters().toString());
         assertNull(toResponse(HttpStatus.OK, "", "").getContentType(null));
     }
 
@@ -283,7 +283,7 @@ public class URLLoaderTest {
 
     @Test
     public void testHttpResponseWithContentLengthHeaderZero() throws IOException {
-        URLLoader request = URLLoader.get("https://www.colorize-dashboard.nl/rest/website/colorize.nl/check",
+        URLLoader request = URLLoader.get("https://www.colorize-dashboard.nl/rest/website/check/colorize.nl",
             Charsets.UTF_8);
         URLResponse response = request.sendRequest();
 
