@@ -3,7 +3,7 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: colorize-ci
+    container: colorizenl/colorize-ci
     steps:
       - name: Checkout
         uses: actions/checkout@v2
