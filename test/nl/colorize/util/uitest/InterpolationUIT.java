@@ -6,6 +6,20 @@
 
 package nl.colorize.util.uitest;
 
+import com.google.common.collect.ImmutableList;
+import nl.colorize.util.animation.Animatable;
+import nl.colorize.util.animation.Interpolation;
+import nl.colorize.util.animation.Timeline;
+import nl.colorize.util.swing.SwingAnimator;
+import nl.colorize.util.swing.SwingUtils;
+import nl.colorize.util.swing.Utils2D;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -15,21 +29,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
-import nl.colorize.util.animation.Animatable;
-import nl.colorize.util.animation.Interpolation;
-import nl.colorize.util.animation.Timeline;
-import nl.colorize.util.swing.SwingAnimator;
-import nl.colorize.util.swing.SwingUtils;
-import nl.colorize.util.swing.Utils2D;
 
 /**
  * Depicts different interpolation methods intended for animation. This is done
@@ -55,6 +56,11 @@ public class InterpolationUIT extends JPanel implements Animatable {
     private static final Color EXAMPLE_ANIM_COLOR = new Color(255, 64, 0);
     private static final Stroke EXAMPLE_ANIM_STROKE = new BasicStroke(1.5f);
     private static final float EXAMPLE_ANIM_DURATION = 2f;
+
+    private static final List<Interpolation> INTERPOLATION_METHODS = ImmutableList.of(
+        Interpolation.DISCRETE, Interpolation.LINEAR, Interpolation.EASE,
+        Interpolation.CUBIC, Interpolation.QUADRATIC, Interpolation.QUINTIC
+    );
 
     public static void main(String[] args) {
         SwingUtils.initializeSwing();
@@ -83,10 +89,9 @@ public class InterpolationUIT extends JPanel implements Animatable {
         String[] lineColors = {"#822B35", "#FF4E33", "#B35300", "#FF941A", "#C794DB", "#633091", 
                 "#3B54B0", "#3B93B0", "#3BB08B"};
 
-        Interpolation[] interpolationMethods = Interpolation.values();
-        lineColorMap = new HashMap<Interpolation,Color>();
-        for (int i = 0; i < interpolationMethods.length; i++) {
-            lineColorMap.put(interpolationMethods[i], Utils2D.parseHexColor(lineColors[i]));
+        lineColorMap = new HashMap<>();
+        for (int i = 0; i < INTERPOLATION_METHODS.size(); i++) {
+            lineColorMap.put(INTERPOLATION_METHODS.get(i), Utils2D.parseHexColor(lineColors[i]));
         }
     }
 
@@ -95,7 +100,7 @@ public class InterpolationUIT extends JPanel implements Animatable {
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         add(topPanel, BorderLayout.NORTH);
         
-        selector = new JComboBox(Interpolation.values());
+        selector = new JComboBox(INTERPOLATION_METHODS.toArray(new Interpolation[0]));
         selector.addActionListener(e -> selectionChanged());
         selector.setSelectedItem(Interpolation.LINEAR);
         topPanel.add(new JLabel("Interpolation method:"));
@@ -126,7 +131,7 @@ public class InterpolationUIT extends JPanel implements Animatable {
         
         Graphics2D g2 = Utils2D.createGraphics(g, true, false);
         paintGrid(g2);
-        for (Interpolation interpolationMethod : Interpolation.values()) {
+        for (Interpolation interpolationMethod : INTERPOLATION_METHODS) {
             if (interpolationMethod != selected) {
                 Color color = Utils2D.withAlpha(lineColorMap.get(interpolationMethod), 64);
                 paintGraph(g2, color, interpolationMethod);
@@ -175,8 +180,7 @@ public class InterpolationUIT extends JPanel implements Animatable {
     }
     
     private void selectionChanged() {
-        String selectedName = selector.getSelectedItem().toString();
-        selected = Interpolation.valueOf(selectedName);
+        selected = (Interpolation) selector.getSelectedItem();
         recreateExample();
         repaint();
     }

@@ -32,13 +32,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Utility class to load and save data of various types. Data can be loaded from
@@ -49,27 +49,23 @@ import java.util.regex.Pattern;
  */
 public final class LoadUtils {
 
-    private static final Logger LOGGER = LogHelper.getLogger(LoadUtils.class);
-    
     private LoadUtils() { 
     }
     
     /**
      * Reads all bytes from a stream and closes the stream afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static byte[] readToByteArray(InputStream stream) throws IOException {
-        byte[] result = null;
-        try {
-            result = ByteStreams.toByteArray(stream);
-        } finally {
-            Closeables.close(stream, true);
+        try (stream) {
+            return ByteStreams.toByteArray(stream);
         }
-        return result;
     }
     
     /**
      * Reads all characters from a stream and closes the stream afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static String readToString(InputStream stream, Charset charset) throws IOException {
@@ -79,37 +75,32 @@ public final class LoadUtils {
     
     /**
      * Reads all characters from a reader and closes the reader afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static String readToString(Reader reader) throws IOException {
-        String result = null;
-        try {
-            result = CharStreams.toString(reader);
-        } finally {
-            Closeables.close(reader, true);
+        try (reader) {
+            return CharStreams.toString(reader);
         }
-        return result;
     }
     
     /**
      * Reads all lines from a reader and closes the reader afterwards. If the
      * text ends with a newline the last element in the returned list will be
      * the line before that newline.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static List<String> readLines(Reader reader) throws IOException {
-        List<String> result = null;
-        try {
-            result = CharStreams.readLines(reader);
-        } finally {
-            Closeables.close(reader, true);
+        try (reader) {
+            return CharStreams.readLines(reader);
         }
-        return result;
     }
     
     /**
      * Reads the first N lines. Depending on the size of the input the number of
      * lines might not be reached. The stream is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      * @throws IllegalArgumentException if {@code n} is less than 1.
      */
@@ -122,12 +113,10 @@ public final class LoadUtils {
         List<String> lines = new ArrayList<String>();
         String line = null;
         
-        try {
+        try (reader) {
             while ((line = reader.readLine()) != null && lines.size() < n) {
                 lines.add(line);
             }
-        } finally {
-            Closeables.close(reader, true);
         }
         
         return joinLines(lines);
@@ -151,23 +140,19 @@ public final class LoadUtils {
     
     /**
      * Loads a properties file from a reader. The reader is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Properties loadProperties(Reader source) throws IOException {
         // This needs a workaround because the "normal" version
         // of Properties.load(Reader) is not available in TeaVM.
-        // This workaround leads to some unnecessary overhead,
-        // but since property files are generally not loaded
-        // multiple times this should be OK.
-        Properties properties = new Properties();
-        byte[] contents = new byte[0];
-
         if (Platform.isTeaVM()) {
-            contents = CharStreams.toString(source).getBytes(Charsets.UTF_8);
-            LOGGER.warning("Unable to load non-ASCII characters in property files when running in TeaVM");
-        } else {
-            contents = CharStreams.toString(source).getBytes(Charsets.ISO_8859_1);
+            throw new UnsupportedOperationException(
+                "Loading .properties files is not supported on TeaVM");
         }
+
+        Properties properties = new Properties();
+        byte[] contents = contents = CharStreams.toString(source).getBytes(Charsets.ISO_8859_1);
 
         try (InputStream buffer = new ByteArrayInputStream(contents)) {
             properties.load(buffer);
@@ -179,6 +164,7 @@ public final class LoadUtils {
     /**
      * Loads a properties file from a stream, using the specified character encoding.
      * The stream is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Properties loadProperties(InputStream stream, Charset charset) throws IOException {
@@ -189,6 +175,7 @@ public final class LoadUtils {
     
     /**
      * Loads a properties file with the default charset of ISO-8859-1.
+     *
      * @deprecated Use {@link #loadProperties(Reader)} instead.
      */
     @Deprecated
@@ -200,6 +187,7 @@ public final class LoadUtils {
     
     /**
      * Loads a properties file from a resource file.
+     *
      * @throws RuntimeException if the resource file could not be parsed.
      */
     public static Properties loadProperties(ResourceFile file, Charset charset) {
@@ -242,31 +230,28 @@ public final class LoadUtils {
      * Serializes a {@code Properties} object to the specified writer. This method
      * is different from the standard {@link java.util.Properties#store(Writer, String)}
      * in that it writes the properties in a consistent and predictable order. 
-     * The writer is closed afterwards. 
+     * The writer is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while writing. 
      */
     public static void saveProperties(Properties properties, Writer dest) throws IOException {
-        List<String> sortedNames = new ArrayList<String>();
-        for (Object name : properties.keySet()) {
-            sortedNames.add((String) name);
-        }
-        
-        Collections.sort(sortedNames);
-        
-        PrintWriter writer = new PrintWriter(dest);
-        try {
+        List<String> sortedNames = properties.keySet().stream()
+            .map(name -> (String) name)
+            .sorted()
+            .collect(Collectors.toList());
+
+        try (PrintWriter writer = new PrintWriter(dest)) {
             for (String name : sortedNames) {
                 writer.println(name + "=" + properties.getProperty(name));
             }
-        } finally {
-            Closeables.close(writer, true);
         }
     }
     
     /**
      * Serializes a {@code Properties} object to the specified file. This method
      * is different from the standard {@link java.util.Properties#store(Writer, String)}
-     * in that it writes the properties in a consistent and predictable order. 
+     * in that it writes the properties in a consistent and predictable order.
+     *
      * @throws IOException if an I/O error occurs while writing. 
      */
     public static void saveProperties(Properties properties, File dest, Charset charset) throws IOException {
@@ -285,6 +270,7 @@ public final class LoadUtils {
      * Returns a file filter that will only accept files that match one of the
      * specified file extensions. The file extension check is case-insensitive.
      * @param extensions File extensions to accept (without the leading dot).
+     *
      * @throws IllegalArgumentException if the provided list is empty.
      */
     public static FilenameFilter getFileExtensionFilter(String... extensions) {

@@ -7,8 +7,8 @@ The library provides the following features:
 
 - an animation framework that includes scheduling and keyframe animation
 - a component library for Swing applications
+- a command line argument parser
 - assists in sending HTTP requests from applications
-- a framework for working with data sets
 - reading and writing CSV
 - automatic application logging configuration
 - various other utility classes
@@ -33,19 +33,52 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2021.4</version>
+        <version>2021.8</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2021.4"
+        compile "nl.colorize:colorize-java-commons:2021.8"
     }
     
 Documentation
 -------------
 
 - [JavaDoc](http://api.clrz.nl/colorize-java-commons/)
+
+Usage examples
+--------------
+
+### Command line interface
+
+The `CommandLineArgumentParser` can be used to define and parse arguments for command line
+applications. It uses an approach that is quite different from the annotation-based approach
+used by [Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
+since 2016. Instead, it is quite similar to Python's `argparse` module.
+
+The following example shows how to define a simple command line interface:
+
+```
+public static void main(String[] args) {
+    CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp");
+    argParser.add("--input", "Input directory");
+    argParser.addOptional("--overwrite", false, "Overwrites existing values");
+    argParser.parseArgs(args)
+ 
+    File inputDir = argParser.getFile("input");
+    boolean overwrite = argParser.getBool("overwrite");
+}
+```
+
+### Swing component library
+
+Refer to `CustomComponentsUIT` for an example application. `MacIntegrationUIT` contains an example
+application that shows integration with some Mac system functionality.
+
+### Animation framework
+
+Refer to `InterpolationUIT` for an interactive example.
 
 Build instructions
 ------------------
@@ -63,6 +96,7 @@ The following Gradle build tasks are available:
 - `gradle test` runs all unit tests
 - `gradle coverage` runs all unit tests and reports on test coverage
 - `gradle javadoc` generates the JavaDoc API documentation
+- `gradle -b build-mavencentral.gradle publish` publishes to Maven central (requires account) 
 
 License
 -------

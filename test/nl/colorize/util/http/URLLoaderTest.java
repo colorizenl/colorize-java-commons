@@ -321,6 +321,22 @@ public class URLLoaderTest {
         assertEquals("3", request.getQueryParams().getData().get("b"));
     }
 
+    @Test
+    void httpsRequest() throws IOException {
+        URLLoader request = URLLoader.get("https://clrz.nl/");
+        URLResponse response = request.sendRequest();
+
+        assertEquals(HttpStatus.OK, response.getStatus());
+    }
+
+    @Test
+    void redirectHttpToHttps() throws IOException {
+        URLLoader request = URLLoader.get("http://apple.com/");
+        URLResponse response = request.sendRequest();
+
+        assertEquals(HttpStatus.OK, response.getStatus());
+    }
+
     private URLResponse toResponse(int status, String contentType, String body) {
         URLResponse response = new URLResponse(status, body, Charsets.UTF_8);
         response.addHeader(HttpHeaders.CONTENT_TYPE, contentType);

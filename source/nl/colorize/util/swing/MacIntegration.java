@@ -8,7 +8,7 @@ package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import nl.colorize.util.CommandRunner;
+import nl.colorize.util.cli.CommandRunner;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.Version;

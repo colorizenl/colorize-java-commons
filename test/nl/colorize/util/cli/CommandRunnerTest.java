@@ -4,13 +4,18 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.cli;
 
 import java.io.File;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Charsets;
 
+import nl.colorize.util.FileUtils;
+import nl.colorize.util.LoadUtils;
+import nl.colorize.util.Platform;
+import nl.colorize.util.cli.CommandRunner;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,7 +29,7 @@ public class CommandRunnerTest {
         commandRunner.execute();
 
         assertEquals(0, commandRunner.getExitCode());
-        assertEquals(Platform.getUserWorkingDirectory().getAbsolutePath(), commandRunner.getOutput());
+        Assertions.assertEquals(Platform.getUserWorkingDirectory().getAbsolutePath(), commandRunner.getOutput());
     }
     
     @Test
@@ -39,7 +44,7 @@ public class CommandRunnerTest {
     @Test
     public void testShellMode() throws Exception {
         File tempFile = LoadUtils.createTempFile("test 1", Charsets.UTF_8);
-        assertEquals("test 1", FileUtils.read(tempFile, Charsets.UTF_8));
+        Assertions.assertEquals("test 1", FileUtils.read(tempFile, Charsets.UTF_8));
         
         CommandRunner commandRunner = new CommandRunner("echo", "test", ">", tempFile.getAbsolutePath());
         commandRunner.setShellMode(true);

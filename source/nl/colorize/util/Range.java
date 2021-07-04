@@ -14,6 +14,7 @@ import com.google.common.primitives.Ints;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * A set that includes integers between the start and end. Ranges represented by
@@ -121,9 +122,14 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
     public int[] toArray() {
         return Ints.toArray(toList());
     }
-    
+
+    @Override
     public Iterator<Integer> iterator() {
         return toList().iterator();
+    }
+
+    public Stream<Integer> stream() {
+        return toList().stream();
     }
     
     /**

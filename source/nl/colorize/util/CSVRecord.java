@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableList;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -129,6 +130,10 @@ public class CSVRecord {
      * headers and will not be included in the results.
      */
     public static List<CSVRecord> parseRecords(String csv, String delimiter, boolean hasHeaders) {
+        if (csv.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<CSVRecord> records = RECORD_SPLITTER.splitToList(csv).stream()
             .map(row -> parseRecord(row, delimiter))
             .collect(Collectors.toList());

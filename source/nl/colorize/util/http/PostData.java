@@ -38,7 +38,6 @@ public class PostData {
 
     private static final Splitter POST_DATA_SPLITTER = Splitter.on("&");
     private static final PostData EMPTY = new PostData(Collections.emptyMap());
-    private static final TypeToken<Map<String, Object>> JSON_MAP_TYPE = new TypeToken<>() {};
 
     private PostData(Map<String, String> data) {
         this.data = ImmutableMap.copyOf(data);
@@ -200,7 +199,8 @@ public class PostData {
         }
 
         Gson gson = new Gson();
-        Map<String, Object> jsonMap = gson.fromJson(json, JSON_MAP_TYPE.getType());
+        TypeToken<Map<String, Object>> jsonMapType = new TypeToken<>() {};
+        Map<String, Object> jsonMap = gson.fromJson(json, jsonMapType.getType());
         Map<String, String> data = new LinkedHashMap<>();
 
         for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {

@@ -4,13 +4,15 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.cli;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
 import com.google.common.io.Closeables;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Platform;
 
 import java.io.BufferedReader;
 import java.io.File;

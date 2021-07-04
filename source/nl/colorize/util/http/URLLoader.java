@@ -550,6 +550,7 @@ public abstract class URLLoader extends HttpMessage {
             HttpClient.Builder builder = HttpClient.newBuilder();
             builder.followRedirects(HttpClient.Redirect.ALWAYS);
             builder.connectTimeout(Duration.ofMillis(getTimeout()));
+            builder.version(HttpClient.Version.HTTP_1_1);
 
             if (!hasCertificateVerification()) {
                 builder.sslContext(getDisabledSSLContext());
