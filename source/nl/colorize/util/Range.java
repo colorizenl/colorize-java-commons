@@ -122,7 +122,7 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
         List<Integer> list = toList();
         int[] array = new int[list.size()];
         for (int i = 0; i < array.length; i++) {
-            array[0] = list.get(i);
+            array[i] = list.get(i);
         }
         return array;
     }
