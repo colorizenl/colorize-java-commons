@@ -7,7 +7,9 @@
 package nl.colorize.util;
 
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
@@ -27,6 +29,9 @@ import java.util.regex.Pattern;
  * Miscellaneous utility and convenience versions for working with text.
  */
 public final class TextUtils {
+
+    public static final Splitter LINE_SPLITTER = Splitter.on("\n");
+    public static final Joiner LINE_JOINER = Joiner.on("\n");
     
     private static final CharMatcher TEXT_MATCHER = Escape.CHARACTER.or(CharMatcher.whitespace());
 

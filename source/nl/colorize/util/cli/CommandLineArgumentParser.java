@@ -14,6 +14,7 @@ import nl.colorize.util.Platform;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +37,9 @@ import java.util.stream.Collectors;
  *     public static void main(String[] args) {
  *         CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp");
  *         argParser.add("--input", "Input directory");
- *         argParser.addOptional("--overwrite", false, "Overwrites existing values");
+ *         argParser.addOptional("--output", "/tmp", "Output directory");
+ *         argParser.addFlag("--overwrite", "Overwrites existing values");
+ *
  *         argParser.parseArgs(args)
  *
  *         File inputDir = argParser.getFile("input");
@@ -71,12 +74,16 @@ public class CommandLineArgumentParser {
      * @throws IllegalStateException if another argument with the same name has
      *         already been defined.
      */
-    public void add(String name, String usage) {
+    public CommandLineArgumentParser add(String name, String usage) {
+        Preconditions.checkArgument(name.startsWith("-"),
+            "Invalid argument name: " + name);
+
         Preconditions.checkState(!definedArgs.containsKey(name),
             "Argument '" + name + "' has already been defined");
 
         CommandLineArg arg = new CommandLineArg(name, true, null, usage);
         definedArgs.put(name, arg);
+        return this;
     }
 
     /**
@@ -86,23 +93,28 @@ public class CommandLineArgumentParser {
      * @throws IllegalStateException if another argument with the same name
      *         has already been defined.
      */
-    public void addOptional(String name, String defaultValue, String usage) {
+    public CommandLineArgumentParser addOptional(String name, String defaultValue, String usage) {
+        Preconditions.checkArgument(name.startsWith("-"),
+            "Invalid argument name: " + name);
+
         Preconditions.checkState(!definedArgs.containsKey(name),
             "Argument '" + name + "' has already been defined");
 
         CommandLineArg arg = new CommandLineArg(name, false, defaultValue, usage);
         definedArgs.put(name, arg);
+        return this;
     }
 
     /**
-     * Adds an optional command line flag with the specified name and default
-     * value.
+     * Adds an optional command line flag with the specified name. Flags are
+     * always optional, and always have a default value of false (i.e. when
+     * the flag is not set).
      *
      * @throws IllegalStateException if another argument with the same name
      *         has already been defined.
      */
-    public void addOptional(String name, boolean defaultValue, String usage) {
-        addOptional(name, String.valueOf(defaultValue), usage);
+    public CommandLineArgumentParser addFlag(String name, String usage) {
+        return addOptional(name, "false", usage);
     }
 
     /**
@@ -188,7 +200,7 @@ public class CommandLineArgumentParser {
         if (value != null && !value.isEmpty()) {
             parsedArgs.put(normalizeName(arg.name), value);
         } else {
-            if (arg.defaultValue == null) {
+            if (arg.required) {
                 throw new CommandLineInterfaceException("Missing required argument: " + arg.name);
             }
 
@@ -204,17 +216,21 @@ public class CommandLineArgumentParser {
         Preconditions.checkState(!parsedArgs.isEmpty(),
             "Command line arguments have not been parsed yet");
 
-        String value = parsedArgs.get(normalizeName(name));
+        String normalizedName = normalizeName(name);
 
-        if (value != null) {
-            return value;
+        if (parsedArgs.containsKey(normalizedName)) {
+            return parsedArgs.get(normalizedName);
         } else {
             throw new CommandLineInterfaceException("Unknown argument: " + name);
         }
     }
 
     public List<String> getList(String name) throws CommandLineInterfaceException {
-        return LIST_SPLITTER.splitToList(get(name));
+        String value = get(name);
+        if (value.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return LIST_SPLITTER.splitToList(value);
     }
 
     public int getInt(String name) throws CommandLineInterfaceException {
@@ -235,6 +251,30 @@ public class CommandLineArgumentParser {
 
     public File getFile(String name) throws CommandLineInterfaceException {
         return parseFilePath(get(name));
+    }
+
+    @Deprecated
+    public File getDir(String name) throws CommandLineInterfaceException {
+        return getOutputDir(name);
+    }
+
+    public File getInputDir(String name) throws CommandLineInterfaceException {
+        File file = parseFilePath(get(name));
+        if (!file.exists() || !file.isDirectory()) {
+            throw new CommandLineInterfaceException("Directory not found: " + file.getAbsolutePath());
+        }
+        return file;
+    }
+
+    public File getOutputDir(String name) throws CommandLineInterfaceException {
+        File file = parseFilePath(get(name));
+        if (file.exists() && !file.isDirectory()) {
+            throw new CommandLineInterfaceException(file.getAbsolutePath() + " is not a directory");
+        }
+        if (!file.exists()) {
+            file.mkdir();
+        }
+        return file;
     }
 
     public List<File> getFileList(String name) throws CommandLineInterfaceException {

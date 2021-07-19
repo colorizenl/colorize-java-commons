@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -225,6 +226,17 @@ public final class FileUtils {
             return Collections.emptyList();
         }
         return ImmutableList.copyOf(contents);
+    }
+
+    /**
+     * Shorthand for {@code Files.walk} to iterate over files in a directory,
+     * with only files matching the filter being returned.
+     */
+    public static List<File> walkFiles(File dir, Predicate<File> filter) throws IOException {
+        return Files.walk(dir.toPath())
+            .map(Path::toFile)
+            .filter(file -> !file.isDirectory() && filter.test(file))
+            .collect(Collectors.toList());
     }
 
     /**

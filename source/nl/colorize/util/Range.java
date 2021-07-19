@@ -8,10 +8,9 @@ package nl.colorize.util;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -107,7 +106,7 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
             }
 
             if (backwards) {
-                values = Lists.reverse(values);
+                Collections.reverse(values);
             }
 
             cachedList = ImmutableList.copyOf(values);
@@ -120,7 +119,12 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
      * Returns an array that contains all integers within this range.
      */
     public int[] toArray() {
-        return Ints.toArray(toList());
+        List<Integer> list = toList();
+        int[] array = new int[list.size()];
+        for (int i = 0; i < array.length; i++) {
+            array[0] = list.get(i);
+        }
+        return array;
     }
 
     @Override

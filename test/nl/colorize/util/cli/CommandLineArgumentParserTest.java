@@ -15,6 +15,7 @@ import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -60,7 +61,7 @@ class CommandLineArgumentParserTest {
     void simpleFlag() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
         argParser.add("--input", "Input directory");
-        argParser.addOptional("--overwrite", "false", "Overwrites existing values");
+        argParser.addFlag("--overwrite", "Overwrites existing values");
         argParser.tryParseArgs("--input", "/tmp", "--overwrite");
 
         assertEquals("/tmp", argParser.get("input"));
@@ -126,5 +127,25 @@ class CommandLineArgumentParserTest {
         assertTrue(argParser.getBool("a"));
         assertFalse(argParser.getBool("b"));
         assertEquals("test", argParser.get("c"));
+    }
+
+    @Test
+    void allowNullAsDefaultValue() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
+        argParser.addOptional("--a", null, "test");
+        argParser.addOptional("--b", "B", "test");
+        argParser.tryParseArgs();
+
+        assertNull(argParser.get("a"));
+        assertEquals("B", argParser.get("b"));
+    }
+
+    @Test
+    void allowEmptyListAsDefault() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
+        argParser.addOptional("--exclude", "", "test");
+        argParser.tryParseArgs();
+
+        assertEquals(0, argParser.getList("exclude").size());
     }
 }

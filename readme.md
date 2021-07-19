@@ -22,7 +22,7 @@ The library focuses on portability, and supports a wide variety of platforms and
 - AWS (cloud)
 - Android
 - iOS (via [RoboVM](http://robovm.mobidevelop.com))
-- Browser (via [TeaVM](http://teavm.org))
+- Browser (via [TeaVM](http://teavm.org) or [JSweet](http://www.jsweet.org))
 
 Usage
 -----
@@ -33,13 +33,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2021.8</version>
+        <version>2021.10</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2021.8"
+        compile "nl.colorize:colorize-java-commons:2021.10"
     }
     
 Documentation
@@ -63,7 +63,9 @@ The following example shows how to define a simple command line interface:
 public static void main(String[] args) {
     CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp");
     argParser.add("--input", "Input directory");
-    argParser.addOptional("--overwrite", false, "Overwrites existing values");
+    argParser.addOptional("--output", "/tmp", "Output directory");
+    argParser.addFlag("--overwrite", "Overwrites existing values")
+    
     argParser.parseArgs(args)
  
     File inputDir = argParser.getFile("input");

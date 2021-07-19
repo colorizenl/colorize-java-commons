@@ -49,7 +49,9 @@ public interface Interpolation {
      * x . . . . . . . .
      * </code>
      */
-    public static final Interpolation LINEAR = (x0, x1, delta) -> x0 + clamp(delta) * (x1 - x0);
+    public static final Interpolation LINEAR = (x0, x1, delta) -> {
+        return x0 + Timeline.clampDelta(delta) * (x1 - x0);
+    };
 
     /**
      * Easing interpolation.
@@ -67,7 +69,7 @@ public interface Interpolation {
      * </code>
      */
     public static final Interpolation EASE = (x0, x1, delta) -> {
-        float delta2 = 3f - (clamp(delta) * 2f);
+        float delta2 = 3f - (Timeline.clampDelta(delta) * 2f);
         return x0 + (delta * delta * delta2) * (x1 - x0);
     };
 
@@ -87,7 +89,7 @@ public interface Interpolation {
      * </code>
      */
     public static final Interpolation CUBIC = (x0, x1, delta) -> {
-        delta = clamp(delta) / 0.5f;
+        delta = Timeline.clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta * delta + x0;
         } else {
@@ -112,7 +114,7 @@ public interface Interpolation {
      * </code>
      */
     public static final Interpolation QUADRATIC = (x0, x1, delta) -> {
-        delta = clamp(delta) / 0.5f;
+        delta = Timeline.clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta + x0;
         } else {
@@ -137,7 +139,7 @@ public interface Interpolation {
      * </code>
      */
     public static final Interpolation QUINTIC = (x0, x1, delta) -> {
-        delta = clamp(delta) / 0.5f;
+        delta = Timeline.clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta * delta * delta * delta + x0;
         } else {
@@ -152,10 +154,4 @@ public interface Interpolation {
      * animation has been completed.
      */
     public float interpolate(float x0, float x1, float delta);
-
-    private static float clamp(float delta) {
-        delta = Math.max(delta, 0f);
-        delta = Math.min(delta, 1f);
-        return delta;
-    }
 }

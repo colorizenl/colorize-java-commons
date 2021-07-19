@@ -263,6 +263,16 @@ public class TimelineTest {
         assertFalse(timeline.isCompleted());
     }
 
+    @Test
+    void clampDelta() {
+        assertEquals(0f, Timeline.clampDelta(-2f), EPSILON);
+        assertEquals(0f, Timeline.clampDelta(0f), EPSILON);
+        assertEquals(0.1f, Timeline.clampDelta(0.1f), EPSILON);
+        assertEquals(0.9f, Timeline.clampDelta(0.9f), EPSILON);
+        assertEquals(1f, Timeline.clampDelta(1f), EPSILON);
+        assertEquals(1f, Timeline.clampDelta(2f), EPSILON);
+    }
+
     private void assertRGBA(Color color, int r, int g, int b, int a) {
         assertEquals(r, color.getRed());
         assertEquals(g, color.getGreen());

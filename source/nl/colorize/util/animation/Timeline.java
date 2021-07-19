@@ -357,4 +357,11 @@ public class Timeline implements Animatable {
         
         return interpolationMethod.interpolate(prev.getValue(), next.getValue(), relativeDelta);
     }
+
+    /**
+     * Clamps the specified value to a range between 0.0 and 1.0
+     */
+    protected static float clampDelta(float delta) {
+        return Math.min(Math.max(delta, 0f), 1f);
+    }
 }
