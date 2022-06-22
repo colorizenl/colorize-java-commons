@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize MultimediaLib
-// Copyright 2009-2021 Colorize
+// Copyright 2009-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -284,8 +284,8 @@ public class CommandLineArgumentParser {
     }
 
     private File parseFilePath(String path) {
-        if (path.isEmpty()) {
-            throw new CommandLineInterfaceException("Empty file path: " + path);
+        if (path == null || path.isEmpty()) {
+            return null;
         }
 
         if (path.startsWith("~/")) {

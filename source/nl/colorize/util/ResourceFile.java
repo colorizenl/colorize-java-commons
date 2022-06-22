@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,6 +8,8 @@ package nl.colorize.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -90,13 +92,25 @@ public final class ResourceFile {
     }
     
     /**
-     * Opens a stream to the resource file represented by this file handle. The
-     * locations that are searched depend on the platform, and is implemented by
-     * {@link Platform#openResourceFile(String)}.
-     * @throws IOException if an I/O error occurs while reading the file.
+     * Opens a stream to the resource file represented by this file handle.
+     *
+     * @throws FileNotFoundException if an I/O error occurs while reading the file.
      */
-    public InputStream openStream() throws IOException {
-        return Platform.openResourceFile(path);
+    public InputStream openStream() throws FileNotFoundException {
+        ClassLoader classLoader = ResourceFile.class.getClassLoader();
+        InputStream inClassPath = classLoader.getResourceAsStream(path);
+
+        if (inClassPath != null) {
+            return inClassPath;
+        }
+
+        File inFileSystem = new File(path);
+
+        if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
+            return new FileInputStream(inFileSystem);
+        }
+
+        throw new FileNotFoundException("Resource file not found: " + path);
     }
     
     /**
@@ -149,9 +163,9 @@ public final class ResourceFile {
      * Returns true if the resource file exists in one of the searched locations.
      */
     public boolean exists() {
-        try {
-            return openStream() != null;
-        } catch (IOException | IllegalStateException e) {
+        try (InputStream ignored = openStream()) {
+            return true;
+        } catch (IOException e) {
             return false;
         }
     }

@@ -1,11 +1,14 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import nl.colorize.util.animation.Animatable;
+
+import javax.swing.JPanel;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -13,9 +16,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
-import javax.swing.JPanel;
-
-import nl.colorize.util.animation.Animatable;
 
 /**
  * A circular progressbar commonly used in web based AJAX applications. The look
@@ -130,11 +130,11 @@ public class CircularLoader extends JPanel implements Animatable {
         
         int offsetX = size / 2;
         int offsetY = size / 2;
-        int outerRadius = Math.min(size, size) / 2 - 2;
+        int outerRadius = size / 2 - 2;
         int innerRadius = outerRadius / 2 + 1;
                 
         for (int i = 0; i < NUM_LINES; i++) {
-            float angle = (float) Math.toRadians(i * (360 / NUM_LINES));
+            float angle = (float) Math.toRadians(i * (360.0 / NUM_LINES));
             int startX = (int) (Math.cos(angle) * outerRadius);
             int startY = (int) (Math.sin(angle) * outerRadius);
             int endX = (int) (Math.cos(angle) * innerRadius);

@@ -1,11 +1,17 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.animation.Interpolation;
+import nl.colorize.util.animation.Timeline;
+
+import javax.swing.JComponent;
+import javax.swing.JPanel;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -16,13 +22,6 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-
-import nl.colorize.util.LogHelper;
-import nl.colorize.util.animation.Interpolation;
-import nl.colorize.util.animation.Timeline;
 
 /**
  * Panel that contains a number of vertically stacked sub-panels, which can
@@ -212,7 +211,7 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
             timeline.addKeyFrame(0f, currentHeight);
             timeline.addKeyFrame(ANIMATION_DURATION, expanded ? fullHeight : 0);
 
-            animator.play(timeline).onFrame(anim -> {
+            animator.play(timeline, dt -> {
                 currentHeight = Math.round(timeline.getValue());
                 detailPanel.revalidate();
             });

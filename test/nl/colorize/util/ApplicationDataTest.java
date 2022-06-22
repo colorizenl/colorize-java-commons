@@ -1,12 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -36,7 +37,7 @@ class ApplicationDataTest {
 
     @Test
     void deserializeProperties() {
-        ApplicationData data = new ApplicationData("a=b\nc=3");
+        ApplicationData data = new ApplicationData(ImmutableMap.of("a", "b", "c", "3"));
 
         assertEquals("b", data.get("a", ""));
         assertEquals(3, data.get("c", 0));

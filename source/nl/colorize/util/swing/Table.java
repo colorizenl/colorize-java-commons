@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -123,9 +123,9 @@ public class Table<R> extends JPanel implements TableModel {
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
         Preconditions.checkArgument(rowIndex >= 0 && columnIndex >= 0 && columnIndex < columns.size(),
-                "Invalid cell");
+            "Invalid cell");
         Preconditions.checkArgument(rowIndex < rows.size(),
-                "Cannot use setValueAt(...) to insert rows, use addRow(...) instead");
+            "Cannot use setValueAt(...) to insert rows, use addRow(...) instead");
         
         List<String> rowCells = rows.get(rowIndex).cells;
         rowCells.set(columnIndex, value.toString());
@@ -154,7 +154,7 @@ public class Table<R> extends JPanel implements TableModel {
     public void addRow(R key, List<String> data) {
         Preconditions.checkArgument(key != null, "Rows keys cannot be null");
         Preconditions.checkArgument(data.size() == columns.size(),
-                "Invalid number of columns: " + data.size());
+            "Invalid number of columns: " + data.size());
         
         rows.add(new Row<R>(key, replaceNulls(data)));
         fireTableEvent(rows.size() - 1, TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT);

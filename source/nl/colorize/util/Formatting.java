@@ -1,22 +1,19 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 
-import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
-import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
 /**
@@ -26,8 +23,6 @@ import java.util.regex.Pattern;
  */
 public final class Formatting {
 
-    private static DynamicResourceBundle durationsBundle;
-
     private static final String YYYYMMDD = "yyyyMMdd";
     private static final String YYYY_MM_DD = "yyyy-MM-dd";
     private static final String YYYY_MM_DD_TIME = "yyyy-MM-dd HH:mm";
@@ -35,25 +30,6 @@ public final class Formatting {
 
     private static final Pattern WORD_SEPARATOR_PATTERN = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR_PATTERN).omitEmptyStrings();
-
-    private static final ResourceFile DURATIONS_BUNDLE_FILE =
-        new ResourceFile("custom-swing-components.properties");
-    private static final long MILLIS_IN_HOUR = 3_600_000L;
-    private static final long MILLIS_IN_DAY = 24L * MILLIS_IN_HOUR;
-
-    // Number of milliseconds in each time unit. Note that these values are an
-    // apporoximation, they are not intended to be exact. The values for month
-    // and year in particular are not that accurate, but since this is only used
-    // for human-readable text labels the error margin is acceptable.
-    private static final Map<String,Long> TIME_UNITS = new ImmutableMap.Builder<String,Long>()
-        .put("SECOND", 1000L)
-        .put("MINUTE", 60_000L)
-        .put("HOUR", MILLIS_IN_HOUR)
-        .put("DAY", MILLIS_IN_DAY)
-        .put("WEEK", MILLIS_IN_DAY * 7L)
-        .put("MONTH", MILLIS_IN_DAY * 30L)
-        .put("YEAR", MILLIS_IN_DAY * 365L)
-        .build();
 
     private Formatting() {
     }
@@ -158,6 +134,35 @@ public final class Formatting {
     }
 
     /**
+     * Wrapper around {@code SimpleDateFormat.format}, that removes the need to
+     * create a {@code SimpleDateFormat} instance every single time.
+     *
+     * @deprecated Use {@link DateParser#format(Date, String)} instead.
+     */
+    @Deprecated
+    public static String formatDate(Date input, String dateFormat) {
+        return new SimpleDateFormat(dateFormat).format(input);
+    }
+
+    /**
+     * Wrapper around {@code SimpleDateFormat.parse}, that throws an unchecked
+     * exception instead of a {@link ParseException}.
+     *
+     * @throws IllegalArgumentException if the input string cannot be parsed
+     *         using the provided date format.
+     *
+     * @deprecated Use {@link DateParser#parse(String, String)} instead.
+     */
+    @Deprecated
+    public static Date parseDate(String input, String dateFormat) {
+        try {
+            return new SimpleDateFormat(dateFormat).parse(input);
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Cannot parse date: " + input, e);
+        }
+    }
+
+    /**
      * Utility method to parse a date that has been formatted using the ISO 8601
      * date format. This allows for multiple precision levels, so the following
      * formats are supported:
@@ -170,7 +175,10 @@ public final class Formatting {
      *
      * @throws IllegalArgumentException if the date's notation is not included
      *         in the list above..
+     *
+     * @deprecated Use {@link DateParser#parse(String)} instead.
      */
+    @Deprecated
     public static Date toDate(String date) {
         Map<Integer, String> formats = ImmutableMap.of(
             19, YYYY_MM_DD_SECONDS,
@@ -193,77 +201,21 @@ public final class Formatting {
                 " using format " + formatString);
         }
     }
-    
-    /**
-     * Formats the difference between two dates, using text labels from the
-     * specified resource bundle.
-     */
-    public static String formatDateDiff(Date first, Date second, ResourceBundle bundle) {
-        long diff = Math.abs(second.getTime() - first.getTime());
-        String timeUnit = getAppropriateTimeUnit(diff);
-        long diffInUnit = diff / TIME_UNITS.get(timeUnit);
-        
-        if (bundle instanceof DynamicResourceBundle) {
-            return ((DynamicResourceBundle) bundle).getString(timeUnit, diffInUnit);
-        } else {
-            return new DynamicResourceBundle(bundle).getString(timeUnit, diffInUnit);
-        }
-    }
-    
-    private static String getAppropriateTimeUnit(long diff) {
-        String timeUnit = "SECOND";
-        for (Map.Entry<String,Long> entry : TIME_UNITS.entrySet()) {
-            if (Math.abs(diff) >= 2L * entry.getValue()) {
-                timeUnit = entry.getKey();
-            }
-        }
-        return timeUnit;
-    }
 
     /**
-     * Formats the difference between a date and now, using text labels from
-     * the specified resource bundle.
+     * Returns the hexcode for the specified byte array. For example, 0xDEADBEEF
+     * will return a hexcode of 6465616462656566.
      */
-    public static String formatDateDiff(Date date, ResourceBundle bundle) {
-        return formatDateDiff(date, new Date(), bundle);
-    }
-    
-    /**
-     * Formats the difference between two dates, using text labels from the
-     * default resource bundle.
-     */
-    public static String formatDateDiff(Date first, Date second) {
-        return formatDateDiff(first, second, getDurationsBundle());
-    }
-    
-    /**
-     * Formats the difference between a date and now, using text labels from
-     * the default resource bundle.
-     */
-    public static String formatDateDiff(Date date) {
-        return formatDateDiff(date, getDurationsBundle());
-    }
-
-    private static DynamicResourceBundle getDurationsBundle() {
-        if (durationsBundle == null) {
-            durationsBundle = new DynamicResourceBundle(DURATIONS_BUNDLE_FILE, Charsets.UTF_8);
+    public static String toHexString(byte[] bytes) {
+        // Implementation based on
+        // http://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
+        char[] hexArray = "0123456789ABCDEF".toCharArray();
+        char[] hexChars = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; i++) {
+            int v = bytes[i] & 0xFF;
+            hexChars[i * 2] = hexArray[v >>> 4];
+            hexChars[i * 2 + 1] = hexArray[v & 0x0F];
         }
-        return durationsBundle;
-    }
-
-    /**
-     * Formats a file's location in a human readable format containing the file's
-     * name and parent directory. This can be used to communicate file locations
-     * in a user interface to communicate the file's location without having to
-     * display the file's full path.
-     * @deprecated Should be replaced by application-specific logic.
-     */
-    @Deprecated
-    public static String formatHumanReadableFileLocation(File file) {
-        File parent = file.getParentFile();
-        if (parent == null) {
-            return file.getName();
-        }
-        return parent.getName() + " \u00BB " + file.getName(); 
+        return new String(hexChars);
     }
 }

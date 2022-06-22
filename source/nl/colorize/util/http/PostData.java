@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -12,8 +12,9 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import nl.colorize.util.Escape;
 
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -82,11 +83,11 @@ public class PostData {
             if (buffer.length() > 0) {
                 buffer.append('&');
             }
-            buffer.append(Escape.urlEncode(entry.getKey(), charset));
+            buffer.append(URLEncoder.encode(entry.getKey(), charset));
             if (!entry.getKey().isEmpty()) {
                 buffer.append('=');
             }
-            buffer.append(Escape.urlEncode(entry.getValue(), charset));
+            buffer.append(URLEncoder.encode(entry.getValue(), charset));
         }
 
         return buffer.toString();
@@ -183,7 +184,7 @@ public class PostData {
         for (String param : POST_DATA_SPLITTER.split(encoded)) {
             String paramName = param.substring(0, param.indexOf('='));
             String paramValue = param.substring(param.indexOf('=') + 1);
-            data.put(Escape.urlDecode(paramName, charset), Escape.urlDecode(paramValue, charset));
+            data.put(URLDecoder.decode(paramName, charset), URLDecoder.decode(paramValue, charset));
         }
 
         return new PostData(data);

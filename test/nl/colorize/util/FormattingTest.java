@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,7 +8,6 @@ package nl.colorize.util;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -68,26 +67,14 @@ public class FormattingTest {
     }
 
     @Test
-    public void testFormatDiff() {
-        Date base = Formatting.toDate("2010-01-01 12:00:00");
-
-        assertEquals("seconds ago", Formatting.formatDateDiff(asDate("2010-01-01 12:00:00"), base));
-        assertEquals("5 minutes ago", Formatting.formatDateDiff(asDate("2010-01-01 12:05:00"), base));
-        assertEquals("8 hours ago", Formatting.formatDateDiff(asDate("2010-01-01 20:00:00"), base));
-        assertEquals("2 days ago", Formatting.formatDateDiff(asDate("2010-01-03 12:00:00"), base));
-        assertEquals("2 weeks ago", Formatting.formatDateDiff(asDate("2010-01-15 12:00:00"), base));
-        assertEquals("6 months ago", Formatting.formatDateDiff(asDate("2010-07-15 00:00:00"), base));
-        assertEquals("100 years ago", Formatting.formatDateDiff(asDate("2110-01-01 12:00:00"), base));
+    public void testToHexString() {
+        assertEquals("", Formatting.toHexString(new byte[0]));
+        assertEquals("61", Formatting.toHexString(new byte[] {'a'}));
+        assertEquals("61313233", Formatting.toHexString(new byte[] {'a', '1', '2', '3'}));
+        assertEquals("6465616462656566",
+            Formatting.toHexString(new byte[] {'d', 'e', 'a', 'd', 'b', 'e', 'e', 'f'}));
     }
 
-    @Test
-    public void testFormatHumanReadableFileLocation() {
-        assertEquals("a \u00BB b.txt", Formatting.formatHumanReadableFileLocation(new File("a/b.txt")));
-        assertEquals("a \u00BB b.txt", Formatting.formatHumanReadableFileLocation(new File("/a/b.txt")));
-        assertEquals("b \u00BB c.txt", Formatting.formatHumanReadableFileLocation(new File("/a/b/c.txt")));
-        assertEquals("a.txt", Formatting.formatHumanReadableFileLocation(new File("a.txt")));
-    }
-    
     private Date asDate(String date) {
         return Formatting.toDate(date);
     }

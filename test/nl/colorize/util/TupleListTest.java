@@ -1,15 +1,20 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TupleListTest {
 
@@ -48,5 +53,21 @@ class TupleListTest {
         assertEquals("[(a, 2), (b, 3)]", list.toString());
         assertEquals("[(a, 2)]", immutableVersion.toString());
         assertThrows(UnsupportedOperationException.class, () -> immutableVersion.add("c", 4));
+    }
+
+    @Test
+    void fromStream() {
+        Tuple<String, Integer> a = Tuple.of("a", 2);
+        Tuple<String, Integer> b = Tuple.of("b", 3);
+        Stream<Tuple<String, Integer>> stream = ImmutableList.of(a, b).stream();
+
+        assertEquals("[(a, 2), (b, 3)]", TupleList.from(stream).toString());
+    }
+
+    @Test
+    void fromMap() {
+        Map<String, Integer> map = ImmutableMap.of("a", 2, "b", 3);
+
+        assertEquals("[(a, 2), (b, 3)]", TupleList.from(map).toString());
     }
 }

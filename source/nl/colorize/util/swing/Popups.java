@@ -1,14 +1,14 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
 import com.google.common.collect.ImmutableList;
-import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.LogHelper;
+import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -37,7 +37,7 @@ import java.util.logging.Logger;
 public final class Popups {
     
     public static final int MESSAGE_WIDTH = 350;
-    private static final DynamicResourceBundle BUNDLE = SwingUtils.getCustomComponentsBundle();
+    private static final TranslationBundle BUNDLE = SwingUtils.getCustomComponentsBundle();
     private static final String DEFAULT_OK = BUNDLE.getString("Popups.ok");
     private static final String DEFAULT_CANCEL = BUNDLE.getString("Popups.cancel");
     private static final Logger LOGGER = LogHelper.getLogger(Popups.class);

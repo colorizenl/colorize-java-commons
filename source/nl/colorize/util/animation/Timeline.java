@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -356,12 +356,5 @@ public class Timeline implements Animatable {
         float relativeDelta = relativePlayhead / relativeDuration;
         
         return interpolationMethod.interpolate(prev.getValue(), next.getValue(), relativeDelta);
-    }
-
-    /**
-     * Clamps the specified value to a range between 0.0 and 1.0
-     */
-    protected static float clampDelta(float delta) {
-        return Math.min(Math.max(delta, 0f), 1f);
     }
 }

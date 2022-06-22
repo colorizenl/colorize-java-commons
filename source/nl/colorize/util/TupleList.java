@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -12,7 +12,9 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Convenience class that can be used as a shorthand for creating a list of
@@ -79,6 +81,17 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
 
     public static <L, R> TupleList<L, R> create() {
         return new TupleList<>();
+    }
+
+    public static <L, R> TupleList<L, R> from(Stream<Tuple<L, R>> tuples) {
+        return new TupleList<>(tuples.collect(Collectors.toList()));
+    }
+
+    public static <L, R> TupleList<L, R> from(Map<L, R> values) {
+        List<Tuple<L, R>> tuples = values.entrySet().stream()
+            .map(entry -> Tuple.of(entry.getKey(), entry.getValue()))
+            .collect(Collectors.toList());
+        return new TupleList<>(tuples);
     }
 
     /**

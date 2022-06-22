@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,7 +34,8 @@ public final class TextUtils {
     public static final Splitter LINE_SPLITTER = Splitter.on("\n");
     public static final Joiner LINE_JOINER = Joiner.on("\n");
     
-    private static final CharMatcher TEXT_MATCHER = Escape.CHARACTER.or(CharMatcher.whitespace());
+    private static final CharMatcher TEXT_MATCHER =
+        CharMatcher.forPredicate(Character::isLetterOrDigit).or(CharMatcher.whitespace());
 
     private TextUtils() {
     }
@@ -235,6 +237,24 @@ public final class TextUtils {
      */
     public static List<String> matchLines(String input, Pattern regex) {
         return matchLines(input, regex, 0);
+    }
+
+    /**
+     * Runs a regular expression on all lines within the specified string, then
+     * invokes a callback function for every match.
+     */
+    public static void matchLines(String input, Pattern regex, Consumer<List<String>> callback) {
+        for (String line : LINE_SPLITTER.split(input)) {
+            Matcher matcher = regex.matcher(line);
+            if (!line.isBlank() && matcher.matches()) {
+                List<String> groups = new ArrayList<>();
+                for (int i = 0; i <= matcher.groupCount(); i++) {
+                    groups.add(matcher.group(i));
+                }
+
+                callback.accept(groups);
+            }
+        }
     }
 
     /**

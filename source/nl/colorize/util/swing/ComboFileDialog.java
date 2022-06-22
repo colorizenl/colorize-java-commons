@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -11,8 +11,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Chars;
-import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.Platform;
+import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -36,7 +36,7 @@ public class ComboFileDialog {
     private File startDirectory;
     private FileExtFilter filter;
     
-    protected DynamicResourceBundle bundle;
+    protected TranslationBundle bundle;
     
     private static final Charset FILENAME_CHARSET = Charsets.US_ASCII;
     private static final List<Character> ILLEGAL_CHARS = Chars.asList('\\', '/', ':', ';', '*', '|', '<', '>');

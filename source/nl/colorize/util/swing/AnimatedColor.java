@@ -1,16 +1,16 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import java.awt.Color;
-
 import nl.colorize.util.animation.Animatable;
 import nl.colorize.util.animation.Interpolation;
 import nl.colorize.util.animation.Timeline;
+
+import java.awt.Color;
 
 /**
  * Color with red, green, blue, and alpha components that change over time. 
@@ -122,7 +122,7 @@ public class AnimatedColor extends Color implements Animatable {
         return ((getAlpha() & 0xFF) << 24) 
                 | ((getRed() & 0xFF) << 16) 
                 | ((getGreen() & 0xFF) << 8) 
-                | ((getBlue() & 0xFF) << 0);
+                | ((getBlue() & 0xFF));
     }
     
     @Override

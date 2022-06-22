@@ -1,13 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
 import com.google.common.collect.ImmutableList;
-import nl.colorize.util.DynamicResourceBundle;
+import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class PropertyEditor extends JPanel {
 
     private Map<String, String> properties;
-    private DynamicResourceBundle bundle;
+    private TranslationBundle bundle;
     private List<Consumer<Map<String, String>>> listeners;
 
     private Table<String> table;

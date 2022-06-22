@@ -1,17 +1,16 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import nl.colorize.util.cli.CommandRunner;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.Version;
+import nl.colorize.util.cli.CommandRunner;
 
 import javax.swing.JFrame;
 import javax.swing.UIDefaults;
@@ -22,10 +21,8 @@ import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Taskbar;
-import java.awt.Window;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +50,6 @@ import java.util.logging.Logger;
  */
 public final class MacIntegration {
 
-    private static AppleJavaExtensionsProxy appleExtensionsProxy;
-    
     private static final Version MACOS_YOSEMITE = Version.parse("10.10");
     private static final Version MACOS_BIG_SUR = Version.parse("10.16");
 
@@ -104,36 +99,6 @@ public final class MacIntegration {
     
     private static boolean isAtLeast(Version minVersion) {
         return Platform.isMac() && getMacOSVersion().isAtLeast(minVersion);
-    }
-    
-    /**
-     * Returns true if the used JRE supports the Apple Java extensions. These
-     * extensions were introduced in macOS Snow Leopard (an older version used
-     * in older macOS versions is no longer supported by this class). These APIs
-     * were a part of the macOS version of the JRE in Java 5-8, but have been
-     * removed from the JRE as of Java 9. However, it can still be accessed
-     * through reflection, though this will result in a warning.
-     *
-     * @deprecated The Apple Java extensions should no longer be accessed, even
-     *             using reflection, and should be phased out. The only reason
-     *             some of these classes are still used is because not all
-     *             functionality can be accessed through AWT or Swing.
-     */
-    @Deprecated
-    private static boolean supportsAppleJavaExtensions() {
-        return Platform.isMac();
-    }
-
-    @Deprecated
-    private static synchronized AppleJavaExtensionsProxy getAppleExtensionsProxy() {
-        Preconditions.checkState(supportsAppleJavaExtensions(),
-            "Apple Java extensions are not supported on this platform");
-
-        if (appleExtensionsProxy == null) {
-            appleExtensionsProxy = new AppleJavaExtensionsProxy();
-        }
-
-        return appleExtensionsProxy;
     }
 
     /**
@@ -283,48 +248,10 @@ public final class MacIntegration {
      * as the user clicking the green window button.
      */
     public static void goFullScreen(JFrame window) {
-        if (supportsAppleJavaExtensions()) {
-            getAppleExtensionsProxy().invokeApplication("requestToggleFullScreen", Window.class, window);
-        }
-    }
-
-    /**
-     * Accesses the Apple Java extensions through reflection. The reason that 
-     * reflection is used is that these APIs are only available on specific
-     * versions of the JRE on macOS.
-     *
-     * @deprecated Direct usage of the Apple extensions through reflection
-     *             will be phased out. These classes are still used in this
-     *             way for the reasons that are outlined in the documentation
-     *             for {@link #supportsAppleJavaExtensions()}.
-     */
-    @Deprecated
-    private static class AppleJavaExtensionsProxy {
-
-        private Object application;
-
-        public AppleJavaExtensionsProxy() {
-            try {
-                Class<?> applicationClass = Class.forName("com.apple.eawt.Application");
-                Method getApplication = applicationClass.getMethod("getApplication");
-                application = getApplication.invoke(null);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Error while initializing Apple Java extensions", e);
-            }
-        }
-
-        public Object invokeApplication(String methodName, Class<?>[] argTypes, Object[] argValues) {
-            try {
-                Method appMethod = application.getClass().getMethod(methodName, argTypes);
-                return appMethod.invoke(application, argValues);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Exception while calling Apple method", e);
-                return null;
-            }
-        }
-
-        public Object invokeApplication(String methodName, Class<?> argType, Object argValue) {
-            return invokeApplication(methodName, new Class[] { argType }, new Object[] { argValue });
-        }
+        //TODO this was previously possible via the Apple Java extensions,
+        //     but this no longer works as of Java 17. There is also no
+        //     replacement for "real" Mac fullscreen mode.
+        //     See https://bugs.openjdk.java.net/browse/JDK-8228638
+        window.setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 }

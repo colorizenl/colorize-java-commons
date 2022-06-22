@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,11 +8,9 @@ package nl.colorize.util;
 
 import com.google.common.collect.ImmutableMap;
 
+import javax.swing.filechooser.FileSystemView;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -76,9 +74,10 @@ public final class Platform {
         .put("10.16", "Big Sur")
         .put("11.", "Big Sur")
         .put("12.", "Monterey")
+        .put("13.", "Ventura")
         .build();
     
-    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("11.0.0");
+    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
     private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
 
     private Platform() {
@@ -214,19 +213,7 @@ public final class Platform {
     public static boolean isTeaVM() {
         return teaVM.get();
     }
-    
-    /**
-     * Returns true if the application is running in Java Web Start. 
-     * @deprecated Java Web Start is no longer supported by this library. As
-     *             support by modern browsers is also far from guaranteed it
-     *             is recommended to no use Web Start as a deployment method.
-     */
-    @Deprecated
-    public static boolean isWebstartEnabled() {
-        String webstartVersion = System.getProperty("javawebstart.version");
-        return webstartVersion != null && !webstartVersion.isEmpty();
-    }
-    
+
     /**
      * Returns true if the application is running inside of the Mac app sandbox.
      * When running inside of the sandbox access to system resources is limited 
@@ -294,18 +281,12 @@ public final class Platform {
     
     private static Version getAndroidJavaVersion() {
         Version androidVersion = getAndroidVersion();
-        Version froyo = Version.parse("2.2"); // API level 8
-        Version kitkat = Version.parse("4.4"); // API level 19
         Version nougat = Version.parse("7.0"); // API level 24
         
         if (androidVersion.isAtLeast(nougat)) {
             return Version.parse("1.8.0-android");
-        } else if (androidVersion.isAtLeast(kitkat)) {
-            return Version.parse("1.7.0-android");
-        } else if (androidVersion.isAtLeast(froyo)) {
-            return Version.parse("1.6.0-android");
         } else {
-            return Version.parse("1.5.0-android");
+            return Version.parse("1.7.0-android");
         }
     }
     
@@ -383,7 +364,7 @@ public final class Platform {
      * @throws UnsupportedOperationException if the platform does not allow
      *         application data (e.g. Google App Engine).
      */
-    protected static File getApplicationDataDirectory(String app) {
+    public static File getApplicationDataDirectory(String app) {
         if (isWindows()) {
             File applicationDataRoot = new File(System.getenv("APPDATA"));
             return new File(applicationDataRoot, app);
@@ -474,14 +455,8 @@ public final class Platform {
     }
 
     private static File getWindowsMyDocumentsDirectory() {
-        // There is no API for this other than using the Swing file dialog.
-        // This has to be done through reflection since this class is also
-        // used on Android and Google App Engine.
         try {
-            Class<?> fileSystemViewClass = Class.forName("javax.swing.filechooser.FileSystemView");
-            Object fileSystemView = fileSystemViewClass.getMethod("getFileSystemView").invoke(null);
-            return (File) fileSystemView.getClass().getMethod("getDefaultDirectory")
-                .invoke(fileSystemView);
+            return FileSystemView.getFileSystemView().getDefaultDirectory();
         } catch (Exception e) {
             return getUserHomeDir();
         }
@@ -535,27 +510,12 @@ public final class Platform {
     /**
      * Returns the platform-specific character(s) used for newlines. This is 
      * "\r\n" on Windows and "\n" on nearly all other platforms.
+     *
+     * @deprecated This method is no longer necessary since
+     *             {@link System#lineSeparator()} was introduced in Java 7.
      */
+    @Deprecated
     public static String getLineSeparator() {
         return System.lineSeparator();
-    }
-
-    /**
-     * Opens the resource file located at the specified path.
-     *
-     * @throws IOException if the file cannot be located.
-     */
-    protected static InputStream openResourceFile(String path) throws IOException {
-        InputStream inClassPath = Platform.class.getClassLoader().getResourceAsStream(path);
-        if (inClassPath != null) {
-            return inClassPath;
-        }
-
-        File inFileSystem = new File(path);
-        if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
-            return new FileInputStream(inFileSystem);
-        }
-
-        throw new FileNotFoundException("Resource file not found: " + path);
     }
 }

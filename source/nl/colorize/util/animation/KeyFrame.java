@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -44,21 +44,17 @@ public class KeyFrame implements Comparable<KeyFrame> {
      * Compares key frames based on their position on the timeline
      */
     public int compareTo(KeyFrame other) {
-        if (time < other.time) {
-            return -1;
-        } else if (time > other.time) {
-            return 1;
-        } else {
-            return 0;
-        }
+        return Float.compare(time, other.time);
     }
     
     @Override
     public boolean equals(Object o) {
         if (o instanceof KeyFrame) {
-            return compareTo((KeyFrame) o) == 0;
+            KeyFrame other = (KeyFrame) o;
+            return compareTo(other) == 0;
+        } else {
+            return false;
         }
-        return false;
     }
     
     @Override

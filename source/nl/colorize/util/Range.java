@@ -1,18 +1,19 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -33,19 +34,29 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
 
     private int start;
     private int end;
-    private boolean backwards;
-    
+
     private List<Integer> cachedList;
 
     /**
      * Creates a range with all integers between {@code start} (inclusive) and 
      * {@code end} (also inclusive). If {@code start} and {@code end} are equal
      * the range will consist of a single number.
+     *
+     * @throws IllegalArgumentException if the value for {@code start} is greater
+     *         than the value for {@code end}.
      */
     public Range(int start, int end) {
-        this.start = Math.min(start, end);
-        this.end = Math.max(start, end);
-        this.backwards = end < start;
+        Preconditions.checkArgument(end >= start,
+            "Invalid range: " + start + ".." + end);
+
+        this.start = start;
+        this.end = end;
+
+        if (start == end) {
+            cachedList = ImmutableList.of(start);
+        } else {
+            cachedList = ImmutableList.copyOf(IntStream.range(start, end + 1).iterator());
+        }
     }
     
     /**
@@ -94,24 +105,26 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
     public boolean intersects(Range r) {
         return r.start <= end && r.end >= start;
     }
-    
+
+    /**
+     * Returns the index of the specified value within this range. For example,
+     * for the range (2..7) the value 2 will have an index of 0, the value 3
+     * will have an index of 1, and so on.
+     *
+     * @throws IllegalArgumentException if the value is not included within
+     *         this range.
+     */
+    public int index(int value) {
+        Preconditions.checkArgument(value >= start && value <= end,
+            "Value outside of range: " + value);
+
+        return value - start;
+    }
+
     /**
      * Returns a list that contains all integers within this range.
      */
     public List<Integer> toList() {
-        if (cachedList == null) {
-            List<Integer> values = new ArrayList<>();
-            for (int i = start; i <= end; i++) {
-                values.add(Integer.valueOf(i));
-            }
-
-            if (backwards) {
-                Collections.reverse(values);
-            }
-
-            cachedList = ImmutableList.copyOf(values);
-        }
-        
         return cachedList;
     }
     
@@ -119,21 +132,16 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
      * Returns an array that contains all integers within this range.
      */
     public int[] toArray() {
-        List<Integer> list = toList();
-        int[] array = new int[list.size()];
-        for (int i = 0; i < array.length; i++) {
-            array[i] = list.get(i);
-        }
-        return array;
+        return Ints.toArray(cachedList);
     }
 
     @Override
     public Iterator<Integer> iterator() {
-        return toList().iterator();
+        return cachedList.iterator();
     }
 
     public Stream<Integer> stream() {
-        return toList().stream();
+        return cachedList.stream();
     }
     
     /**
@@ -157,8 +165,9 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
         if (o instanceof Range) {
             Range other = (Range) o;
             return start == other.start && end == other.end;
+        } else {
+            return false;
         }
-        return false;
     }
     
     @Override
@@ -172,5 +181,37 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
             return String.valueOf(start);
         }
         return start + ".." + end;
+    }
+
+    /**
+     * Creates a range that is based on the minimum and maximum values from the
+     * specified list.
+     *
+     * @throws IllegalArgumentException if the list is empty.
+     */
+    public static Range span(List<Integer> list) {
+        return span(list.stream().mapToInt(value -> value));
+    }
+
+    /**
+     * Creates a range that is based on the minimum and maximum values from the
+     * specified stream.
+     *
+     * @throws IllegalArgumentException if the stream is empty.
+     */
+    public static Range span(IntStream stream) {
+        Iterator<Integer> iterator = stream.iterator();
+        Preconditions.checkArgument(iterator.hasNext(), "Cannnot create empty range");
+
+        int min = iterator.next();
+        int max = min;
+
+        while (iterator.hasNext()) {
+            int value = iterator.next();
+            min = Math.min(value, min);
+            max = Math.max(value, max);
+        }
+
+        return new Range(min, max);
     }
 }

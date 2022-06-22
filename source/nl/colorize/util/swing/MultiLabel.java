@@ -1,18 +1,18 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
+import javax.swing.JComponent;
+import javax.swing.JPanel;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import javax.swing.JComponent;
-import javax.swing.JPanel;
 
 /**
  * Component similar to a {@link javax.swing.JLabel}, but it can display text
@@ -92,7 +92,7 @@ public class MultiLabel extends JPanel {
             int preferredHeight = height + 2 * border;
             setPreferredSize(new Dimension(width, preferredHeight));
             if (getParent() instanceof JComponent) {
-                ((JComponent) getParent()).revalidate();
+                getParent().revalidate();
             }
         }
     }
@@ -116,10 +116,9 @@ public class MultiLabel extends JPanel {
         BufferedImage scratchImage = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = scratchImage.createGraphics();
         g2.setFont(getFont());
-        int estimate = Utils2D.drawMultiLineString(g2, label, border, border, width - 
-                border * 2) + 2 * border;
+        int textHeight = Utils2D.drawMultiLineString(g2, label, border, border, width - border * 2);
         g2.dispose();
-        return estimate;
+        return textHeight + 2 * border;
     }
     
     public void recalculateHeight(int width) {

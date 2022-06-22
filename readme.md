@@ -5,13 +5,16 @@ Java library containing utility classes for web, desktop, and mobile application
 all Java-based applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
 The library provides the following features:
 
-- an animation framework that includes scheduling and keyframe animation
-- a component library for Swing applications
-- a command line argument parser
-- assists in sending HTTP requests from applications
-- reading and writing CSV
-- automatic application logging configuration
-- various other utility classes
+- An animation framework including keyframe animation
+- A component library for Swing applications
+- A command line argument parser
+- A lightweight translation framework
+- Assists in sending HTTP requests from applications
+- Reading and writing CSV
+- Utilities for working with statistics
+- Automatic application logging configuration
+- A mechanism for application data and preferences
+- Various other utility classes
 
 The library focuses on portability, and supports a wide variety of platforms and environments:
 
@@ -33,13 +36,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2021.10</version>
+        <version>2022.6</version>
     </dependency>  
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        compile "nl.colorize:colorize-java-commons:2021.10"
+        implementation "nl.colorize:colorize-java-commons:2022.6"
     }
     
 Documentation
@@ -98,12 +101,13 @@ The following Gradle build tasks are available:
 - `gradle test` runs all unit tests
 - `gradle coverage` runs all unit tests and reports on test coverage
 - `gradle javadoc` generates the JavaDoc API documentation
+- `gradle dependencyUpdates` checks for and reports on library updates.
 - `gradle -b build-mavencentral.gradle publish` publishes to Maven central (requires account) 
 
 License
 -------
 
-Copyright 2007-2021 Colorize
+Copyright 2007-2022 Colorize
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.

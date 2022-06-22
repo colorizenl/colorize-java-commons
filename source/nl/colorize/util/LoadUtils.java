@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,6 +8,7 @@ package nl.colorize.util;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
@@ -32,11 +33,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -254,7 +253,8 @@ public final class LoadUtils {
      *
      * @throws IOException if an I/O error occurs while writing. 
      */
-    public static void saveProperties(Properties properties, File dest, Charset charset) throws IOException {
+    public static void saveProperties(Properties properties, File dest, Charset charset)
+            throws IOException {
         PrintWriter writer = new PrintWriter(dest, charset.displayName());
         saveProperties(properties, writer);
     }
@@ -274,17 +274,10 @@ public final class LoadUtils {
      * @throws IllegalArgumentException if the provided list is empty.
      */
     public static FilenameFilter getFileExtensionFilter(String... extensions) {
-        if (extensions.length == 0) {
-            throw new IllegalArgumentException("No file extensions provided");
-        }
-        
-        final List<String> extensionList = ImmutableList.copyOf(extensions);
-        return new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                String ext = Files.getFileExtension(name).toLowerCase();
-                return extensionList.contains(ext);
-            }
-        };
+        Preconditions.checkArgument(extensions.length > 0, "No file extensions provided");
+
+        List<String> extensionList = ImmutableList.copyOf(extensions);
+        return (dir, name) -> extensionList.contains(Files.getFileExtension(name).toLowerCase());
     }
     
     /**
@@ -293,13 +286,8 @@ public final class LoadUtils {
      * a list of supported constructs. 
      */
     public static FilenameFilter getGlobFilter(String globPattern) {
-        final Pattern fileNamePattern = convertGlobPattern(globPattern);
-        return new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                Matcher nameMatcher = fileNamePattern.matcher(name);
-                return nameMatcher.matches();
-            }
-        };
+        Pattern fileNamePattern = convertGlobPattern(globPattern);
+        return (dir, name) -> fileNamePattern.matcher(name).matches();
     }
     
     private static Pattern convertGlobPattern(String globPattern) {
@@ -325,23 +313,15 @@ public final class LoadUtils {
     /**
      * Converts a {@link java.io.FilenameFilter} to a {@link java.io.FileFilter}.
      */
-    public static FileFilter toFileFilter(final FilenameFilter filter) {
-        return new FileFilter() {
-            public boolean accept(File file) {
-                return filter.accept(file.getParentFile(), file.getName());
-            }
-        };
+    public static FileFilter toFileFilter(FilenameFilter filter) {
+        return file -> filter.accept(file.getParentFile(), file.getName());
     }
     
     /**
      * Converts a {@link java.io.FileFilter} to a {@link java.io.FilenameFilter}.
      */
-    public static FilenameFilter toFilenameFilter(final FileFilter filter) {
-        return new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return filter.accept(new File(dir, name));
-            }
-        };
+    public static FilenameFilter toFilenameFilter(FileFilter filter) {
+        return (dir, name) -> filter.accept(new File(dir, name));
     }
     
     /**
@@ -384,7 +364,11 @@ public final class LoadUtils {
     /**
      * Calls {@code Closeables.close()} and logs any {@code IOException}s it 
      * might throw.
+     *
+     * @deprecated Usage of this method should be replaced with try-with-resources
+     *             blocks in new code.
      */
+    @Deprecated
     public static void closeQuietly(Closeable closeable) {
         try {
             Closeables.close(closeable, true);
@@ -435,6 +419,7 @@ public final class LoadUtils {
      * that will be deleted when the JVM exits. The file will have a random
      * name. Note that this method will not actually create the file, it will 
      * just return a {@code File} object pointing to it.
+     *
      * @throws UnsupportedOperationException if the current platform has no
      *         directory for storing temporary files.
      */

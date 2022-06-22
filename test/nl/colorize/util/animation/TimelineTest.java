@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -261,16 +261,6 @@ public class TimelineTest {
         assertTrue(timeline.hasKeyFrameAtPosition(3f));
         assertEquals(30f, timeline.getLastKeyFrame().getValue(), EPSILON);
         assertFalse(timeline.isCompleted());
-    }
-
-    @Test
-    void clampDelta() {
-        assertEquals(0f, Timeline.clampDelta(-2f), EPSILON);
-        assertEquals(0f, Timeline.clampDelta(0f), EPSILON);
-        assertEquals(0.1f, Timeline.clampDelta(0.1f), EPSILON);
-        assertEquals(0.9f, Timeline.clampDelta(0.9f), EPSILON);
-        assertEquals(1f, Timeline.clampDelta(1f), EPSILON);
-        assertEquals(1f, Timeline.clampDelta(2f), EPSILON);
     }
 
     private void assertRGBA(Color color, int r, int g, int b, int a) {

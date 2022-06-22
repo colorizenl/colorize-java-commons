@@ -1,21 +1,19 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.xml;
 
-import java.io.File;
-
 import com.google.common.base.Charsets;
-
+import nl.colorize.util.FileUtils;
+import nl.colorize.util.LoadUtils;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.junit.jupiter.api.Test;
 
-import nl.colorize.util.FileUtils;
-import nl.colorize.util.LoadUtils;
+import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -143,12 +141,12 @@ public class XMLHelperTest {
         
         Document document = XMLHelper.parse(xml);
         
-        assertEquals("b", XPath.parse("/a/b").findFirst(document).getName());
-        assertEquals("test", XPath.parse("/a/b").findText(document));
-        assertNull(XPath.parse("/a/b/c").findFirst(document));
-        assertEquals("c", XPath.parse("//c").findFirst(document).getName());
-        assertEquals(3, XPath.parse("//c").findAll(document).size());
-        assertEquals(0, XPath.parse("//d").findAll(document).size());
+        assertEquals("b", XMLHelper.findFirst(document, "/a/b").getName());
+        assertEquals("test", XMLHelper.findText(document, "/a/b"));
+        assertNull(XMLHelper.findFirst(document, "/a/b/c"));
+        assertEquals("c", XMLHelper.findFirst(document, "//c").getName());
+        assertEquals(3, XMLHelper.findAll(document, "//c").size());
+        assertEquals(0, XMLHelper.findAll(document, "//d").size());
     }
     
     @Test

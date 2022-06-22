@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -9,7 +9,9 @@ package nl.colorize.util;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -137,5 +139,17 @@ public class TextUtilsTest {
         assertTrue(TextUtils.contains("abc", ImmutableList.of("a", "b")));
         assertTrue(TextUtils.contains("bc", ImmutableList.of("a", "b")));
         assertFalse(TextUtils.contains("zz", ImmutableList.of("a", "b")));
+    }
+
+    @Test
+    void matchWithCallback() {
+        Pattern pattern = Pattern.compile("(\\S+) \\S+ (\\S+).*");
+        String input = "one two three four\nfive\n\nsix seven eight nine\nten eleven";
+        List<String> result = new ArrayList<>();
+
+        TextUtils.matchLines(input, pattern,
+            groups -> result.add(groups.get(1) + "/" + groups.get(2)));
+
+        assertEquals(ImmutableList.of("one/three", "six/eight"), result);
     }
 }

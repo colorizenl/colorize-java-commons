@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -12,15 +12,15 @@ package nl.colorize.util.animation;
  * <a href="http://gizma.com/easing/">http://gizma.com/easing/</a>.
  * <p>
  * The JavaDoc for each interpolation method includes a graphical example in
- * ASCII art to visualize the interpolation.
+ * ASCII art to visualize the interpolation curve.
  */
 @FunctionalInterface
 public interface Interpolation {
 
     /**
      * Discrete interpolation.
-     *
-     * <code>
+     * <p>
+     * <pre>
      * . . . . . . . . x
      * . . . . . . . . .
      * . . . . . . . . .
@@ -30,14 +30,14 @@ public interface Interpolation {
      * . . . . . . . . .
      * . . . . . . . . .
      * x x x x x x x x .
-     * </code>
+     * </pre>
      */
     public static final Interpolation DISCRETE = (x0, x1, delta) -> (delta >= 1f) ? x1 : x0;
 
     /**
      * Linear interpolation.
-     *
-     * <code>
+     * <p>
+     * <pre>
      * . . . . . . . . x
      * . . . . . . . x .
      * . . . . . . x . .
@@ -47,16 +47,16 @@ public interface Interpolation {
      * . . x . . . . . .
      * . x . . . . . . .
      * x . . . . . . . .
-     * </code>
+     * </pre>
      */
     public static final Interpolation LINEAR = (x0, x1, delta) -> {
-        return x0 + Timeline.clampDelta(delta) * (x1 - x0);
+        return x0 + clampDelta(delta) * (x1 - x0);
     };
 
     /**
      * Easing interpolation.
-     *
-     * <code>
+     * <p>
+     * <pre>
      * . . . . . . . x x
      * . . . . . . x . .
      * . . . . . . . . .
@@ -66,17 +66,17 @@ public interface Interpolation {
      * . . . x . . . . .
      * . . x . . . . . .
      * x x . . . . . . .
-     * </code>
+     * </pre>
      */
     public static final Interpolation EASE = (x0, x1, delta) -> {
-        float delta2 = 3f - (Timeline.clampDelta(delta) * 2f);
+        float delta2 = 3f - (clampDelta(delta) * 2f);
         return x0 + (delta * delta * delta2) * (x1 - x0);
     };
 
     /**
      * Cubic easing interpolation.
-     *
-     * <code>
+     * <p>
+     * <pre>
      * . . . . . . x x x
      * . . . . . . . . .
      * . . . . . x . . .
@@ -86,10 +86,10 @@ public interface Interpolation {
      * . . . . . . . . .
      * . . . x . . . . .
      * x x x . . . . . .
-     * </code>
+     * </pre>
      */
     public static final Interpolation CUBIC = (x0, x1, delta) -> {
-        delta = Timeline.clampDelta(delta) / 0.5f;
+        delta = clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta * delta + x0;
         } else {
@@ -99,9 +99,9 @@ public interface Interpolation {
     };
 
     /**
-     * Qadratic easing interpolation.
-     *
-     * <code>
+     * Quadratic easing interpolation.
+     * <p>
+     * <pre>
      * . . . . . . . x x
      * . . . . . . x . .
      * . . . . . . . . .
@@ -111,10 +111,10 @@ public interface Interpolation {
      * . . . x . . . . .
      * . . . . . . . . .
      * x x x . . . . . .
-     * </code>
+     * </pre>
      */
     public static final Interpolation QUADRATIC = (x0, x1, delta) -> {
-        delta = Timeline.clampDelta(delta) / 0.5f;
+        delta = clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta + x0;
         } else {
@@ -125,8 +125,8 @@ public interface Interpolation {
 
     /**
      * Quantic easing interpolation.
-     *
-     * <code>
+     * <p>
+     * <pre>
      * . . . . . . x x x
      * . . . . . x . . .
      * . . . . . . . . .
@@ -136,10 +136,10 @@ public interface Interpolation {
      * . . . . . . . . .
      * . . . x . . . . .
      * x x x . . . . . .
-     * </code>
+     * </pre>
      */
     public static final Interpolation QUINTIC = (x0, x1, delta) -> {
-        delta = Timeline.clampDelta(delta) / 0.5f;
+        delta = clampDelta(delta) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta * delta * delta * delta + x0;
         } else {
@@ -154,4 +154,8 @@ public interface Interpolation {
      * animation has been completed.
      */
     public float interpolate(float x0, float x1, float delta);
+
+    private static float clampDelta(float delta) {
+        return Math.min(Math.max(delta, 0f), 1f);
+    }
 }

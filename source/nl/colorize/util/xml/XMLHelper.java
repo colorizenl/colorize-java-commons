@@ -1,10 +1,26 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.xml;
+
+import com.google.common.base.Charsets;
+import nl.colorize.util.Platform;
+import nl.colorize.util.ResourceFile;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.Namespace;
+import org.jdom2.filter.Filters;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
+import org.jdom2.xpath.XPathExpression;
+import org.jdom2.xpath.XPathFactory;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -15,23 +31,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Closeables;
-
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.JDOMException;
-import org.jdom2.Namespace;
-import org.jdom2.input.SAXBuilder;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
-import org.xml.sax.EntityResolver;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-
-import nl.colorize.util.Platform;
-import nl.colorize.util.ResourceFile;
+import java.util.List;
 
 /**
  * Contains convenience methods for working with XML using JDOM. 
@@ -49,46 +49,45 @@ public final class XMLHelper {
     
     /**
      * Parses XML from a stream. The stream is closed afterwards.
+     *
      * @throws JDOMException if the XML cannot be parsed.
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Document parse(InputStream stream) throws JDOMException, IOException {
-        Document document = null;
-        try {
-            document = getSaxBuilder().build(stream);
-        } finally {
-            Closeables.close(stream, true);
+        try (stream) {
+            SAXBuilder saxBuilder = getSaxBuilder();
+            return saxBuilder.build(stream);
         }
-        return document;
     }
     
     /**
      * Parses XML from a reader. The reader is closed afterwards.
+     *
      * @throws JDOMException if the XML cannot be parsed.
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Document parse(Reader source) throws JDOMException, IOException {
-        Document document = null;
-        try {
-            document = getSaxBuilder().build(source);
-        } finally {
-            Closeables.close(source, true);
+        try (source) {
+            SAXBuilder saxBuilder = getSaxBuilder();
+            return saxBuilder.build(source);
         }
-        return document;
     }
     
     /**
-     * Parses XML from a file. 
+     * Parses XML from a file.
+     *
      * @throws JDOMException if the XML cannot be parsed.
      * @throws IOException if an I/O error occurs while reading.
      */
     public static Document parse(File source) throws JDOMException, IOException {
-        InputStream stream = new FileInputStream(source);
-        return parse(stream);
+        try (InputStream stream = new FileInputStream(source)) {
+            return parse(stream);
+        }
     }
     
     /**
-     * Parses XML from a resource file. 
+     * Parses XML from a resource file.
+     *
      * @throws JDOMException if the XML cannot be parsed.
      * @throws RuntimeException if the resource file could not be parsed.
      */
@@ -101,7 +100,8 @@ public final class XMLHelper {
     }
     
     /**
-     * Parses XML from a string. 
+     * Parses XML from a string.
+     *
      * @throws JDOMException if the XML cannot be parsed.
      */
     public static Document parse(String xml) throws JDOMException {
@@ -130,13 +130,13 @@ public final class XMLHelper {
     /**
      * Writes XML to a stream using a default formatter and UTF-8 encoding.
      * The stream is closed afterwards.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public static void write(Document document, OutputStream dest) throws IOException {
-        try {
-            getOutputter().output(document, dest);
-        } finally {
-            Closeables.close(dest, true);
+        try (dest) {
+            XMLOutputter output = getOutputter();
+            output.output(document, dest);
         }
     }
     
@@ -167,9 +167,8 @@ public final class XMLHelper {
      * Requests whitespace in {@code element}'s text to be preserved when printed.
      * This will add the attribute {@code xml:space="preserve"}.
      */
-    public static Element preserveWhitespace(Element element) {
+    public static void preserveWhitespace(Element element) {
         element.setAttribute("space", "preserve", Namespace.XML_NAMESPACE);
-        return element;
     }
     
     /**
@@ -190,6 +189,40 @@ public final class XMLHelper {
     public static void addPropertyElement(Element parent, String name, String text) {
         parent.addContent(createPropertyElement(name, text));
     }
+
+    private static XPathExpression<Element> compileXPath(String xpath) {
+        return XPathFactory.instance().compile(xpath, Filters.element());
+    }
+
+    /**
+     * Queries an XML document using the specified XPath expression and return
+     * the first element found. If there are no results this will return
+     * {@code null}.
+     */
+    public static Element findFirst(Document document, String xpath) {
+        return compileXPath(xpath).evaluateFirst(document);
+    }
+
+    /**
+     * Queries an XML document using this XPath expression and returns the text
+     * content of the first element found. If there are no results this will
+     * return {@code null}.
+     */
+    public static String findText(Document document, String xpath) {
+        Element result = findFirst(document, xpath);
+        if (result == null) {
+            return null;
+        }
+        return result.getText();
+    }
+
+    /**
+     * Queries an XML document using this XPath expression and returns a list
+     * containing all found elements.
+     */
+    public static List<Element> findAll(Document document, String xpath) {
+        return compileXPath(xpath).evaluate(document);
+    }
     
     /**
      * Prevents JDOM from loading DTDs from the actual URL listed in the XML file,
@@ -198,8 +231,8 @@ public final class XMLHelper {
      */
     private static class NoOpEntityResolver implements EntityResolver {
 
-        public InputSource resolveEntity(String publicId, String systemId) 
-                throws SAXException, IOException {
+        @Override
+        public InputSource resolveEntity(String publicId, String systemId) {
             return new InputSource(new ByteArrayInputStream(new byte[0]));
         }
     }

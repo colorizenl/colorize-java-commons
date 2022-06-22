@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RangeTest {
@@ -105,11 +106,32 @@ public class RangeTest {
         assertEquals(6, new Range(2, 7).getSize());
         assertEquals(2, new Range(2, 3).getSize());
         assertEquals(1, new Range(2).getSize());
-        assertEquals(3, new Range(4, 2).getSize());
     }
 
     @Test
-    public void testBackwards() {
-        assertEquals(ImmutableList.of(3, 2, 1), new Range(3, 1).toList());
+    void within() {
+        List<Integer> list = ImmutableList.of(2, 3, 4);
+
+        assertEquals("2..4", Range.span(list.stream().mapToInt(e -> e)).toString());
+    }
+
+    @Test
+    void cannotCreateFromEmptySupplier() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Range.span(Collections.emptyList());
+        });
+    }
+
+    @Test
+    void index() {
+        Range range = new Range(-2, 4);
+
+        assertEquals(0, range.index(-2));
+        assertEquals(1, range.index(-1));
+        assertEquals(2, range.index(0));
+        assertEquals(3, range.index(1));
+        assertEquals(4, range.index(2));
+        assertEquals(5, range.index(3));
+        assertEquals(6, range.index(4));
     }
 }

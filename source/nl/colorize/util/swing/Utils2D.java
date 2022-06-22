@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -10,7 +10,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import nl.colorize.util.ResourceFile;
 
@@ -56,6 +55,7 @@ public final class Utils2D {
     
     private static final CharMatcher NEWLINE_MATCHER = CharMatcher.is('\n');
     private static final Splitter NEWLINE_SPLITTER = Splitter.on(NEWLINE_MATCHER).trimResults();
+    private static final float LINE_SPACING_FACTOR = 1.8f;
 
     private Utils2D() {
     }
@@ -63,20 +63,18 @@ public final class Utils2D {
     /**
      * Loads an image from a stream. The image can be of any type supported by
      * ImageIO. The stream is closed afterwards.
+     *
      * @throws IOException if the image could not be loaded from the stream.
      */
     public static BufferedImage loadImage(InputStream input) throws IOException {
-        BufferedImage image = null;
-        try {
-            image = ImageIO.read(input);
-        } finally {
-            Closeables.close(input, true);
+        try (input) {
+            return ImageIO.read(input);
         }
-        return image;
     }
     
     /**
      * Loads an image from a file. The image can be of any type supported by ImageIO.
+     *
      * @throws IOException if an I/O error occurs while readin the file.
      */
     public static BufferedImage loadImage(File file) throws IOException {
@@ -114,6 +112,7 @@ public final class Utils2D {
     /**
      * Encodes the specified image as a PNG and writes it to a stream. The stream
      * is closed afterwards,
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public static void savePNG(BufferedImage image, OutputStream output) throws IOException {
@@ -121,15 +120,14 @@ public final class Utils2D {
             image = convertImage(image, BufferedImage.TYPE_INT_ARGB);
         }
         
-        try {
+        try (output) {
             ImageIO.write(image, "png", output);
-        } finally {
-            Closeables.close(output, true);
         }
     }
     
     /**
      * Encodes the specified image as a PNG and writes it to a file.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public static void savePNG(BufferedImage image, File dest) throws IOException {
@@ -139,12 +137,12 @@ public final class Utils2D {
     
     /**
      * Encodes the specified image as a JPEG and writes it to a stream.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public static void saveJPEG(BufferedImage image, OutputStream output) throws IOException {
         ImageWriter writer = ImageIO.getImageWritersByFormatName("JPEG").next();
-        ImageOutputStream ios = ImageIO.createImageOutputStream(output);
-        try {
+        try (ImageOutputStream ios = ImageIO.createImageOutputStream(output)) {
             writer.setOutput(ios);
             ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
@@ -152,28 +150,17 @@ public final class Utils2D {
             writer.write(null, new IIOImage(image, null, null), param);
             ios.flush();
             writer.dispose();
-        } finally {
-            closeQuietely(ios);
         }
     }
     
     /**
      * Encodes the specified image as a JPEG and writes it to a file.
+     *
      * @throws IOException if an I/O error occurs while writing.
      */
     public static void saveJPEG(BufferedImage image, File dest) throws IOException {
         FileOutputStream stream = new FileOutputStream(dest);
         saveJPEG(image, stream);
-    }
-    
-    private static void closeQuietely(ImageOutputStream stream) {
-        try {
-            if (stream != null) {
-                stream.close();
-            }
-        } catch (IOException e) {
-            // Ignore
-        }
     }
 
     /**
@@ -235,6 +222,7 @@ public final class Utils2D {
     /**
      * Creates a new image containing the source image, applying the specified
      * amount of padding to the top/bottom/left/right.
+     *
      * @throws IllegalArgumentException for negative amounts of padding.
      */
     public static BufferedImage addPadding(BufferedImage sourceImage, int padding) {
@@ -315,6 +303,7 @@ public final class Utils2D {
 
     /**
      * Creates an image from a data URL.
+     *
      * @throws IOException if the data URL is corrupted or uses an image format
      *         that is not supported by Java2D.
      */
@@ -376,7 +365,7 @@ public final class Utils2D {
      */
     public static int drawMultiLineString(Graphics2D g2, String text, int x, int startY, int width) {
         FontRenderContext renderContext = g2.getFontRenderContext();
-        int currentY = startY;
+        float currentY = startY;
         
         for (String line : NEWLINE_SPLITTER.split(text)) {
             // Simulate paragraphs for empty lines.
@@ -396,11 +385,11 @@ public final class Utils2D {
                 TextLayout layout = lineBreakMeasurer.nextLayout(width);
                 currentY += layout.getAscent();
                 layout.draw(g2, x, currentY);
-                currentY += layout.getDescent() + layout.getLeading();
+                currentY += (layout.getDescent() + layout.getLeading()) * LINE_SPACING_FACTOR;
             }
         }
         
-        return currentY - startY;
+        return Math.round(currentY - startY);
     }
 
     /**
@@ -438,6 +427,15 @@ public final class Utils2D {
     public static Color withAlpha(Color color, int alpha) {
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
     }
+
+    /**
+     * Returns a color with the RGB value indicated by {@code hexColor} but a
+     * different alpha.
+     * @param alpha The new alpha value, between 0 and 255.
+     */
+    public static Color withAlpha(String hexColor, int alpha) {
+        return withAlpha(parseHexColor(hexColor), alpha);
+    }
     
     /**
      * Returns a color with the same RGB value as {@code color} but different alpha.
@@ -446,7 +444,7 @@ public final class Utils2D {
     public static Color withAlpha(Color color, float alpha) {
         return withAlpha(color, Math.round(alpha * 255f));
     }
-    
+
     /**
      * Converts a {@link java.awt.Color} object to a hex string. For example, the
      * color red will produce "#FF0000".
@@ -492,6 +490,7 @@ public final class Utils2D {
     /**
      * Creates a new image by applying gaussian blur to an existing image.
      * @param amount The amount of blur, in pixels.
+     *
      * @throws IllegalArgumentException for negative amounts of blur.
      */
     public static BufferedImage applyGaussianBlur(BufferedImage image, int amount) {

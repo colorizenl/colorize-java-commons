@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -297,18 +297,6 @@ public class URLLoaderTest {
         Future<URLResponse> future = request.sendRequestAsync();
 
         assertEquals(HttpStatus.OK, future.get().getStatus());
-    }
-
-    @Test
-    public void testSendBackgroundRequest() throws InterruptedException {
-        List<URLResponse> received = new ArrayList<>();
-
-        URLLoader.get("http://www.colorize.nl", Charsets.UTF_8).sendBackgroundRequest()
-            .then(received::add);
-
-        Thread.sleep(2000);
-
-        assertEquals(1, received.size());
     }
 
     @Test

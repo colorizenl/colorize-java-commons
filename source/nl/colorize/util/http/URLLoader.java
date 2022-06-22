@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -10,10 +10,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
-import nl.colorize.util.Escape;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.Task;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -36,6 +34,7 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -165,15 +164,18 @@ public abstract class URLLoader extends HttpMessage {
     }
 
     /**
-     * Convenience method to add basic HTTP authentication headers to the request.
+     * Convenience method to add the HTTP basic authentication header to the
+     * request.
      * <p>
-     * <strong>Security note:</strong> This will BASE64-encode the username
-     * and password, and adds them as a HTTP header. BASE64 encoding can easily
-     * be intercepted when using plain HTTP instead of HTTPS.
+     * <strong>Security note:</strong> Only use this method when sending
+     * requests to HTTP URLs. Do not use it for requests over plain HTTP, as
+     * the header can potentially be intercepted by anyone with network access.
      */
     public void setBasicAuthentication(String user, String password) {
-        getHeaders().replace(HttpHeaders.AUTHORIZATION,
-            "Basic " + Escape.base64Encode(user + ":" + password, getEncoding()));
+        String identity = user + ":" + password;
+        String base64 = Base64.getEncoder().encodeToString(identity.getBytes(Charsets.UTF_8));
+
+        getHeaders().replace(HttpHeaders.AUTHORIZATION, "Basic " + base64);
     }
 
     /**
@@ -251,28 +253,6 @@ public abstract class URLLoader extends HttpMessage {
         FutureTask<URLResponse> task = new FutureTask<>(this::sendRequest);
 
         Thread thread = new Thread(task, "ColorizeJavaCommons-URLLoader");
-        thread.start();
-
-        return task;
-    }
-
-    /**
-     * Sends the HTTP request asynchronously, and returns a {@link Task} that
-     * can be used to obtain the result.
-     */
-    public Task<URLResponse> sendBackgroundRequest() {
-        Task<URLResponse> task = new Task<>();
-
-        Runnable backgroundRequest = () -> {
-            try {
-                URLResponse response = sendRequest();
-                task.complete(response);
-            } catch (IOException e) {
-                task.fail(e);
-            }
-        };
-
-        Thread thread = new Thread(backgroundRequest, "ColorizeJavaCommons-URLLoader");
         thread.start();
 
         return task;

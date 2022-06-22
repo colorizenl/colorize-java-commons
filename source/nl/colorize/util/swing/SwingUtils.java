@@ -1,17 +1,17 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
-import nl.colorize.util.DynamicResourceBundle;
 import nl.colorize.util.LoadUtils;
 import nl.colorize.util.Platform;
 import nl.colorize.util.ResourceFile;
+import nl.colorize.util.TranslationBundle;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -75,7 +75,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * Miscelleaneous utility and convenience methods for working with Swing. 
@@ -84,8 +83,8 @@ public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
-    private static final DynamicResourceBundle CUSTOM_COMPONENTS_BUNDLE =
-        new DynamicResourceBundle(new ResourceFile("custom-swing-components.properties"), Charsets.UTF_8);
+    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE =
+        TranslationBundle.fromFile(new ResourceFile("custom-swing-components.properties"));
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);
@@ -146,7 +145,7 @@ public final class SwingUtils {
      * custom Swing components provided by this library. This bundle can be
      * used to change and/or translate the text.
      */
-    public static DynamicResourceBundle getCustomComponentsBundle() {
+    public static TranslationBundle getCustomComponentsBundle() {
         return CUSTOM_COMPONENTS_BUNDLE;
     }
 
@@ -752,10 +751,9 @@ public final class SwingUtils {
 
     public static <T> JComboBox<String> createComboBox(Collection<T> items, T selected) {
         String[] names = items.stream()
-            .map(item -> item.toString())
+            .map(Object::toString)
             .sorted()
-            .collect(Collectors.toList())
-            .toArray(new String[0]);
+            .toArray(String[]::new);
 
         JComboBox<String> field = new JComboBox<>(names);
 
@@ -764,6 +762,10 @@ public final class SwingUtils {
         }
 
         return field;
+    }
+
+    public static <T> JComboBox<String> createComboBox(T[] items, T selected) {
+        return createComboBox(ImmutableList.copyOf(items), selected);
     }
 
     /**

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -12,7 +12,6 @@ import com.google.common.base.Splitter;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -21,12 +20,30 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
  * Extension of {@link Properties} that can be used to load and save application
  * data. Storage is limited to simple key/value pairs, but convenience methods
  * are available to parse the values as common data types.
+ * <p>
+ * The following property types are supported:
+ *
+ * <ul>
+ *   <li>String</li>
+ *   <li>int</li>
+ *   <li>long</li>
+ *   <li>float</li>
+ *   <li>double</li>
+ *   <li>boolean</li>
+ *   <li>{@link java.util.Date}</li>
+ *   <li>{@code List<String>}</li>
+ *   <li>{@link java.util.UUID}</li>
+ * </ul>
+ *
+ * Other property types need to be manually serialized to and deserialized from
+ * strings.
  */
 public class ApplicationData {
 
@@ -67,18 +84,6 @@ public class ApplicationData {
      */
     public ApplicationData(ResourceFile file) {
         this.properties = LoadUtils.loadProperties(file, Charsets.UTF_8);
-    }
-
-    /**
-     * Loads application data from the specified {@code .properties} file
-     * contents.
-     */
-    public ApplicationData(String properties) {
-        try {
-            this.properties = LoadUtils.loadProperties(new StringReader(properties));
-        } catch (IOException e) {
-            throw new AssertionError(e);
-        }
     }
 
     public void set(String key, String value) {
@@ -196,6 +201,28 @@ public class ApplicationData {
         return LIST_SPLITTER.splitToList(get(key, LIST_JOINER.join(defaultValue)));
     }
 
+    public void set(String key, UUID value) {
+        set(key, value.toString());
+    }
+
+    public UUID get(String key, UUID defaultValue) {
+        return UUID.fromString(get(key, defaultValue.toString()));
+    }
+
+    /**
+     * Returns a {@link Properties} object that contains all properties,
+     * serializing all properties to strings in the process.
+     */
+    public Properties toProperties() {
+        Properties clone = new Properties();
+        properties.forEach((key, value) -> clone.setProperty((String) key, (String) value));
+        return clone;
+    }
+
+    /**
+     * Returns a map that contains all properties, serializing all properties
+     * to strings in the process.
+     */
     public Map<String, String> toMap() {
         Map<String, String> result = new LinkedHashMap<>();
         for (String property : properties.stringPropertyNames()) {

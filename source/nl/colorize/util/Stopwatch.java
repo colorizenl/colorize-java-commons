@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2021 Colorize
+// Copyright 2007-2022 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ public class Stopwatch {
      * should only be compared against other invocations of this method, the
      * value returned is not absolute.
      */
-    private long value() {
+    protected long value() {
         return System.currentTimeMillis();
     }
     
