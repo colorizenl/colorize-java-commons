@@ -6,30 +6,21 @@
 
 package nl.colorize.util.http;
 
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
-
 /**
- * HTTP request methods, as defined by the HTTP/1.1 standard
- * (http://tools.ietf.org/html/rfc7231).
+ * HTTP request methods, as defined by the HTTP/1.1 standard. Refer to
+ * <a href="http://tools.ietf.org/html/rfc7231">RFC 7231</a> for more
+ * information.
  */
 public enum Method {
-    GET("SAFE"),
-    HEAD("SAFE", "RESPONSE_HEADERS_ONLY"),
-    POST("REQUEST_BODY"),
-    PUT("REQUEST_BODY"),
-    DELETE(),
-    CONNECT(),
-    OPTIONS("SAFE"),
-    TRACE("SAFE");
-    
-    private List<String> characteristics;
-    
-    private Method(String... characteristics) {
-        this.characteristics = ImmutableList.copyOf(characteristics);
-    }
-    
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE;
+
     /**
      * If true, HTTP requests using this method will send request parameters as
      * part of the request body. Note that the specification does not forbid a
@@ -37,7 +28,7 @@ public enum Method {
      * body if it's not "supposed" to be there.
      */
     public boolean hasRequestBody() {
-        return characteristics.contains("REQUEST_BODY");
+        return this == POST || this == PUT;
     }
     
     /**
@@ -45,7 +36,7 @@ public enum Method {
      * the response headers, not the response body.
      */
     public boolean isResponseHeadersOnly() {
-        return characteristics.contains("RESPONSE_HEADERS_ONLY");
+        return this == HEAD;
     }
     
     /**
@@ -53,12 +44,13 @@ public enum Method {
      * retrieval without changing the state of the server.
      */
     public boolean isSafe() {
-        return characteristics.contains("SAFE");
+        return this == GET || this == HEAD || this == OPTIONS || this == TRACE;
     }
 
     /**
      * Returns the {@code Method} instance corresponding to the HTTP request
      * method with the specified name.
+     *
      * @throws IllegalArgumentException if there is no matching request method.
      * @throws NullPointerException if {@code methodName} is {@code null}.
      */

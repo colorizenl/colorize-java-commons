@@ -18,10 +18,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -126,7 +126,7 @@ public class LoadUtilsTest {
     }
 
     @Test
-    public void testFileExtensionFilter() throws Exception {
+    public void testFileExtensionFilter() {
         FilenameFilter filter = LoadUtils.getFileExtensionFilter("jpg", "png");
         assertTrue(filter.accept(new File("/tmp"), "test.jpg"));
         assertTrue(filter.accept(new File("/tmp"), "test.png"));
@@ -136,13 +136,43 @@ public class LoadUtilsTest {
     }
     
     @Test
-    public void testGlobFilter() throws Exception {
+    public void testGlobFilter() {
         FilenameFilter filter = LoadUtils.getGlobFilter("*.txt");
         assertTrue(filter.accept(new File("/tmp"), "test.txt"));
         assertTrue(filter.accept(new File("/tmp"), "test.TXT"));
         assertFalse(filter.accept(new File("/tmp"), "test.png"));
     }
-    
+
+    @Test
+    void loadPropertiesFromString() {
+        Properties properties = LoadUtils.loadProperties("a=1\nb=2");
+
+        assertEquals("1", properties.getProperty("a"));
+        assertEquals("2", properties.getProperty("b"));
+    }
+
+    @Test
+    void convertMapToProperties() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("a", "1");
+        data.put("b", true);
+        data.put("c", null);
+
+        Properties properties = LoadUtils.toProperties(data);
+
+        assertEquals("1", properties.getProperty("a"));
+        assertEquals("true", properties.getProperty("b"));
+        assertEquals("3", properties.getProperty("c", "3"));
+    }
+
+    @Test
+    void serializeProperties() {
+        Properties properties = new Properties();
+        properties.setProperty("a", "2");
+
+        assertEquals("a=2\n", LoadUtils.serializeProperties(properties));
+    }
+
     private InputStreamReader fileReader(File f) throws IOException {
         return new InputStreamReader(new FileInputStream(f), Charsets.UTF_8);
     }

@@ -412,26 +412,6 @@ public final class Platform {
     }
 
     /**
-     * Loads application data that is stored in a {@code .properties} file within
-     * the platform's directory for storing application data, for the application
-     * with the specified name. If the application data directory does not already
-     * exist it will be created.
-     *
-     * @param app Name of the application for which to create the directory.
-     *
-     * @throws IOException if the file does not exist or cannot be parsed.
-     * @throws IllegalArgumentException If the application name cannot be used
-     *         as a directory name, if the path is empty, or if an absolute path
-     *         is used instead of a relative path.
-     * @throws UnsupportedOperationException if the platform does not allow
-     *         application data (e.g. Google App Engine).
-     */
-    public static ApplicationData loadApplicationData(String app, String path) throws IOException {
-        File file = getApplicationData(app, path);
-        return new ApplicationData(file);
-    }
-
-    /**
      * Returns the platform's standard directory for storing user data (e.g. "My
      * Documents" on Windows).
      *

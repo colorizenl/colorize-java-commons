@@ -9,11 +9,11 @@ The library provides the following features:
 - A component library for Swing applications
 - A command line argument parser
 - A lightweight translation framework
-- Assists in sending HTTP requests from applications
+- Cross-platform API for sending HTTP requests
 - Reading and writing CSV
 - Utilities for working with statistics
 - Automatic application logging configuration
-- A mechanism for application data and preferences
+- Mini-framework for managing application configuration and preferences
 - Various other utility classes
 
 The library focuses on portability, and supports a wide variety of platforms and environments:
@@ -36,13 +36,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2022.6</version>
-    </dependency>  
+        <version>2022.9</version>
+    </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2022.6"
+        implementation "nl.colorize:colorize-java-commons:2022.9"
     }
     
 Documentation
@@ -91,7 +91,7 @@ Build instructions
 The build is cross-platform and supports Windows, macOS, and Linux, but requires the following 
 software to be available:
 
-- [Java JDK](http://java.oracle.com) 11+
+- [Java JDK](http://java.oracle.com) 17+
 - [Gradle](http://gradle.org)
 
 The following Gradle build tasks are available:

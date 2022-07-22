@@ -46,6 +46,7 @@ public class PostData {
 
     /**
      * Returns the value of the parameter with the specified name.
+     *
      * @throws IllegalStateException if no parameter with that name exists.
      */
     public String getRequiredParameter(String name) {

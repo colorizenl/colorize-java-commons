@@ -27,6 +27,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -35,6 +37,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -196,9 +199,10 @@ public final class LoadUtils {
             throw new RuntimeException("Cannot parse properties file", e);
         }
     }
-    
+
     /**
      * Loads a properties file from a local file.
+     *
      * @throws IOException if the file could not be read.
      */
     public static Properties loadProperties(File source, Charset charset) throws IOException {
@@ -206,17 +210,29 @@ public final class LoadUtils {
             return loadProperties(reader);
         }
     }
+
+    /**
+     * Loads a properties file from a string.
+     */
+    public static Properties loadProperties(String contents) {
+        try (Reader reader = new StringReader(contents)) {
+            return loadProperties(reader);
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
+    }
     
     /**
      * Creates a {@code Properties} object directly from a number of key/value
      * pairs.
+     *
      * @throws IllegalArgumentException if {@code rest.length} is not even.
      */
     public static Properties toProperties(String key, String value, String... rest) {
         if (rest.length % 2 != 0) {
             throw new IllegalArgumentException("Needs an even number for key/value pairs");
         }
-        
+
         Properties properties = new Properties();
         properties.setProperty(key, value);
         for (int i = 0; i < rest.length; i += 2) {
@@ -224,7 +240,28 @@ public final class LoadUtils {
         }
         return properties;
     }
-    
+
+    /**
+     * Creates a {@code Properties} object from a map, with every element in
+     * the map being registered as a property. Note that even though
+     * {@code Properties} itself extends {@code Map<Object, Object>}, both
+     * property names and values are required to be strings by this method.
+     * If any of the values are *not* strings, their {@code toString()} method
+     * will be called to obtain their string representation. {@code} map
+     * entries will *not* end up in the resulting {@code Properties} object.
+     */
+    public static Properties toProperties(Map<String, ?> data) {
+        Properties properties = new Properties();
+
+        for (Map.Entry<String, ?> entry : data.entrySet()) {
+            if (entry.getValue() != null) {
+                properties.setProperty(entry.getKey(), entry.getValue().toString());
+            }
+        }
+
+        return properties;
+    }
+
     /**
      * Serializes a {@code Properties} object to the specified writer. This method
      * is different from the standard {@link java.util.Properties#store(Writer, String)}
@@ -257,6 +294,19 @@ public final class LoadUtils {
             throws IOException {
         PrintWriter writer = new PrintWriter(dest, charset.displayName());
         saveProperties(properties, writer);
+    }
+
+    /**
+     * Seralizes a {@code Properties} object to its text representation, which
+     * would normally serve as the contents of the {@code .properties} file.
+     */
+    public static String serializeProperties(Properties properties) {
+        try (StringWriter buffer = new StringWriter()) {
+            saveProperties(properties, buffer);
+            return buffer.toString();
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
     }
     
     private static String normalizeFileExtension(String ext) {

@@ -6,64 +6,21 @@
 
 package nl.colorize.util.animation;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Defines a property's value at a certain point in time. Key frames are placed 
  * on a timeline, which can then animate the property by interpolating between
  * key frames.
  */
-public class KeyFrame implements Comparable<KeyFrame> {
-    
-    private float time;
-    private float value;
-    
-    /**
-     * Creates a new key frame with the specified value.
-     * @param time Position of the key frame on the timeline, in seconds.
-     * @throws IllegalArgumentException if {@code time} is negative.
-     */
-    public KeyFrame(float time, float value) {
-        if (time < 0) {
-            throw new IllegalArgumentException("Invalid time position: " + time);
-        }
-        this.time = time;
-        this.value = value;
+public record KeyFrame(float time, float value) implements Comparable<KeyFrame> {
+
+    public KeyFrame {
+        Preconditions.checkArgument(time >= 0f, "Invalid time position: " + time);
     }
-    
-    /**
-     * Returns the position of this key frame on the timeline, in seconds.
-     */
-    public float getTime() {
-        return time;
-    }
-    
-    public float getValue() {
-        return value;
-    }
-    
-    /**
-     * Compares key frames based on their position on the timeline
-     */
+
+    @Override
     public int compareTo(KeyFrame other) {
         return Float.compare(time, other.time);
-    }
-    
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof KeyFrame) {
-            KeyFrame other = (KeyFrame) o;
-            return compareTo(other) == 0;
-        } else {
-            return false;
-        }
-    }
-    
-    @Override
-    public int hashCode() {
-        return Math.round(time * 1000);
-    }
-    
-    @Override
-    public String toString() {
-        return String.format("KeyFrame(time=%.3f, value=%.3f)", time, value);
     }
 }

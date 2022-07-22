@@ -128,7 +128,7 @@ public class Timeline implements Animatable {
         if (keyframes.isEmpty()) {
             return 0;
         }
-        return keyframes.last().getTime();
+        return keyframes.last().time();
     }
     
     /**
@@ -184,7 +184,7 @@ public class Timeline implements Animatable {
      * @throws IllegalArgumentException if a key frame already exists at that position.
      */
     public Timeline addKeyFrame(KeyFrame keyframe) {
-        float position = keyframe.getTime();
+        float position = keyframe.time();
         Preconditions.checkArgument(getKeyFrameAtPosition(position) == null,
             "Key frame already exists at position: " + position);
         keyframes.add(keyframe);
@@ -268,7 +268,7 @@ public class Timeline implements Animatable {
         
         KeyFrame closest = keyframes.first();
         for (KeyFrame keyframe : keyframes) {
-            if (keyframe.getTime() <= position) {
+            if (keyframe.time() <= position) {
                 closest = keyframe;
             } else {
                 break;
@@ -291,7 +291,7 @@ public class Timeline implements Animatable {
     }
     
     private boolean hasKeyFrameAtPosition(KeyFrame keyframe, float position) {
-        return keyframe.getTime() >= position - EPSILON && keyframe.getTime() <= position + EPSILON;
+        return keyframe.time() >= position - EPSILON && keyframe.time() <= position + EPSILON;
     }
 
     /**
@@ -304,7 +304,7 @@ public class Timeline implements Animatable {
         Preconditions.checkState(!keyframes.isEmpty(), "Timeline has no key frames");
         
         if (keyframes.size() == 1) {
-            return keyframes.first().getValue();
+            return keyframes.first().value();
         } else {
             return getInterpolatedValue();
         }
@@ -319,7 +319,7 @@ public class Timeline implements Animatable {
         KeyFrame nextKeyFrame = null;
         
         for (KeyFrame keyframe : keyframes) {
-            if (keyframe.getTime() <= playhead) {
+            if (keyframe.time() <= playhead) {
                 currentKeyFrame = keyframe;
             } else {
                 if (currentKeyFrame == null) {
@@ -339,22 +339,22 @@ public class Timeline implements Animatable {
      */
     private float interpolateValue(KeyFrame prev, KeyFrame next) {
         if (next == null || prev == next) {
-            return prev.getValue();
+            return prev.value();
         }
         
-        if (playhead <= prev.getTime()) {
-            return prev.getValue();
-        } else if (playhead >= next.getTime()) {
-            return next.getValue();
+        if (playhead <= prev.time()) {
+            return prev.value();
+        } else if (playhead >= next.time()) {
+            return next.value();
         }
         
         // Although getDelta() already returns a value between 0 and 1 for,
         // the entire timeline, we need a value between 0 and 1 for the
         // relative position between these two key frames.
-        float relativePlayhead = playhead - prev.getTime();
-        float relativeDuration = next.getTime() - prev.getTime();
+        float relativePlayhead = playhead - prev.time();
+        float relativeDuration = next.time() - prev.time();
         float relativeDelta = relativePlayhead / relativeDuration;
         
-        return interpolationMethod.interpolate(prev.getValue(), next.getValue(), relativeDelta);
+        return interpolationMethod.interpolate(prev.value(), next.value(), relativeDelta);
     }
 }

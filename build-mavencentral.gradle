@@ -1,0 +1,59 @@
+apply from: "build.gradle"
+
+apply plugin: "maven-publish"
+apply plugin: "signing"
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = "colorize-java-commons"
+            from components.java
+            
+            pom {
+                name = "Colorize-Java-Commons"
+                description = "Library containing utility classes for web, desktop, and mobile applications."
+                url = "https://www.clrz.nl"
+                
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+            
+                developers {
+                    developer {
+                        id = "colorize"
+                        name = "Colorize"
+                        email = "contact@colorize.nl"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+                    developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+                    url = "https://github.com/colorizenl/colorize-java-commons"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            credentials {
+                username ossrhUser
+                password ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
