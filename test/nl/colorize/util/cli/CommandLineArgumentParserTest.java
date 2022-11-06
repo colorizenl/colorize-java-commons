@@ -6,6 +6,7 @@
 
 package nl.colorize.util.cli;
 
+import nl.colorize.util.AppProperties;
 import nl.colorize.util.Platform;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,22 +32,29 @@ class CommandLineArgumentParserTest {
     }
 
     @Test
-    void simpleArgument() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out);
-        argParser.add("--input", "Input directory");
-        argParser.tryParseArgs("--input", "/a/b/c");
+    void simpleArgument() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("test", out)
+            .addRequired("--input", "Input directory")
+            .tryParseArgs("--input", "/a/b/c");
 
-        assertEquals("/a/b/c", argParser.get("input"));
-        assertEquals("/a/b/c", argParser.get("Input"));
-        assertEquals("/a/b/c", argParser.get("--input"));
-        assertEquals("/a/b/c", argParser.getFile("input").getAbsolutePath());
+        assertEquals("/a/b/c", args.get("input"));
+    }
+
+    @Test
+    void normalizeArgumentName() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("test", out)
+            .addRequired("--input", "Input directory")
+            .tryParseArgs("--input", "/a/b/c");
+
+        assertEquals("/a/b/c", args.get("input"));
+        assertEquals("/a/b/c", args.get("--input"));
     }
 
     @Test
     void showUsageInformation() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
-        argParser.addOptional("--overwrite", "false", "Overwrites existing values");
+        argParser.addRequired("--input", "Input directory");
+        argParser.addOptional("--overwrite", "Overwrites existing values");
         argParser.printUsage();
 
         String usage = "";
@@ -58,94 +66,122 @@ class CommandLineArgumentParserTest {
     }
 
     @Test
-    void simpleFlag() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
-        argParser.addFlag("--overwrite", "Overwrites existing values");
-        argParser.tryParseArgs("--input", "/tmp", "--overwrite");
+    void simpleFlag() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addRequired("--input", "Input directory")
+            .addFlag("--overwrite", "Overwrites existing values")
+            .tryParseArgs("--input", "/tmp", "--overwrite");
 
-        assertEquals("/tmp", argParser.get("input"));
-        assertTrue(argParser.getBool("overwrite"));
+        assertEquals("/tmp", args.get("input"));
+        assertTrue(args.getBoolean("overwrite"));
     }
 
     @Test
     void showUsageIfMandatoryArgumentIsMissing() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out)
+            .addRequired("--input", "Input directory");
 
-        assertThrows(CommandLineInterfaceException.class, () -> {
-            argParser.tryParseArgs();
-        });
+        assertThrows(CommandLineInterfaceException.class, () -> argParser.tryParseArgs());
     }
 
     @Test
     void doNotShowUsageIfNonMandatoryArgumentIsMissing() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
-        argParser.addOptional("--overwrite", "false", "Overwrites existing values");
+        argParser.addRequired("--input", "Input directory");
+        argParser.addOptional("--overwrite", "Overwrites existing values");
     }
 
     @Test
-    void optionalArgumentWithDefaultValue() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.addOptional("--input", "/tmp", "Input directory");
-        argParser.tryParseArgs();
+    void optionalArgumentWithDefaultValue() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--input", "Input directory")
+            .tryParseArgs();
 
-        assertEquals("/tmp", argParser.get("input"));
+        assertNull(args.get("input"));
+        assertEquals("/tmp", args.get("input", "/tmp"));
     }
 
     @Test
-    void relativeFilePath() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
-        argParser.tryParseArgs("--input", "~/Documents");
+    void relativeFilePath() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addRequired("--input", "Input directory")
+            .tryParseArgs("--input", "~/Documents");
 
-        assertEquals("Documents", argParser.getFile("input").getName());
+        assertEquals("Documents", args.getFile("input").getName());
         assertEquals(Platform.getUserHomeDir().getAbsolutePath(),
-            argParser.getFile("input").getParentFile().getAbsolutePath());
+            args.getFile("input").getParentFile().getAbsolutePath());
     }
 
     @Test
-    void listOfFilePaths() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.add("--input", "Input directory");
-        argParser.tryParseArgs("--input", "/Library,/tmp");
+    void multipleFlags() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addFlag("--a", "A")
+            .addFlag("--b", "B")
+            .addFlag("--c", "C")
+            .tryParseArgs("--a", "--c");
 
-        assertEquals(2, argParser.getFileList("input").size());
-        assertEquals("/Library", argParser.getFileList("input").get(0).getAbsolutePath());
-        assertEquals("/tmp", argParser.getFileList("input").get(1).getAbsolutePath());
+        assertTrue(args.getBoolean("a"));
+        assertFalse(args.getBoolean("b"));
+        assertTrue(args.getBoolean("c"));
     }
 
     @Test
-    void multipleFlags() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.addOptional("--a", "false", "A");
-        argParser.addOptional("--b", "false", "B");
-        argParser.addOptional("--c", "", "C");
-        argParser.tryParseArgs("--a", "--c", "test");
+    void allowNullAsDefaultValue() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--a", "test")
+            .addOptional("--b", "test")
+            .tryParseArgs();
 
-        assertTrue(argParser.getBool("a"));
-        assertFalse(argParser.getBool("b"));
-        assertEquals("test", argParser.get("c"));
+        assertNull(args.get("a"));
+        assertEquals("B", args.get("b", "B"));
     }
 
     @Test
-    void allowNullAsDefaultValue() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.addOptional("--a", null, "test");
-        argParser.addOptional("--b", "B", "test");
-        argParser.tryParseArgs();
+    void allowEmptyAsDefault() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--exclude", "test")
+            .tryParseArgs();
 
-        assertNull(argParser.get("a"));
-        assertEquals("B", argParser.get("b"));
+        assertEquals("", args.get("exclude", ""));
     }
 
     @Test
-    void allowEmptyListAsDefault() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.addOptional("--exclude", "", "test");
-        argParser.tryParseArgs();
+    void allowBothSingleAndDoubleLeadingHyphen() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--a", "test")
+            .tryParseArgs("-a", "2");
 
-        assertEquals(0, argParser.getList("exclude").size());
+        assertEquals("2", args.get("a"));
+    }
+
+    @Test
+    void allowRetrievalTimeDefaultValue() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--a", "test")
+            .addOptional("--b", "test")
+            .addOptional("--c", "test")
+            .tryParseArgs();
+
+        assertEquals("3", args.get("a", "3"));
+        assertNull(args.get("a"));
+        assertEquals("3", args.get("c", "3"));
+    }
+
+    @Test
+    void optionalArgumentCanProduceNullValue() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--a", "test")
+            .tryParseArgs();
+
+        assertNull(args.get("a"));
+    }
+
+    @Test
+    void allowNameEqualsValueNotationForArguments() throws CommandLineInterfaceException {
+        AppProperties args = new CommandLineArgumentParser("MyApp", out)
+            .addOptional("--a", "test")
+            .tryParseArgs("--a=b");
+
+        assertEquals("b", args.get("a"));
     }
 }

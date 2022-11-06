@@ -6,19 +6,20 @@
 
 package nl.colorize.util.cli;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import nl.colorize.util.Platform;
+import nl.colorize.util.AppProperties;
+import nl.colorize.util.LoadUtils;
 
-import java.io.File;
 import java.io.PrintWriter;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -34,87 +35,93 @@ import java.util.stream.Collectors;
  * The following example shows how to define a simple command line interface:
  * <p>
  * <pre>
- *     public static void main(String[] args) {
- *         CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp");
- *         argParser.add("--input", "Input directory");
- *         argParser.addOptional("--output", "/tmp", "Output directory");
- *         argParser.addFlag("--overwrite", "Overwrites existing values");
+ *     public static void main(String[] argv) {
+ *         AppProperties args = new CommandLineArgumentParser("MyApp")
+ *             .addRequired("--input", "Input directory");
+ *             .addOptional("--output", "Output directory");
+ *             .addFlag("--overwrite", "Overwrites existing values");
+ *             .parseArgs(argv)
  *
- *         argParser.parseArgs(args)
- *
- *         File inputDir = argParser.getFile("input");
- *         boolean overwrite = argParser.getBool("overwrite");
+ *         File inputDir = args.getFile("input");
+ *         File outputDir = args.getFile("input", new File("/tmp"));
+ *         boolean overwrite = args.getBool("overwrite");
  *     }
  * </pre>
+ * <p>
+ * When providing argument values on the command line, argument names are
+ * considered case-insensitive and normalized. For example, using "input",
+ * "-input", "--input", or "--input=value" all map to the same argument. When
+ * *retrieving* the argument, the canonical argument name is "input", i.e.
+ * lowercase and without hyphens or the equals symbol.
  */
 public class CommandLineArgumentParser {
 
     private String applicationName;
-    private Map<String, CommandLineArg> definedArgs;
-    private Map<String, String> parsedArgs;
+    private Map<String, Argument> definedArgs;
     private PrintWriter out;
 
-    private static final CharMatcher LIST_SEP = CharMatcher.anyOf(",;:");
-    private static final Splitter LIST_SPLITTER = Splitter.on(LIST_SEP).trimResults().omitEmptyStrings();
-
-    public CommandLineArgumentParser(String applicationName, PrintWriter out) {
+    protected CommandLineArgumentParser(String applicationName, PrintWriter out) {
         this.applicationName = applicationName;
         this.out = out;
         this.definedArgs = new LinkedHashMap<>();
-        this.parsedArgs = new HashMap<>();
     }
 
     public CommandLineArgumentParser(String applicationName) {
         this(applicationName, new PrintWriter(System.out));
     }
 
+    public CommandLineArgumentParser(Class<?> applicationName) {
+        this(applicationName.getSimpleName());
+    }
+
+    private void addArgument(String name, boolean required, boolean flag, String usage) {
+        Preconditions.checkArgument(name.startsWith("-"), "Invalid argument name: " + name);
+        Preconditions.checkArgument(!(flag && required), "Flag cannot be required argument");
+
+        Argument arg = new Argument(name, required, flag, usage);
+        String normalizedName = name.replace("-", "").toLowerCase();
+
+        Preconditions.checkState(!definedArgs.containsKey(normalizedName),
+            "Argument '" + name + "' has already been defined");
+
+        definedArgs.put(normalizedName, arg);
+    }
+
     /**
-     * Adds a mandatory command line argument with the specified name.
+     * Adds a required/mandatory command line argument with the specified name.
+     * Returns {@code this} for method chaining.
      *
      * @throws IllegalStateException if another argument with the same name has
      *         already been defined.
      */
-    public CommandLineArgumentParser add(String name, String usage) {
-        Preconditions.checkArgument(name.startsWith("-"),
-            "Invalid argument name: " + name);
-
-        Preconditions.checkState(!definedArgs.containsKey(name),
-            "Argument '" + name + "' has already been defined");
-
-        CommandLineArg arg = new CommandLineArg(name, true, null, usage);
-        definedArgs.put(name, arg);
+    public CommandLineArgumentParser addRequired(String name, String usage) {
+        addArgument(name, true, false, usage);
         return this;
     }
 
     /**
      * Adds an optional command line argument with the specified name and
-     * default value.
+     * default value. Returns {@code this} for method chaining.
      *
      * @throws IllegalStateException if another argument with the same name
      *         has already been defined.
      */
-    public CommandLineArgumentParser addOptional(String name, String defaultValue, String usage) {
-        Preconditions.checkArgument(name.startsWith("-"),
-            "Invalid argument name: " + name);
-
-        Preconditions.checkState(!definedArgs.containsKey(name),
-            "Argument '" + name + "' has already been defined");
-
-        CommandLineArg arg = new CommandLineArg(name, false, defaultValue, usage);
-        definedArgs.put(name, arg);
+    public CommandLineArgumentParser addOptional(String name, String usage) {
+        addArgument(name, false, false, usage);
         return this;
     }
 
     /**
      * Adds an optional command line flag with the specified name. Flags are
      * always optional, and always have a default value of false (i.e. when
-     * the flag is not set).
+     * the flag is not set). Returns {@code this} for method chaining.
      *
      * @throws IllegalStateException if another argument with the same name
      *         has already been defined.
      */
     public CommandLineArgumentParser addFlag(String name, String usage) {
-        return addOptional(name, "false", usage);
+        addArgument(name, false, true, usage);
+        return this;
     }
 
     /**
@@ -122,14 +129,14 @@ public class CommandLineArgumentParser {
      * is done automatically if the provides arguments are incomplete.
      */
     public void printUsage() {
-        int nameColumnWidth = definedArgs.keySet().stream()
-            .mapToInt(String::length)
+        int nameColumnWidth = definedArgs.values().stream()
+            .mapToInt(arg -> arg.name.length())
             .max()
             .orElse(0);
 
         out.println("Usage: " + applicationName);
 
-        for (CommandLineArg arg : definedArgs.values()) {
+        for (Argument arg : definedArgs.values()) {
             String name = arg.required ? "<" + arg.name + ">" : "[" + arg.name + "]";
             out.println("       " + Strings.padEnd(name, nameColumnWidth + 4, ' ') + arg.usage);
         }
@@ -146,180 +153,147 @@ public class CommandLineArgumentParser {
     }
 
     /**
-     * Attempts to parse all arguments using the provided values. If the provided
-     * arguments are missing or incomplete, the usage information will be
-     * displayed and the application will terminate.
+     * Parses the provided command line arguments. If required arguments are
+     * missing or invalid, the usage information will be displayed and the
+     * application will terminate.
      */
-    public void parseArgs(String... args) {
+    public AppProperties parseArgs(String... args) {
         try {
-            tryParseArgs(args);
+            return tryParseArgs(args);
         } catch (CommandLineInterfaceException e) {
             printUsage(e);
             System.exit(1);
+            throw new AssertionError("System exit");
         }
     }
 
     /**
-     * Attempts to parse all arguments using the provided values. In most cases
-     * applications should prefer {@link #parseArgs(String[])}, which will
-     * automatically show the usage information if the provided values are
-     * incomplete. In contrast, this message will simply throw an exception and
-     * will require the caller to handle the exception.
+     * Parses the provided command line arguments, and throws an exception if
+     * ant required arguments are missing or invalid. This method is similar
+     * to {@link #parseArgs(String...)}, but does not print the usage
+     * information or exit the application.
+     *
+     * @throws CommandLineInterfaceException if the requirements for mandatory
+     *         command line arguments are not met.
      */
-    public void tryParseArgs(String... args) throws CommandLineInterfaceException {
+    public AppProperties tryParseArgs(String... argv) throws CommandLineInterfaceException {
+        List<String> providedArgs = processArgsList(argv);
+        Map<Argument, String> parsedArgs = new HashMap<>();
         int index = 0;
 
-        while (index < args.length) {
-            CommandLineArg arg = findArgument(args[index]);
+        while (index < providedArgs.size()) {
+            Argument arg = lookupDefinedArgument(providedArgs.get(index));
 
-            if (arg.isFlag()) {
-                parseArgument(arg, "true");
+            if (arg.flag) {
+                register(arg, "true", parsedArgs);
                 index += 1;
             } else {
-                parseArgument(arg, args[index + 1]);
+                register(arg, providedArgs.get(index + 1), parsedArgs);
                 index += 2;
             }
         }
 
-        for (CommandLineArg arg : definedArgs.values()) {
-            if (!parsedArgs.containsKey(normalizeName(arg.name))) {
-                parseArgument(arg, null);
-            }
-        }
-    }
+        checkRequiredArguments(parsedArgs.keySet());
 
-    private CommandLineArg findArgument(String value) {
-        if (definedArgs.containsKey(value)) {
-            return definedArgs.get(value);
-        } else {
-            throw new CommandLineInterfaceException("Unknown argument: " + value);
-        }
-    }
-
-    private void parseArgument(CommandLineArg arg, String value) {
-        if (value != null && !value.isEmpty()) {
-            parsedArgs.put(normalizeName(arg.name), value);
-        } else {
-            if (arg.required) {
-                throw new CommandLineInterfaceException("Missing required argument: " + arg.name);
-            }
-
-            parsedArgs.put(normalizeName(arg.name), arg.defaultValue);
-        }
-    }
-
-    private String normalizeName(String name) {
-        return name.replace("-", "").toLowerCase();
-    }
-
-    public String get(String name) throws CommandLineInterfaceException {
-        Preconditions.checkState(!parsedArgs.isEmpty(),
-            "Command line arguments have not been parsed yet");
-
-        String normalizedName = normalizeName(name);
-
-        if (parsedArgs.containsKey(normalizedName)) {
-            return parsedArgs.get(normalizedName);
-        } else {
-            throw new CommandLineInterfaceException("Unknown argument: " + name);
-        }
-    }
-
-    public List<String> getList(String name) throws CommandLineInterfaceException {
-        String value = get(name);
-        if (value.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return LIST_SPLITTER.splitToList(value);
-    }
-
-    public int getInt(String name) throws CommandLineInterfaceException {
-        return Integer.parseInt(get(name));
-    }
-
-    public float getFloat(String name) throws CommandLineInterfaceException {
-        return Float.parseFloat(get(name));
-    }
-
-    public double getDouble(String name) throws CommandLineInterfaceException {
-        return Double.parseDouble(get(name));
-    }
-
-    public boolean getBool(String name) throws CommandLineInterfaceException {
-        return get(name).equals("true");
-    }
-
-    public File getFile(String name) throws CommandLineInterfaceException {
-        return parseFilePath(get(name));
-    }
-
-    @Deprecated
-    public File getDir(String name) throws CommandLineInterfaceException {
-        return getOutputDir(name);
-    }
-
-    public File getInputDir(String name) throws CommandLineInterfaceException {
-        File file = parseFilePath(get(name));
-        if (!file.exists() || !file.isDirectory()) {
-            throw new CommandLineInterfaceException("Directory not found: " + file.getAbsolutePath());
-        }
-        return file;
-    }
-
-    public File getOutputDir(String name) throws CommandLineInterfaceException {
-        File file = parseFilePath(get(name));
-        if (file.exists() && !file.isDirectory()) {
-            throw new CommandLineInterfaceException(file.getAbsolutePath() + " is not a directory");
-        }
-        if (!file.exists()) {
-            file.mkdir();
-        }
-        return file;
-    }
-
-    public List<File> getFileList(String name) throws CommandLineInterfaceException {
-        return LIST_SPLITTER.splitToStream(get(name))
-            .map(this::parseFilePath)
-            .collect(Collectors.toList());
-    }
-
-    private File parseFilePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return null;
-        }
-
-        if (path.startsWith("~/")) {
-            try {
-                File homeDir = Platform.getUserHomeDir();
-                path = homeDir.getAbsolutePath() + "/" + path.substring(2);
-            } catch (UnsupportedOperationException e) {
-                // Ignore, platform does not support user home directory,
-                // so relative paths starting with ~ are not supported.
-            }
-        }
-
-        return new File(path);
+        Map<String, String> values = finalizeArgumentValues(parsedArgs);
+        return new ArgumentValues(values);
     }
 
     /**
-     * Represents one of the arguments in the command line interface.
+     * Normalizes the list of provided arguments so that the notations
+     * {@code --a b} and {@code --a=b} both produce {@code [--a, b]}.
      */
-    private static class CommandLineArg {
+    private List<String> processArgsList(String[] argv) {
+        Splitter argSplitter = Splitter.on("=").trimResults();
 
-        private String name;
-        private boolean required;
-        private String defaultValue;
-        private String usage;
+        return Arrays.stream(argv)
+            .flatMap(argSplitter::splitToStream)
+            .toList();
+    }
 
-        public CommandLineArg(String name, boolean required, String defaultValue, String usage) {
-            this.name = name;
-            this.required = required;
-            this.defaultValue = defaultValue;
-            this.usage = usage;
+    private String getNormalizedArgumentName(String name) {
+        return name.replace("-", "").toLowerCase();
+    }
+
+    private Argument lookupDefinedArgument(String name) throws CommandLineInterfaceException {
+        String normalizedName = getNormalizedArgumentName(name);
+        Argument arg = definedArgs.get(normalizedName);
+        if (arg == null) {
+            throw new CommandLineInterfaceException("Unknown argument '" + name + "'");
+        }
+        return arg;
+    }
+
+    private void register(Argument arg, String value, Map<Argument, String> parsedArgs) {
+        if (!parsedArgs.containsKey(arg)) {
+            parsedArgs.put(arg, value);
+        }
+    }
+
+    private void checkRequiredArguments(Set<Argument> parsed) throws CommandLineInterfaceException {
+        Set<String> parsedNames = parsed.stream()
+            .map(Argument::name)
+            .collect(Collectors.toSet());
+
+        for (Argument arg : definedArgs.values()) {
+            if (arg.required && !parsedNames.contains(arg.name)) {
+                throw new CommandLineInterfaceException("Missing required argument '" + arg + "'");
+            }
+        }
+    }
+
+    private Map<String, String> finalizeArgumentValues(Map<Argument, String> parsedArgs) {
+        Map<String, String> values = new HashMap<>();
+
+        // All flags have an implicit default value of false, i.e. when
+        // they are not specified.
+        for (Argument arg : definedArgs.values()) {
+            if (arg.flag) {
+                values.put(getNormalizedArgumentName(arg.name), "false");
+            }
         }
 
-        public boolean isFlag() {
-            return "true".equals(defaultValue) || "false".equals(defaultValue);
+        for (Argument arg : parsedArgs.keySet()) {
+            values.put(getNormalizedArgumentName(arg.name), parsedArgs.get(arg));
+        }
+
+        return values;
+    }
+
+    /**
+     * Represents one of the arguments in the command line interface. This
+     * referred to the *defined* argument, not to the *parsed* argument.
+     */
+    private record Argument(String name, boolean required, boolean flag, String usage) {
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    /**
+     * Extends the {@link AppProperties} interface to perform the argument name
+     * normalization by this class. This allows arguments to be accessed by both
+     * identifier name (e.g. "output") and their actual command line name (e.g.
+     * "-o" or "--output").
+     */
+    private class ArgumentValues implements AppProperties {
+
+        private Properties properties;
+
+        public ArgumentValues(Map<String, String> values) {
+            this.properties = LoadUtils.toProperties(values);
+        }
+
+        @Override
+        public Properties getProperties() {
+            return properties;
+        }
+
+        @Override
+        public String get(String name, String defaultValue) {
+            return properties.getProperty(getNormalizedArgumentName(name), defaultValue);
         }
     }
 }

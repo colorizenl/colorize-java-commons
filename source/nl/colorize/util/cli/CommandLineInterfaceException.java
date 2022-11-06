@@ -8,13 +8,16 @@ package nl.colorize.util.cli;
 
 /**
  * Exception that indicates invalid or missing input was provided to an
- * application's command line interface. Using this exception will *not* lead
- * to a stack trace, as it will be used to communicate the error to the caller
- * via the application's usage message.
+ * application's command line interface. Used in combination with
+ * {@link CommandLineArgumentParser}.
  */
-public class CommandLineInterfaceException extends RuntimeException {
+public class CommandLineInterfaceException extends Exception {
 
     public CommandLineInterfaceException(String message) {
-        super(message, null);
+        super(message);
+    }
+
+    public CommandLineInterfaceException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

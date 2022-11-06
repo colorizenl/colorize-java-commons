@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Represents a version number with arbitrary precision. Examples of version
@@ -67,6 +66,7 @@ public final class Version implements Comparable<Version> {
      * Compares this version number to {@code other}, considering only the first
      * N digits. For example, comparing "1.0.0" and "1.0.2" will return 1 with
      * a precision of 3 digits, but 0 with a precision of 2 digits.
+     *
      * @throws IllegalArgumentException if {@code precision} is 0 or less.
      */
     public int compareTo(Version other, int precision) {
@@ -110,7 +110,7 @@ public final class Version implements Comparable<Version> {
 
         List<Integer> truncatedDigits = digits.stream()
             .limit(Math.min(maxDigits, digits.size()))
-            .collect(Collectors.toList());
+            .toList();
 
         return new Version(VERSION_JOINER.join(truncatedDigits), truncatedDigits);
     }
@@ -121,8 +121,7 @@ public final class Version implements Comparable<Version> {
     
     @Override
     public boolean equals(Object o) {
-        if (o instanceof Version) {
-            Version other = (Version) o;
+        if (o instanceof Version other) {
             return compareTo(other) == 0;
         }
         return false;
@@ -158,7 +157,7 @@ public final class Version implements Comparable<Version> {
 
         List<Integer> digits = VERSION_SPLITTER.splitToList(matcher.group(1)).stream()
             .map(Integer::parseInt)
-            .collect(Collectors.toList());
+            .toList();
 
         return new Version(versionString, digits); 
     }

@@ -8,7 +8,6 @@ package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
@@ -73,9 +72,9 @@ public abstract class URLLoader extends HttpMessage {
     private boolean allowErrorStatus;
     private boolean certificateVerification;
 
-    private static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
+    protected static final String CLASSIC_LOADER_PROPERTY = "colorize.urlloader.classic";
 
-    private static final List<String> SUPPORTED_PROTOCOLS = ImmutableList.of("http", "https");
+    private static final List<String> SUPPORTED_PROTOCOLS = List.of("http", "https");
     private static final int DEFAULT_TIMEOUT = 30_000;
     private static final Logger LOGGER = LogHelper.getLogger(URLLoader.class);
     
@@ -153,7 +152,7 @@ public abstract class URLLoader extends HttpMessage {
         Preconditions.checkArgument(name != null && value != null,
             "Invalid query parameter: " + name + "=" + value);
 
-        Preconditions.checkState(!queryParameters.getData().containsKey(name),
+        Preconditions.checkState(!queryParameters.contains(name),
             "Request already contains query parameter: " + name);
 
         queryParameters = queryParameters.merge(PostData.create(name, value));

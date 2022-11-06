@@ -18,14 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 class DateRangeTest {
 
     @Test
-    void formatLabel() {
-        assertEquals("2018-10-10 - 2019-01-07",
-            new DateRange("2018-10-10", "2019-01-07").toString());
-        assertEquals("2018-10-10 - 2019-01-07",
-            new DateRange("2018-10-10 12:00:00", "2019-01-07 15:00").toString());
-    }
-
-    @Test
     void contains() {
         DateRange range = new DateRange(toDate("2018-10-10"),
             toDate("2019-01-07"));

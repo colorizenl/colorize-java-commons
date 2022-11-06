@@ -15,20 +15,19 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PostDataTest {
 
     @Test
     public void testParse() {
-        assertEquals(ImmutableMap.of(), PostData.parse("", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of("a", "2"), PostData.parse("a=2", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of("a", "", "b", "4"), PostData.parse("a=&b=4", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of("a", "3>4"), PostData.parse("a=3%3E4", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of(), PostData.parse("?", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of("a", "7"), PostData.parse("?a=7", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of("a", ""), PostData.parse("a=", Charsets.UTF_8).getData());
-        assertEquals(ImmutableMap.of(), PostData.parse("a", Charsets.UTF_8).getData());
+        assertEquals(ImmutableMap.of(), PostData.parse("", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", "2"), PostData.parse("a=2", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", "", "b", "4"), PostData.parse("a=&b=4", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", "3>4"), PostData.parse("a=3%3E4", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of(), PostData.parse("?", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", "7"), PostData.parse("?a=7", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", ""), PostData.parse("a=", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of(), PostData.parse("a", Charsets.UTF_8).toMap());
     }
 
     @Test
@@ -70,7 +69,7 @@ public class PostDataTest {
         Map<String, String> map = new HashMap<>();
         map.put("a", null);
 
-        assertEquals(ImmutableMap.of("a", ""), PostData.create(map).getData());
+        assertEquals(ImmutableMap.of("a", ""), PostData.create(map).toMap());
     }
 
     @Test
@@ -100,7 +99,7 @@ public class PostDataTest {
         PostData b = PostData.create("b", "3");
         PostData merged = a.merge(b);
 
-        assertEquals(ImmutableMap.of("a", "2", "b", "3"), merged.getData());
+        assertEquals(ImmutableMap.of("a", "2", "b", "3"), merged.toMap());
     }
 
     @Test
@@ -109,36 +108,5 @@ public class PostDataTest {
         PostData b = PostData.create("a", "3");
 
         assertThrows(IllegalArgumentException.class, () -> a.merge(b));
-    }
-
-    @Test
-    void parseFromJson() {
-        PostData postData = PostData.parseJSON("{\"a\":\"2\",\"b\":\"3\"}");
-
-        assertEquals("2", postData.getRequiredParameter("a"));
-        assertEquals("3", postData.getRequiredParameter("b"));
-    }
-
-    @Test
-    void testParseFromJsonWithNonStringValues() {
-        PostData postData = PostData.parseJSON("{\"a\":2,\"b\":true}");
-
-        assertEquals("2.0", postData.getRequiredParameter("a"));
-        assertEquals("true", postData.getRequiredParameter("b"));
-    }
-
-    @Test
-    void testParseEmptyJsonString() {
-        PostData postData = PostData.parseJSON("");
-
-        assertTrue(postData.isEmpty());
-    }
-
-    @Test
-    void serializeToJson() {
-        PostData postData = PostData.create("a", "2", "b", "3");
-        String json = postData.toJSON();
-
-        assertEquals("{\"a\":\"2\",\"b\":\"3\"}", json);
     }
 }

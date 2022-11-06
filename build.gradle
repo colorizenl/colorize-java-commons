@@ -4,9 +4,11 @@ plugins {
 
 apply plugin: "java-library"
 apply plugin: "jacoco"
+apply plugin: "maven-publish"
+apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2022.9"
+version = "2022.13"
 sourceCompatibility = "17"
 targetCompatibility = "17"
 compileJava.options.encoding = "UTF-8"
@@ -20,10 +22,12 @@ repositories {
 
 dependencies {
     api "com.google.guava:guava:31.1-jre"
-    api "com.google.code.gson:gson:2.9.0"
-    api "org.jdom:jdom2:2.0.6.1"
-    api "jaxen:jaxen:1.2.0"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.8.2"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.9.0"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
 
 test {
@@ -45,4 +49,54 @@ task coverage(dependsOn: ["test", "jacocoTestReport"]) {
         println "-" * 40
         println "Test coverage: " + coverage[0][1]
     }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = "colorize-java-commons"
+            from components.java
+
+            pom {
+                name = "Colorize-Java-Commons"
+                description = "Library containing utility classes for web, desktop, and mobile applications."
+                url = "https://www.clrz.nl"
+
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = "colorize"
+                        name = "Colorize"
+                        email = "contact@colorize.nl"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+                    developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+                    url = "https://github.com/colorizenl/colorize-java-commons"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            credentials {
+                username ossrhUser
+                password ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
 }

@@ -8,7 +8,6 @@ package nl.colorize.util.swing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
-import nl.colorize.util.LoadUtils;
 import nl.colorize.util.Platform;
 import nl.colorize.util.ResourceFile;
 import nl.colorize.util.TranslationBundle;
@@ -22,6 +21,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -60,6 +60,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -84,7 +85,7 @@ public final class SwingUtils {
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
     private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE =
-        TranslationBundle.fromFile(new ResourceFile("custom-swing-components.properties"));
+        TranslationBundle.fromPropertiesFile(new ResourceFile("custom-swing-components.properties"));
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);
@@ -330,14 +331,11 @@ public final class SwingUtils {
             return false;
         }
         
-        URI parsedURI = LoadUtils.toURI(uri);
         try {
             Desktop desktop = Desktop.getDesktop();
-            desktop.browse(parsedURI);
+            desktop.browse(URI.create(uri));
             return true;
-        } catch (IOException e) {
-            return false;
-        } catch (UnsupportedOperationException e) {
+        } catch (IOException | UnsupportedOperationException | IllegalArgumentException e) {
             return false;
         }
     }
@@ -665,6 +663,16 @@ public final class SwingUtils {
             populateTable(table, itemSupplier);
         };
     }
+
+    public static JLabel createLabel(String text, Font font, Color textColor) {
+        JLabel label = new JLabel(text);
+        label.setOpaque(false);
+        if (font != null) {
+            label.setFont(font);
+        }
+        label.setForeground(textColor);
+        return label;
+    }
     
     /**
      * Creates a button suitable for usage in a toolbar. The size of the button
@@ -747,6 +755,48 @@ public final class SwingUtils {
             }
         });
         return outlineButton;
+    }
+
+    /**
+     * Creates a button that does not use the platform's normal look-and-feel,
+     * and instead only consists of a text link in the specified color.
+     */
+    public static JButton createTextButton(String label, Font font, Color color, Color highlight) {
+        JButton button = new JButton(label);
+        button.setOpaque(false);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setBorder(null);
+        button.setFocusable(false);
+        if (font != null) {
+            button.setFont(font);
+        }
+        button.setForeground(color);
+
+        button.addMouseListener(toHoverListener(
+            e -> button.setForeground(highlight),
+            e -> button.setForeground(color)
+        ));
+
+        return button;
+    }
+
+    /**
+     * Produces a {@link MouseListener} that performs the specified actions when
+     * the mouse enters or exits the component.
+     */
+    public static MouseListener toHoverListener(Consumer<MouseEvent> enter, Consumer<MouseEvent> exit) {
+        return new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                enter.accept(e);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                exit.accept(e);
+            }
+        };
     }
 
     public static <T> JComboBox<String> createComboBox(Collection<T> items, T selected) {

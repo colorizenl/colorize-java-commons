@@ -9,11 +9,12 @@ package nl.colorize.util;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,13 +27,10 @@ public class ResourceFileTest {
 
     @Test
     public void testGetPath() {
-        assertEquals("kees.xml", new ResourceFile("kees.xml").getPath()); 
-        assertEquals("kees.xml", new ResourceFile("kees.xml/").getPath()); 
-        assertEquals("/kees.xml", new ResourceFile("/kees.xml").getPath());
-        assertEquals("c:/temp/a.xml", new ResourceFile("c:\\temp\\a.xml").getPath());
-        assertEquals("a/b.xml", new ResourceFile(new ResourceFile("a"), "b.xml").getPath());
-        assertEquals("/a/b.xml", new ResourceFile(new ResourceFile("/a"), "b.xml").getPath());
-        assertEquals("/a/b/c/d.xml", new ResourceFile(new ResourceFile("/a/b/"), "/a/b/c/d.xml").getPath());
+        assertEquals("kees.xml", new ResourceFile("kees.xml").path());
+        assertEquals("kees.xml", new ResourceFile("kees.xml/").path());
+        assertEquals("/kees.xml", new ResourceFile("/kees.xml").path());
+        assertEquals("c:/temp/a.xml", new ResourceFile("c:\\temp\\a.xml").path());
     }
     
     @Test
@@ -48,21 +46,23 @@ public class ResourceFileTest {
     public void testOpenFile() throws IOException {
         File testFile = new File("build.gradle");
         assertTrue(testFile.exists());
-        String expected = FileUtils.read(testFile, Charsets.UTF_8);
+        String expected = Files.readString(testFile.toPath(), Charsets.UTF_8);
         
         ResourceFile resourceFile = new ResourceFile("build.gradle");
-        String actual = LoadUtils.readToString(resourceFile.openStream(), Charsets.UTF_8);
+        String actual = resourceFile.read(Charsets.UTF_8);
+
         assertEquals(expected, actual);
     }
     
     @Test
-    public void testAbsolutePath() throws IOException {
-        File tempFile = LoadUtils.getTempFile(".txt");
+    public void testAbsolutePath(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "a.txt");
         assertTrue(tempFile.getAbsolutePath().startsWith("/"));
         FileUtils.write("test\n", Charsets.UTF_8, tempFile);
         
         ResourceFile resourceFile = new ResourceFile(tempFile);
-        String contents = LoadUtils.readToString(resourceFile.openReader(Charsets.UTF_8));
+        String contents = resourceFile.read(Charsets.UTF_8);
+
         assertEquals("test\n", contents);
     }
     
@@ -84,21 +84,33 @@ public class ResourceFileTest {
     }
     
     @Test
-    public void testReadBytes() throws Exception {
+    public void testReadBytes(@TempDir File tempDir) throws Exception {
+        File tempFile = new File(tempDir, "test.txt");
         byte[] bytes = {1, 2, 3, 4, 1, 4, 0, 6};
-        ResourceFile file = new ResourceFile(LoadUtils.createTempFile(new ByteArrayInputStream(bytes)));
+        Files.write(tempFile.toPath(), bytes);
+
+        ResourceFile file = new ResourceFile(tempFile);
+
         assertArrayEquals(bytes, file.readBytes());
     }
     
     @Test
-    public void testReadText() throws Exception {
-        ResourceFile file = new ResourceFile(LoadUtils.createTempFile("Test\ntest", Charsets.UTF_8));
+    public void testReadText(@TempDir File tempDir) throws Exception {
+        File tempFile = new File(tempDir, "test.txt");
+        Files.writeString(tempFile.toPath(), "Test\ntest", Charsets.UTF_8);
+
+        ResourceFile file = new ResourceFile(tempFile);
+
         assertEquals("Test\ntest", file.read(Charsets.UTF_8));
     }
     
     @Test
-    public void testReadLines() throws Exception {
-        ResourceFile file = new ResourceFile(LoadUtils.createTempFile("Test\ntest", Charsets.UTF_8));
+    public void testReadLines(@TempDir File tempDir) throws Exception {
+        File tempFile = new File(tempDir, "test.txt");
+        Files.writeString(tempFile.toPath(), "Test\ntest", Charsets.UTF_8);
+
+        ResourceFile file = new ResourceFile(tempFile);
+
         assertEquals(ImmutableList.of("Test", "test"), file.readLines(Charsets.UTF_8));
     }
 }

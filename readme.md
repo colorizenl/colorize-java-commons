@@ -5,27 +5,27 @@ Java library containing utility classes for web, desktop, and mobile application
 all Java-based applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
 The library provides the following features:
 
-- An animation framework including keyframe animation
-- A component library for Swing applications
-- A command line argument parser
-- A lightweight translation framework
+- Animation framework including keyframe animation and interpolation
+- Component library for Swing applications
+- Lightweight command line argument parser
+- Lightweight translation framework
 - Cross-platform API for sending HTTP requests
 - Reading and writing CSV
 - Utilities for working with statistics
 - Automatic application logging configuration
-- Mini-framework for managing application configuration and preferences
+- Cross-platform storage for application data/configuration/preferences
 - Various other utility classes
 
 The library focuses on portability, and supports a wide variety of platforms and environments:
 
-- Windows (desktop, server)
-- Mac OS (desktop)
-- Linux (desktop, server)
-- Google Cloud (cloud)
-- AWS (cloud)
+- Windows
+- Mac OS
+- Linux
+- Google Cloud
+- AWS
 - Android
-- iOS (via [RoboVM](http://robovm.mobidevelop.com))
-- Browser (via [TeaVM](http://teavm.org) or [JSweet](http://www.jsweet.org))
+- iOS (via [RoboVM](http://robovm.mobidevelop.com) or [Multi-OS Engine](https://multi-os-engine.org))
+- Browser (via [TeaVM](http://teavm.org))
 
 Usage
 -----
@@ -36,13 +36,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2022.9</version>
+        <version>2022.13</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2022.9"
+        implementation "nl.colorize:colorize-java-commons:2022.13"
     }
     
 Documentation
@@ -62,19 +62,17 @@ since 2016. Instead, it is quite similar to Python's `argparse` module.
 
 The following example shows how to define a simple command line interface:
 
-```
-public static void main(String[] args) {
-    CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp");
-    argParser.add("--input", "Input directory");
-    argParser.addOptional("--output", "/tmp", "Output directory");
-    argParser.addFlag("--overwrite", "Overwrites existing values")
-    
-    argParser.parseArgs(args)
+    public static void main(String[] argv) {
+        AppProperties args = new CommandLineArgumentParser(MyApp.class)
+            .addRequired("--input", "Input directory")
+            .addOptional("--output", "Output directory")
+            .addFlag("--overwrite", "Overwrites existing values")
+            .parseArgs(argv);
  
-    File inputDir = argParser.getFile("input");
-    boolean overwrite = argParser.getBool("overwrite");
-}
-```
+        File inputDir = args.getFile("input");
+        File outputDir = args.getFile("input", new File("/tmp"));
+        boolean overwrite = args.getBool("overwrite");
+    }
 
 ### Swing component library
 
@@ -83,7 +81,12 @@ application that shows integration with some Mac system functionality.
 
 ### Animation framework
 
-Refer to `InterpolationUIT` for an interactive example.
+Refer to `InterpolationUIT` for an interactive example. The following example creates a timeline
+that moves the ball across the screen in 0.4 seconds, using easing animation interpolation:
+
+    Timeline anim = new Timeline(Interpolation.EASE)
+        .addKeyFrame(0f, 0f);
+        .addKeyFrame(0.4f, 800f);
 
 Build instructions
 ------------------
@@ -101,8 +104,12 @@ The following Gradle build tasks are available:
 - `gradle test` runs all unit tests
 - `gradle coverage` runs all unit tests and reports on test coverage
 - `gradle javadoc` generates the JavaDoc API documentation
-- `gradle dependencyUpdates` checks for and reports on library updates.
-- `gradle -b build-mavencentral.gradle publish` publishes to Maven central (requires account) 
+- `gradle dependencyUpdates` checks for and reports on library updates
+- `gradle publish` publishes to Maven central
+
+Note: Publishing the library to Maven Central requires the Gradle properties `ossrhUser` and 
+`ossrhPassword`. If you want to use the library locally, remove or change the `publishing` section
+in `build.gradle`.
 
 License
 -------

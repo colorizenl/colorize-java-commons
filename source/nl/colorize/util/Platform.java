@@ -6,12 +6,14 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 import javax.swing.filechooser.FileSystemView;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -21,7 +23,7 @@ import java.util.function.Supplier;
  * <p>
  * Most of this information can also be obtained from system properties, 
  * environment variables, or the {@link java.lang.System} class. However,
- * working directly with these properties is error prone, since the properties
+ * working directly with these properties is error-prone, since the properties
  * are scattered across various locations, need to be parsed by applications,
  * and do not always behave consistently across different platforms.In addition
  * to that, the standard APIs have not always been updated to reflect modern
@@ -56,6 +58,9 @@ import java.util.function.Supplier;
 public final class Platform {
 
     private static AtomicBoolean teaVM = new AtomicBoolean(false);
+    private static TimeZone cachedDefaultTimeZone = null;
+
+    public static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
 
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
@@ -79,6 +84,7 @@ public final class Platform {
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
     private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
+    private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
 
     private Platform() {
     }
@@ -397,10 +403,9 @@ public final class Platform {
      *         application data (e.g. Google App Engine).
      */
     public static File getApplicationData(String app, String path) {
-        if (path.trim().isEmpty() || path.startsWith("/")) {
-            throw new IllegalArgumentException("Invalid path: " + path);
-        }
-        
+        Preconditions.checkArgument(!path.trim().isEmpty() && !path.startsWith("/"),
+            "Invalid path: " + path);
+
         File appDataDir = getApplicationDataDirectory(app);
         try {
             FileUtils.mkdir(appDataDir);
@@ -497,5 +502,26 @@ public final class Platform {
     @Deprecated
     public static String getLineSeparator() {
         return System.lineSeparator();
+    }
+
+    /**
+     * Returns the default timezone. By default, this will return the
+     * {@code Europe/Amsterdam} time zone. The default time zone can be set
+     * explicitly using the environment variable
+     * {@link #COLORIZE_TIMEZONE_ENV}. If the requested time zone is not
+     * available on the current platform, the GMT time zone is used instead.
+     */
+    public static TimeZone getDefaultTimeZone() {
+        if (cachedDefaultTimeZone != null) {
+            return cachedDefaultTimeZone;
+        }
+
+        String requestedTimeZone = System.getenv(COLORIZE_TIMEZONE_ENV);
+        if (requestedTimeZone == null || requestedTimeZone.isEmpty()) {
+            requestedTimeZone = AMSTERDAM_TIME_ZONE;
+        }
+
+        cachedDefaultTimeZone = TimeZone.getTimeZone(requestedTimeZone);
+        return cachedDefaultTimeZone;
     }
 }

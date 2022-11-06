@@ -11,10 +11,9 @@ import com.google.common.collect.ImmutableList;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -22,9 +21,10 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -44,50 +44,18 @@ public final class FileUtils {
 
     private FileUtils() {
     }
-    
-    /**
-     * Reads a file's binary contents and returns them as a byte array.
-     */
-    public static byte[] read(File source) throws IOException {
-        return Files.readAllBytes(source.toPath());
-    }
-    
-    /**
-     * Reads a file's textual contents using the specified character encoding.
-     */
-    public static String read(File source, Charset encoding) throws IOException {
-        return new String(read(source), encoding);
-    }
-    
-    /**
-     * Reads a file's textual contents using the specified character encoding,
-     * and returns a list of lines.
-     */
-    public static List<String> readLines(File source, Charset encoding) throws IOException {
-        return Files.readAllLines(source.toPath(), encoding);
-    }
-    
+
     /**
      * Reads a file's first N lines, or all lines if the file contains less.
      */
     public static List<String> readFirstLines(File source, Charset encoding, int n) throws IOException {
         Preconditions.checkArgument(n >= 1, "Invalid number of lines: " + n);
-        
-        List<String> lines = new ArrayList<>();
-        
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                new FileInputStream(source), encoding))) {
-            while (true) {
-                String line = reader.readLine();
-                if (line != null && lines.size() < n) {
-                    lines.add(line);
-                } else {
-                    break;
-                }
-            }
+
+        try (BufferedReader reader = Files.newBufferedReader(source.toPath(), encoding)) {
+            return reader.lines()
+                .limit(n)
+                .toList();
         }
-        
-        return lines;
     }
     
     /**
@@ -123,7 +91,7 @@ public final class FileUtils {
      */
     public static void rewrite(File file, Charset charset, Function<String, String> lineProcessor)
             throws IOException {
-        List<String> originalLines = FileUtils.readLines(file, charset);
+        List<String> originalLines = Files.readAllLines(file.toPath(), charset);
 
         try (PrintWriter writer = new PrintWriter(file, charset)) {
             for (String line : originalLines) {
@@ -146,6 +114,31 @@ public final class FileUtils {
                 return line;
             }
         });
+    }
+
+    /**
+     * Expands a file path that contains a reference to the user's home
+     * directory. For example, if the path is "~/Desktop/test.txt" and the
+     * user home directory is "/home/john", the returned file will reference
+     * "/home/john/Desktop/test.txt".
+     *
+     * @throws IllegalArgumentException if the path is empty.
+     * @throws UnsupportedOperationException if the current platform does not
+     *         provide or support a user home directory.
+     */
+    public static File expandUser(String path) {
+        Preconditions.checkArgument(path != null && !path.isEmpty(), "Empty file path");
+
+        if (path.startsWith("~/")) {
+            try {
+                File homeDir = Platform.getUserHomeDir();
+                return new File(homeDir.getAbsolutePath() + "/" + path.substring(2));
+            } catch (Exception e) {
+                throw new UnsupportedOperationException("User home not supported on platform", e);
+            }
+        } else {
+            return new File(path);
+        }
     }
 
     /**
@@ -184,8 +177,7 @@ public final class FileUtils {
         Preconditions.checkState(!target.exists(),
             "Target directory already exists: " + target.getAbsolutePath());
 
-        List<Path> contents = Files.walk(source.toPath())
-            .collect(Collectors.toList());
+        List<Path> contents = Files.walk(source.toPath()).toList();
 
         for (Path childPath : contents) {
             Path relativePath = source.toPath().relativize(childPath);
@@ -236,7 +228,7 @@ public final class FileUtils {
         return Files.walk(dir.toPath())
             .map(Path::toFile)
             .filter(file -> !file.isDirectory() && filter.test(file))
-            .collect(Collectors.toList());
+            .toList();
     }
 
     /**
@@ -245,7 +237,7 @@ public final class FileUtils {
      * not share a common base {@code file}'s absolute path will be returned.
      *
      * @deprecated Use {@code Path.relativize} instead. This can be used even when
-     *             when working with APIs still using {@link File} instances:
+     *             working with APIs still using {@link File} instances:
      *             {@code base.toPath().relativize(file.toPath)}.
      */
     @Deprecated
@@ -272,11 +264,37 @@ public final class FileUtils {
      * file does not have a file extension this will return an aempty string.
      */
     public static String getFileExtension(File file) {
-        String fileName = file.getName();
+        return getFileExtension(file.getName());
+    }
+
+    private static String getFileExtension(String fileName) {
         if (fileName.indexOf('.') <= 0) {
             return "";
         }
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    /**
+     * Returns a file filter that will only accept files that match one of the
+     * specified file extensions. The file extension check is case-insensitive.
+     *
+     * @throws IllegalArgumentException if the provided list is empty.
+     */
+    public static FilenameFilter getFileExtensionFilter(String... extensions) {
+        Preconditions.checkArgument(extensions.length > 0, "No file extensions provided");
+
+        Set<String> normalizedExtensions = Arrays.stream(extensions)
+            .map(ext -> normalizeFileExtension(ext))
+            .collect(Collectors.toSet());
+
+        return (dir, name) -> normalizedExtensions.contains(getFileExtension(name).toLowerCase());
+    }
+
+    private static String normalizeFileExtension(String ext) {
+        if (ext.startsWith(".")) {
+            ext = ext.substring(1);
+        }
+        return ext.toLowerCase();
     }
 
     /**

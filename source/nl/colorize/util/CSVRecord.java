@@ -12,82 +12,78 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
- * Serializes data to and parses it from CSV. Cells are separated by a delimiter,
- * and record are separated by newlines. Cells can only be referenced by index,
- * not by column name.
+ * Immutable record within a CSV file. Cells are separated by a delimiter,
+ * records are separated by newlines. Cells can be referenced by column index.
+ * Access by column name is also possible, via the {@link AppProperties}
+ * interface, but requires column name information to be available.
  */
-public class CSVRecord {
+public class CSVRecord implements AppProperties {
 
+    private List<String> columns;
     private List<String> cells;
 
     private static final Splitter RECORD_SPLITTER = Splitter.on("\n").omitEmptyStrings();
     private static final Joiner RECORD_JOINER = Joiner.on("\n");
 
-    private CSVRecord(List<String> cells) {
-        Preconditions.checkArgument(!cells.isEmpty(), "CSV record is empty");
+    private CSVRecord(List<String> columns, List<String> cells) {
+        Preconditions.checkArgument(!cells.isEmpty(),
+            "CSV record is empty");
+
+        Preconditions.checkArgument(columns.isEmpty() || columns.size() == cells.size(),
+            "Number of columns does not match number of cells: " + columns + " <-> " + cells);
+
+        this.columns = ImmutableList.copyOf(columns);
         this.cells = ImmutableList.copyOf(cells);
     }
 
-    public int getCellCount() {
-        return cells.size();
-    }
-
+    /**
+     * Returns the value of the cell with the specified index. This method is
+     * always available, while accessing cells by column name is only available
+     * if the CSV containing column information.
+     */
     public String get(int index) {
         Preconditions.checkArgument(index < cells.size(),
             "Invalid index " + index + ", record has " + cells.size() + " cells");
         return cells.get(index);
     }
 
-    public int getInt(int index) {
-        return Integer.parseInt(get(index));
-    }
-
-    public float getFloat(int index) {
-        return Float.parseFloat(get(index));
-    }
-
-    public double getDouble(int index) {
-        return Double.parseDouble(get(index));
-    }
-
-    public boolean getBoolean(int index) {
-        return get(index).equals("true");
-    }
-
-    public Date getDate(int index, String dateFormat) {
-        try {
-            return new SimpleDateFormat(dateFormat).parse(get(index));
-        } catch (ParseException e) {
-            throw new IllegalArgumentException("Malformed date: " + get(index));
-        }
-    }
-
     /**
-     * Serializes this record to CSV using the specified delimiter. For creating
-     * CSV files consisting of multiple records, use {@link #toCSV(List, String)}
-     * or {@link #toCSV(List, List, String)}.
+     * Returns a {@link Properties} view of this CSV record. This class is
+     * immutable, so changes to the {@link Properties} will not affect the CSV
+     * record itself.
+     *
+     * @throws IllegalStateException if the CSV record only includes column
+     *         index information, but does not include column name information.
      */
-    protected String toCSV(String delimiter) {
+    @Override
+    public Properties getProperties() {
+        Preconditions.checkState(!columns.isEmpty(),
+            "Column name information not available");
+
+        Properties properties = new Properties();
+        for (int i = 0; i < columns.size(); i++) {
+            properties.setProperty(columns.get(i), cells.get(i));
+        }
+        return properties;
+    }
+
+    private String toCSV(String delimiter) {
         Preconditions.checkArgument(delimiter.length() == 1,
             "Invalid CSV delimiter: " + delimiter);
 
         CharMatcher escaper = CharMatcher.anyOf("\r\n" + delimiter);
 
-        List<String> normalizedCells = cells.stream()
+        return cells.stream()
+            .map(cell -> cell == null ? "" : cell)
             .map(escaper::removeFrom)
-            .collect(Collectors.toList());
-
-        Joiner cellJoiner = Joiner.on(delimiter).useForNull("");
-        return cellJoiner.join(normalizedCells);
+            .collect(Collectors.joining(delimiter));
     }
 
     @Override
@@ -96,50 +92,65 @@ public class CSVRecord {
     }
 
     /**
-     * Creates a CSV record from the specified list of cells.
-     *
-     * @throws IllegalArgumentException when trying to create a record without
-     *         any cells.
+     * Creates an indivudual CSV record from the specified list of cells and
+     * column headers.
      */
-    public static CSVRecord create(List<String> cells) {
-        return new CSVRecord(cells);
+    public static CSVRecord create(List<String> columns, List<String> cells) {
+        return new CSVRecord(columns, cells);
     }
 
     /**
-     * Creates a CSV record from the specified array of cells.
-     *
-     * @throws IllegalArgumentException when trying to create a record without
-     *         any cells.
+     * Creates an indivudual CSV record from the specified list of cells, with
+     * no column headers.
+     */
+    public static CSVRecord create(List<String> cells) {
+        return new CSVRecord(Collections.emptyList(), cells);
+    }
+
+    /**
+     * Creates an individual CSV record from the specified array of cells.
      */
     public static CSVRecord create(String... cells) {
-        return new CSVRecord(ImmutableList.copyOf(cells));
+        return new CSVRecord(Collections.emptyList(), ImmutableList.copyOf(cells));
     }
 
     /**
      * Parses an individual CSV record, using the specified delimiter.
      */
     public static CSVRecord parseRecord(String csv, String delimiter) {
-        Splitter cellSplitter = Splitter.on(delimiter);
-        List<String> cells = cellSplitter.splitToList(csv);
-        return new CSVRecord(cells);
+        Preconditions.checkArgument(delimiter.length() == 1,
+            "Invalid CSV delimiter: " + delimiter);
+
+        List<String> cells = Splitter.on(delimiter).splitToList(csv);
+        return new CSVRecord(Collections.emptyList(), cells);
     }
 
     /**
-     * Parses a number of CSV records, using the specified delimiter. If
-     * {@code hasHeaders} is true, the first record is assumed to be the
-     * headers and will not be included in the results.
+     * Parses a CSV file containing any number of record. Cells within each
+     * record are split using the specified delimiter. If {@code headers}
+     * is true, the first record is used as the column header names. If false,
+     * the first record is considered as a normal record, and no column header
+     * information will be available.
      */
-    public static List<CSVRecord> parseRecords(String csv, String delimiter, boolean hasHeaders) {
+    public static List<CSVRecord> parseCSV(String csv, String delimiter, boolean headers) {
+        Preconditions.checkArgument(delimiter.length() == 1,
+            "Invalid CSV delimiter: " + delimiter);
+
         if (csv.isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<CSVRecord> records = RECORD_SPLITTER.splitToList(csv).stream()
-            .map(row -> parseRecord(row, delimiter))
-            .collect(Collectors.toList());
+        List<CSVRecord> records = new ArrayList<>();
+        List<String> columns = Collections.emptyList();
 
-        if (hasHeaders && records.size() > 0) {
-            records = records.subList(1, records.size());
+        for (String row : RECORD_SPLITTER.split(csv)) {
+            List<String> cells = parseRecord(row, delimiter).cells;
+            if (headers && columns.isEmpty()) {
+                columns = cells;
+            } else {
+                CSVRecord record = new CSVRecord(columns, cells);
+                records.add(record);
+            }
         }
 
         return records;
@@ -147,33 +158,39 @@ public class CSVRecord {
 
     /**
      * Serializes a list of records to CSV, using the specified cell delimiter.
-     * If the list of records is empty this will return an empty string.
-     */
-    public static String toCSV(List<CSVRecord> records, String delimiter) {
-        List<String> rows = records.stream()
-            .map(record -> record.toCSV(delimiter))
-            .collect(Collectors.toList());
-
-        return RECORD_JOINER.join(rows);
-    }
-
-    /**
-     * Serializes a list of records to CSV, using the specified cell delimiter
-     * and list of row headers.
+     * If the list of records is empty this will return an empty string. If
+     * {@code headers} is true, the header information in the first record will
+     * be used to include column headers in the generated CSV. If false, no
+     * header information will be included.
      *
-     * @throws IllegalArgumentException if the number of headers does not match
-     *         the number of cells.
+     * @throws IllegalStateException if {@code headers} is true, but no column
+     *         header information is available for the first record. Also thrown
+     *         when {@code headers} is true, but the records in list do not share
+     *         the same headers.
      */
-    public static String toCSV(List<CSVRecord> records, List<String> headers, String delimiter) {
-        List<CSVRecord> all = new ArrayList<>();
-        all.add(new CSVRecord(headers));
-
-        for (CSVRecord record : records) {
-            Preconditions.checkArgument(record.getCellCount() == headers.size(),
-                "Expected " + headers.size() + " cells but got " + record);
-            all.add(record);
+    public static String toCSV(List<CSVRecord> records, String delimiter, boolean headers) {
+        if (records.isEmpty()) {
+            return "";
         }
 
-        return toCSV(all, delimiter);
+        List<String> rows = new ArrayList<>();
+
+        for (CSVRecord record : records) {
+            if (headers) {
+                Preconditions.checkState(record.columns.size() > 0,
+                    "Record missing column headers: " + record);
+                Preconditions.checkState(record.columns.equals(records.get(0).columns),
+                    "Records have inconsistent columns: " + record);
+
+                if (rows.isEmpty()) {
+                    CSVRecord headerRecord = CSVRecord.create(record.columns);
+                    rows.add(headerRecord.toCSV(delimiter));
+                }
+            }
+
+            rows.add(record.toCSV(delimiter));
+        }
+
+        return RECORD_JOINER.join(rows);
     }
 }

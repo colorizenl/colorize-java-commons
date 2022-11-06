@@ -7,9 +7,6 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ListMultimap;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,50 +14,26 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Optional;
 
-import static nl.colorize.util.Formatting.formatDate;
-import static nl.colorize.util.Formatting.toDate;
+import static nl.colorize.util.DateParser.format;
 
 /**
  * Defines a range between two {@link Date}s, with the start date being inclusive
  * and the end date being exclusive. The date range can be split into a number of
  * intervals, such as weeks or months.
  */
-public class DateRange implements Comparable<DateRange> {
+public record DateRange(Date start, Date end, Interval interval) implements Comparable<DateRange> {
 
-    private String label;
-    private Date start;
-    private Date end;
-
-    private ListMultimap<Interval, DateRange> intervalCache;
+    public DateRange {
+        Preconditions.checkArgument(start.getTime() < end.getTime(),
+            "Invalid date range");
+    }
 
     public DateRange(Date start, Date end) {
-        this(formatDate(start, "yyyy-MM-dd") + " - " + formatDate(end, "yyyy-MM-dd"),
-            start, end);
+        this(start, end, Interval.FREE);
     }
 
-    /**
-     * Creates a date range based on two date strings in ISO 8601 format.
-     */
     public DateRange(String start, String end) {
-        this(toDate(start), toDate(end));
-    }
-
-    private DateRange(String label, Date start, Date end) {
-        Preconditions.checkArgument(start.getTime() < end.getTime(), "Invalid date range");
-
-        this.label = label;
-        this.start = start;
-        this.end = end;
-
-        intervalCache = ArrayListMultimap.create();
-    }
-
-    public Date getStart() {
-        return start;
-    }
-
-    public Date getEnd() {
-        return end;
+        this(DateParser.parse(start), DateParser.parse(end), Interval.FREE);
     }
 
     public boolean contains(Date date) {
@@ -74,25 +47,14 @@ public class DateRange implements Comparable<DateRange> {
      * by month will yield October, November, and December 2018.
      */
     public List<DateRange> split(Interval interval) {
-        if (intervalCache.containsKey(interval)) {
-            List<DateRange> cached = intervalCache.get(interval);
-            return ImmutableList.copyOf(cached);
-        } else {
-            List<DateRange> result = toIntervals(interval);
-            intervalCache.putAll(interval, result);
-            return result;
-        }
-    }
-
-    private List<DateRange> toIntervals(Interval interval) {
-        switch (interval) {
-            case DAY : return toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 1);
-            case WEEK : return toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 7);
-            case MONTH : return toIntervals(interval, GregorianCalendar.MONTH, 1);
-            case QUARTER : return toIntervals(interval, GregorianCalendar.MONTH, 3);
-            case YEAR : return toIntervals(interval, GregorianCalendar.YEAR, 1);
-            default : throw new IllegalArgumentException("Interval not supported");
-        }
+        return switch (interval) {
+            case FREE -> List.of(this);
+            case DAY -> toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 1);
+            case WEEK -> toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 7);
+            case MONTH -> toIntervals(interval, GregorianCalendar.MONTH, 1);
+            case QUARTER -> toIntervals(interval, GregorianCalendar.MONTH, 3);
+            case YEAR -> toIntervals(interval, GregorianCalendar.YEAR, 1);
+        };
     }
 
     private List<DateRange> toIntervals(Interval interval, int field, int increment) {
@@ -110,8 +72,7 @@ public class DateRange implements Comparable<DateRange> {
         while (calendar.getTime().getTime() <= end.getTime()) {
             Date intervalStart = calendar.getTime();
             Date intervalEnd = getIntervalEnd(intervalStart, field, increment);
-            String label = getIntervalLabel(interval, intervalStart);
-            intervals.add(new DateRange(label, intervalStart, intervalEnd));
+            intervals.add(new DateRange(intervalStart, intervalEnd, interval));
             calendar.add(field, increment);
         }
 
@@ -123,19 +84,6 @@ public class DateRange implements Comparable<DateRange> {
         calendar.setTime(intervalStart);
         calendar.add(field, increment);
         return new Date(calendar.getTime().getTime() - 1L);
-    }
-
-    private String getIntervalLabel(Interval interval, Date intervalStart) {
-        if (interval == Interval.YEAR) {
-            return formatDate(intervalStart, "yyyy");
-        } else if (interval == Interval.QUARTER) {
-            int quarter = (int) ((intervalStart.getMonth() + 1) / 3.1) + 1;
-            return "Q" + quarter + " " + formatDate(intervalStart, "yyyy");
-        } else if (interval == Interval.MONTH) {
-            return formatDate(intervalStart, "M/yyyy");
-        } else {
-            return formatDate(intervalStart, "yyyy-MM-dd");
-        }
     }
 
     /**
@@ -164,26 +112,21 @@ public class DateRange implements Comparable<DateRange> {
         return start.compareTo(other.start);
     }
 
-    public boolean equals(Object o) {
-        if (o instanceof DateRange) {
-            DateRange other = (DateRange) o;
-            return start.equals(other.start) && end.equals(other.end);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return label.hashCode();
-    }
-
     @Override
     public String toString() {
-        return label;
+        int quarter = (int) ((start.getMonth() + 1) / 3.1) + 1;
+
+        return switch (interval) {
+            case FREE -> format(start, "yyyy-MM-dd") + " - " + format(end, "yyyy-MM-dd");
+            case DAY, WEEK -> format(start, "yyyy-MM-dd");
+            case MONTH -> format(start, "M/yyyy");
+            case QUARTER -> "Q" + quarter + " " + format(start, "yyyy");
+            case YEAR -> format(start, "yyyy");
+        };
     }
 
     public enum Interval {
+        FREE,
         DAY,
         WEEK,
         MONTH,

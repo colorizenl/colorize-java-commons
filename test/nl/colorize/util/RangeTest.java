@@ -39,8 +39,8 @@ public class RangeTest {
     
     @Test
     public void testSingleValueRange() {
-        Range single = new Range(2);
-        assertEquals("2", single.toString());
+        Range single = new Range(2, 2);
+        assertEquals("2..2", single.toString());
         assertEquals(ImmutableList.of(2), single.toList());
     }
     
@@ -105,7 +105,7 @@ public class RangeTest {
     public void testSize() {
         assertEquals(6, new Range(2, 7).getSize());
         assertEquals(2, new Range(2, 3).getSize());
-        assertEquals(1, new Range(2).getSize());
+        assertEquals(1, new Range(2, 2).getSize());
     }
 
     @Test

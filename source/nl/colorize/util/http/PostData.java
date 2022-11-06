@@ -10,8 +10,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -69,29 +67,16 @@ public class PostData {
         return value;
     }
 
-    public Map<String, String> getData() {
-        return data;
+    public boolean contains(String name) {
+        return data.containsKey(name);
     }
 
     public boolean isEmpty() {
         return data.isEmpty();
     }
 
-    public String encode(Charset charset) {
-        StringBuilder buffer = new StringBuilder();
-
-        for (Map.Entry<String,String> entry : data.entrySet()) {
-            if (buffer.length() > 0) {
-                buffer.append('&');
-            }
-            buffer.append(URLEncoder.encode(entry.getKey(), charset));
-            if (!entry.getKey().isEmpty()) {
-                buffer.append('=');
-            }
-            buffer.append(URLEncoder.encode(entry.getValue(), charset));
-        }
-
-        return buffer.toString();
+    public Map<String, String> toMap() {
+        return ImmutableMap.copyOf(data);
     }
 
     /**
@@ -114,16 +99,21 @@ public class PostData {
         return new PostData(merged);
     }
 
-    /**
-     * Serializes this {@code PostData} to a JSON map.
-     */
-    public String toJSON() {
-        if (data.isEmpty()) {
-            return "{}";
+    public String encode(Charset charset) {
+        StringBuilder buffer = new StringBuilder();
+
+        for (Map.Entry<String,String> entry : data.entrySet()) {
+            if (buffer.length() > 0) {
+                buffer.append('&');
+            }
+            buffer.append(URLEncoder.encode(entry.getKey(), charset));
+            if (!entry.getKey().isEmpty()) {
+                buffer.append('=');
+            }
+            buffer.append(URLEncoder.encode(entry.getValue(), charset));
         }
 
-        Gson gson = new Gson();
-        return gson.toJson(data);
+        return buffer.toString();
     }
 
     @Override
@@ -134,14 +124,11 @@ public class PostData {
     /**
      * Creates a {@code PostData} instance from existing key/value pairs.
      */
-    public static PostData create(Map<String, String> data) {
+    public static PostData create(Map<String, ?> data) {
         Map<String, String> processedData = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            String value = entry.getValue();
-            if (value == null) {
-                value = "";
-            }
 
+        for (Map.Entry<String, ?> entry : data.entrySet()) {
+            String value = entry.getValue() != null ? entry.getValue().toString() : "";
             processedData.put(entry.getKey(), value);
         }
 
@@ -176,7 +163,7 @@ public class PostData {
             encoded = encoded.substring(1);
         }
 
-        if (encoded.isEmpty() || encoded.indexOf('=') == -1) {
+        if (encoded.indexOf('=') == -1) {
             return EMPTY;
         }
 
@@ -189,28 +176,6 @@ public class PostData {
         }
 
         return new PostData(data);
-    }
-
-    /**
-     * Parses {@code PostData} from a JSON map. This can be used in environments
-     * that mix traditional form-encoded requests with JSON-based requests.
-     */
-    public static PostData parseJSON(String json) {
-        if (json == null || json.isEmpty()) {
-            return empty();
-        }
-
-        Gson gson = new Gson();
-        TypeToken<Map<String, Object>> jsonMapType = new TypeToken<>() {};
-        Map<String, Object> jsonMap = gson.fromJson(json, jsonMapType.getType());
-        Map<String, String> data = new LinkedHashMap<>();
-
-        for (Map.Entry<String, Object> entry : jsonMap.entrySet()) {
-            String value = entry.getValue() != null ? entry.getValue().toString() : null;
-            data.put(entry.getKey(), value);
-        }
-
-        return create(data);
     }
 
     public static PostData empty() {

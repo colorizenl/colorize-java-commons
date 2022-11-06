@@ -152,4 +152,12 @@ public class TextUtilsTest {
 
         assertEquals(ImmutableList.of("one/three", "six/eight"), result);
     }
+
+    @Test
+    void countIndent() {
+        assertEquals(0, TextUtils.countIndent("a"));
+        assertEquals(1, TextUtils.countIndent(" a"));
+        assertEquals(2, TextUtils.countIndent("  a"));
+        assertEquals(4, TextUtils.countIndent("\ta"));
+    }
 }

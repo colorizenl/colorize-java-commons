@@ -6,15 +6,11 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * A set that includes integers between the start and end. Ranges represented by
@@ -30,12 +26,7 @@ import java.util.stream.Stream;
  *     }
  * </pre>
  */
-public final class Range implements Iterable<Integer>, Comparable<Range> {
-
-    private int start;
-    private int end;
-
-    private List<Integer> cachedList;
+public record Range(int start, int end) implements Iterable<Integer>, Comparable<Range> {
 
     /**
      * Creates a range with all integers between {@code start} (inclusive) and 
@@ -45,35 +36,10 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
      * @throws IllegalArgumentException if the value for {@code start} is greater
      *         than the value for {@code end}.
      */
-    public Range(int start, int end) {
-        Preconditions.checkArgument(end >= start,
-            "Invalid range: " + start + ".." + end);
+    public Range {
+        Preconditions.checkArgument(end >= start, "Invalid range: " + start + ".." + end);
+    }
 
-        this.start = start;
-        this.end = end;
-
-        if (start == end) {
-            cachedList = ImmutableList.of(start);
-        } else {
-            cachedList = ImmutableList.copyOf(IntStream.range(start, end + 1).iterator());
-        }
-    }
-    
-    /**
-     * Creates a range that consists of a single integer.
-     */
-    public Range(int n) {
-        this(n, n);
-    }
-    
-    public int getStart() {
-        return start;
-    }
-    
-    public int getEnd() {
-        return end;
-    }
-    
     /**
      * Returns the number of integers in this range. For example, the range
      * {@code 3..7} will return 5, and ranges containing a single integer will
@@ -125,23 +91,26 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
      * Returns a list that contains all integers within this range.
      */
     public List<Integer> toList() {
-        return cachedList;
+        return stream().boxed().toList();
     }
     
     /**
      * Returns an array that contains all integers within this range.
      */
     public int[] toArray() {
-        return Ints.toArray(cachedList);
+        return stream().toArray();
     }
 
     @Override
     public Iterator<Integer> iterator() {
-        return cachedList.iterator();
+        return stream().iterator();
     }
 
-    public Stream<Integer> stream() {
-        return cachedList.stream();
+    public IntStream stream() {
+        if (start == end) {
+            return IntStream.of(start);
+        }
+        return IntStream.range(start, end + 1);
     }
     
     /**
@@ -159,27 +128,9 @@ public final class Range implements Iterable<Integer>, Comparable<Range> {
         int endSignum = end - other.end;
         return startSignum != 0 ? startSignum : endSignum;
     }
-    
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Range) {
-            Range other = (Range) o;
-            return start == other.start && end == other.end;
-        } else {
-            return false;
-        }
-    }
-    
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(start, end);
-    }
-    
+
     @Override
     public String toString() {
-        if (start == end) {
-            return String.valueOf(start);
-        }
         return start + ".." + end;
     }
 

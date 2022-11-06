@@ -12,6 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.io.Files;
 import nl.colorize.util.ResourceFile;
+import nl.colorize.util.ResourceFileException;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -89,7 +90,7 @@ public final class Utils2D {
         try {
             return loadImage(file.openStream());
         } catch (IOException e) {
-            throw new RuntimeException("Cannot load image from resource file", e);
+            throw new ResourceFileException(file, "Cannot load image from resource file");
         }
     }
     

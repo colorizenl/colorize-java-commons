@@ -49,7 +49,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
      */
     public List<L> getLeft() {
         return tuples.stream()
-            .map(Tuple::getLeft)
+            .map(Tuple::left)
             .collect(Collectors.toList());
     }
 
@@ -58,7 +58,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
      */
     public List<R> getRight() {
         return tuples.stream()
-            .map(Tuple::getRight)
+            .map(Tuple::right)
             .collect(Collectors.toList());
     }
 

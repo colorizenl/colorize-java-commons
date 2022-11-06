@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.swing.Utils2D;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -31,32 +31,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class URLLoaderTest {
     
-    private static SimpleHttpServer server;
-    private static String testURL;
-
     private static final String TEST_HTTPS_URL = "https://www.gazzetta.it";
-    
-    @BeforeAll
-    public static void before() {
-        server = new SimpleHttpServer();
-        server.start(9090);
-        testURL = "http://localhost:9090";
-    }
-    
-    @AfterAll
-    public static void after() {
-        server.stop(true);
-    }
-    
+
     // Implementation note:
     // To make sure reading URLs and sending parameters actually works, some of
     // these tests send read requests to real websites. This is obviously not 
     // very robust, since the tests will break if the site changes.
+
+    @BeforeEach
+    @AfterEach
+    public void reset() {
+        System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "");
+    }
     
     @Test
     public void testLoadTextResponse() throws IOException {
         String response = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
-                .sendRequest().getBody();
+            .sendRequest()
+            .getBody();
+
         assertTrue(response.contains("<base href=\"http://www.colorize.nl/\" />"));
         assertTrue(response.contains("</html>"));
     }
@@ -67,19 +60,7 @@ public class URLLoaderTest {
                 Charsets.UTF_8).sendRequest();
         assertNotNull(Utils2D.loadImage(response.openBodyStream()));
     }
-    
-    @Test
-    public void testPostRequest() throws IOException {
-        URLLoader urlLoader = URLLoader.post(testURL, Charsets.UTF_8);
-        urlLoader.setBody(PostData.create("a", "2"));
-        URLResponse response = urlLoader.sendRequest();
-        
-        assertEquals(HttpStatus.OK, response.getStatus());
-        assertTrue(response.getBody().contains("POST /"));
-        assertTrue(response.getBody().contains("Content-Type: application/x-www-form-urlencoded"));
-        assertTrue(response.getBody().contains("a=2"));
-    }
-    
+
     @Test
     public void test404() {
         URLLoader loader = URLLoader.get("http://www.colorize.nl/nothing.jpg", Charsets.UTF_8);
@@ -283,7 +264,7 @@ public class URLLoaderTest {
 
     @Test
     public void testHttpResponseWithContentLengthHeaderZero() throws IOException {
-        URLLoader request = URLLoader.get("https://www.colorize-dashboard.nl/rest/website/check/colorize.nl",
+        URLLoader request = URLLoader.get("https://dashboard.clrz.nl/rest/website/check/colorize.nl",
             Charsets.UTF_8);
         URLResponse response = request.sendRequest();
 
@@ -304,9 +285,9 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("http://www.colorize.nl?a=2", Charsets.UTF_8);
         request.addQueryParam("b", "3");
 
-        assertEquals(2, request.getQueryParams().getData().size());
-        assertEquals("2", request.getQueryParams().getData().get("a"));
-        assertEquals("3", request.getQueryParams().getData().get("b"));
+        assertEquals(2, request.getQueryParams().toMap().size());
+        assertEquals("2", request.getQueryParams().toMap().get("a"));
+        assertEquals("3", request.getQueryParams().toMap().get("b"));
     }
 
     @Test
@@ -323,6 +304,40 @@ public class URLLoaderTest {
         URLResponse response = request.sendRequest();
 
         assertEquals(HttpStatus.OK, response.getStatus());
+    }
+
+    @Test
+    void sendPostData() throws IOException {
+        URLLoader request = URLLoader.post("https://httpbin.org/post");
+        request.setJsonBody("clrz1234");
+        URLResponse response = request.sendRequest();
+
+        assertEquals(HttpStatus.OK, response.getStatus());
+        assertTrue(response.getBody().contains("\"clrz1234\""), response.getBody());
+    }
+
+    @Test
+    void classicLoaderGet() throws IOException {
+        System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "true");
+
+        String response = URLLoader.get("http://www.colorize.nl", Charsets.UTF_8)
+            .sendRequest()
+            .getBody();
+
+        assertTrue(response.contains("<base href=\"http://www.colorize.nl/\" />"));
+        assertTrue(response.contains("</html>"));
+    }
+
+    @Test
+    void classicLoaderPost() throws IOException {
+        System.setProperty(URLLoader.CLASSIC_LOADER_PROPERTY, "true");
+
+        URLLoader request = URLLoader.post("https://httpbin.org/post");
+        request.setJsonBody("clrz1234");
+        URLResponse response = request.sendRequest();
+
+        assertEquals(HttpStatus.OK, response.getStatus());
+        assertTrue(response.getBody().contains("\"clrz1234\""), response.getBody());
     }
 
     private URLResponse toResponse(int status, String contentType, String body) {

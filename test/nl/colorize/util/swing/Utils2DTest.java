@@ -6,10 +6,9 @@
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Charsets;
-import nl.colorize.util.LoadUtils;
 import nl.colorize.util.ResourceFile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -21,9 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Utils2DTest {
@@ -39,8 +36,8 @@ public class Utils2DTest {
     }
     
     @Test
-    public void testSaveImagePNG() throws IOException {
-        File tempFile = LoadUtils.getTempFile(".png");
+    public void testSaveImagePNG(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "test.png");
         BufferedImage image = image(200, 200);
         Utils2D.savePNG(image, new FileOutputStream(tempFile));
         BufferedImage loaded = Utils2D.loadImage(new ResourceFile(tempFile));
@@ -49,8 +46,8 @@ public class Utils2DTest {
     }
     
     @Test
-    public void testSaveImageJPEG() throws IOException {
-        File tempFile = LoadUtils.getTempFile(".jpg");
+    public void testSaveImageJPEG(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "test.jpg");
         BufferedImage image = new BufferedImage(200, 200, BufferedImage.TYPE_INT_BGR);
         Utils2D.saveJPEG(image, new FileOutputStream(tempFile));
         BufferedImage loaded = Utils2D.loadImage(new ResourceFile(tempFile));
@@ -59,14 +56,14 @@ public class Utils2DTest {
     }
 
     @Test
-    public void testImageTransparency() throws IOException {
+    public void testImageTransparency(@TempDir File tempDir) throws IOException {
         BufferedImage original = new BufferedImage(200, 200, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = original.createGraphics();
         g2.setColor(Color.RED);
         g2.fillOval(0, 0, 200, 200);
         g2.dispose();
         
-        File pngFile = LoadUtils.getTempFile(".png");
+        File pngFile = new File(tempDir, "test.png");
         Utils2D.savePNG(original, pngFile);
         
         BufferedImage png = Utils2D.loadImage(new FileInputStream(pngFile));
@@ -78,7 +75,7 @@ public class Utils2DTest {
         g2.fillRect(0, 0, 200, 200);
         g2.dispose();
         
-        File jpgFile = LoadUtils.getTempFile(".jpg");
+        File jpgFile = new File(tempDir, "test.jpg");
         Utils2D.saveJPEG(original, jpgFile);
         
         BufferedImage jpg = Utils2D.loadImage(new FileInputStream(jpgFile));

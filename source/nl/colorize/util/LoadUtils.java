@@ -6,99 +6,42 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteStreams;
 import com.google.common.io.CharStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.Closeable;
 import java.io.File;
-import java.io.FileFilter;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Utility class to load and save data of various types. Data can be loaded from
- * a number of different sources. Typically all methods in this class that work 
+ * a number of different sources. Typically, all methods in this class that work
  * with binary data use a {@link java.io.InputStream} and methods that work with
- * text use a {@link java.io.Reader}. Unless specifically mentioned in the method 
- * documentation, the stream is closed directly after reading or writing from it. 
+ * text use a {@link java.io.Reader}.
  */
 public final class LoadUtils {
 
+    private static final CharMatcher PROPERTY_NAME = CharMatcher.anyOf("=:\n\\");
+
     private LoadUtils() { 
     }
-    
-    /**
-     * Reads all bytes from a stream and closes the stream afterwards.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static byte[] readToByteArray(InputStream stream) throws IOException {
-        try (stream) {
-            return ByteStreams.toByteArray(stream);
-        }
-    }
-    
-    /**
-     * Reads all characters from a stream and closes the stream afterwards.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static String readToString(InputStream stream, Charset charset) throws IOException {
-        InputStreamReader reader = new InputStreamReader(stream, charset);
-        return readToString(reader);
-    }
-    
-    /**
-     * Reads all characters from a reader and closes the reader afterwards.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static String readToString(Reader reader) throws IOException {
-        try (reader) {
-            return CharStreams.toString(reader);
-        }
-    }
-    
-    /**
-     * Reads all lines from a reader and closes the reader afterwards. If the
-     * text ends with a newline the last element in the returned list will be
-     * the line before that newline.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static List<String> readLines(Reader reader) throws IOException {
-        try (reader) {
-            return CharStreams.readLines(reader);
-        }
-    }
-    
+
     /**
      * Reads the first N lines. Depending on the size of the input the number of
      * lines might not be reached. The stream is closed afterwards.
@@ -107,31 +50,17 @@ public final class LoadUtils {
      * @throws IllegalArgumentException if {@code n} is less than 1.
      */
     public static String readFirstLines(Reader source, int n) throws IOException {
-        if (n < 1) {
-            throw new IllegalArgumentException("Invalid number of lines: " + n);
+        Preconditions.checkArgument(n >= 1, "Invalid number of lines: " + n);
+
+        String lineSeparator = System.lineSeparator();
+
+        try (BufferedReader buffer = toBufferedReader(source)) {
+            return buffer.lines()
+                .limit(n)
+                .collect(Collectors.joining(lineSeparator));
         }
-        
-        BufferedReader reader = toBufferedReader(source);
-        List<String> lines = new ArrayList<String>();
-        String line = null;
-        
-        try (reader) {
-            while ((line = reader.readLine()) != null && lines.size() < n) {
-                lines.add(line);
-            }
-        }
-        
-        return joinLines(lines);
     }
-    
-    private static String joinLines(List<String> lines) {
-        if (!lines.isEmpty()) {
-            // Ensure that the the last line ends with a newline
-            lines.add("");
-        }
-        return Joiner.on(Platform.getLineSeparator()).skipNulls().join(lines);
-    }
-    
+
     private static BufferedReader toBufferedReader(Reader reader) {
         if (reader instanceof BufferedReader) {
             return (BufferedReader) reader;
@@ -141,69 +70,87 @@ public final class LoadUtils {
     }
     
     /**
-     * Loads a properties file from a reader. The reader is closed afterwards.
+     * Loads a properties file from a reader and returns the resulting
+     * {@link Properties} object.
+     * <p>
+     * For {@code .properties} files containing non-ASCII characters, the
+     * behavior of this method is different depending on the platform.
+     * Originally, {@code .properties} files were required to use the ISO-8859-1
+     * character encoding, with non-ASCII characters respresented by Unicode
+     * escape sequences in the form {@code uXXXX}. Modern versions of the
+     * {@code .properties} file format allow any character encoding to be used,
+     * but this is still not supported on all platforms by all Java
+     * implementations.
+     * <p>
+     * This method will load the {@code .properties} file from a reader. If the
+     * current platform supports {@code .properties} files with any character
+     * encoding, the reader's character encoding is used to load the file. If
+     * the platform only supports {@code .properties} files with the ISO-8859-1
+     * character encoding, this encoding is used as a fallback, regardless of
+     * the reader's actual character encoding. On such platforms, files that
+     * contain non-ASCII characters will not be loaded correctly.
+     * <p>
+     * The reader is closed by this method after the {@code .properties} file
+     * has been loaded.
      *
-     * @throws IOException if an I/O error occurs while reading.
+     * @throws ResourceFileException if an I/O error occurs while reading the
+     *         properties file.
      */
-    public static Properties loadProperties(Reader source) throws IOException {
-        // This needs a workaround because the "normal" version
-        // of Properties.load(Reader) is not available in TeaVM.
-        if (Platform.isTeaVM()) {
-            throw new UnsupportedOperationException(
-                "Loading .properties files is not supported on TeaVM");
-        }
-
+    public static Properties loadProperties(Reader source) {
         Properties properties = new Properties();
-        byte[] contents = contents = CharStreams.toString(source).getBytes(Charsets.ISO_8859_1);
 
-        try (InputStream buffer = new ByteArrayInputStream(contents)) {
-            properties.load(buffer);
+        try (source) {
+            if (isUnicodePropertiesFilesSupported()) {
+                properties.load(source);
+            } else {
+                String contents = CharStreams.toString(source);
+                ByteArrayInputStream buffer = new ByteArrayInputStream(contents.getBytes(UTF_8));
+                properties.load(buffer);
+            }
+        } catch (IOException e) {
+            throw new ResourceFileException("I/O error while reading .properties file", e);
         }
 
         return properties;
     }
-    
-    /**
-     * Loads a properties file from a stream, using the specified character encoding.
-     * The stream is closed afterwards.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static Properties loadProperties(InputStream stream, Charset charset) throws IOException {
-        try (Reader reader = new InputStreamReader(stream, charset)) {
-            return loadProperties(reader);
-        }
+
+    private static boolean isUnicodePropertiesFilesSupported() {
+        return !Platform.isTeaVM();
     }
-    
+
     /**
-     * Loads a properties file with the default charset of ISO-8859-1.
+     * Loads a {@code .properties file} using the specified character encoding.
+     * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
      *
-     * @deprecated Use {@link #loadProperties(Reader)} instead.
-     */
-    @Deprecated
-    public static Properties loadProperties(InputStream input) throws IOException {
-        Properties properties = new Properties();
-        properties.load(input);
-        return properties;
-    }
-    
-    /**
-     * Loads a properties file from a resource file.
-     *
-     * @throws RuntimeException if the resource file could not be parsed.
+     * @throws ResourceFileException if an I/O error occurs while reading the
+     *         properties file.
      */
     public static Properties loadProperties(ResourceFile file, Charset charset) {
         try (Reader reader = file.openReader(charset)) {
             return loadProperties(reader);
         } catch (IOException e) {
-            throw new RuntimeException("Cannot parse properties file", e);
+            throw new ResourceFileException(file, "Cannot read properties file");
         }
     }
 
     /**
-     * Loads a properties file from a local file.
+     * Loads a {@code .properties file} that is assumed to use the UTF-8 character
+     * encoding. Parsing the file is done using
+     * {@link LoadUtils#loadProperties(Reader)}.
      *
-     * @throws IOException if the file could not be read.
+     * @throws ResourceFileException if an I/O error occurs while reading the
+     *         properties file.
+     */
+    public static Properties loadProperties(ResourceFile file) {
+        return loadProperties(file, UTF_8);
+    }
+
+    /**
+     * Loads a properties file from a local file. Parsing the file is done using
+     * {@link LoadUtils#loadProperties(Reader)}.
+     *
+     * @throws IOException if an I/O error occurs while reading the properties
+     *         file.
      */
     public static Properties loadProperties(File source, Charset charset) throws IOException {
         try (Reader reader = Files.newReader(source, charset)) {
@@ -212,50 +159,25 @@ public final class LoadUtils {
     }
 
     /**
-     * Loads a properties file from a string.
+     * Loads a properties file from a string containing the file contents.
+     * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
      */
     public static Properties loadProperties(String contents) {
-        try (Reader reader = new StringReader(contents)) {
+        try (StringReader reader = new StringReader(contents)) {
             return loadProperties(reader);
-        } catch (IOException e) {
-            throw new AssertionError(e);
         }
-    }
-    
-    /**
-     * Creates a {@code Properties} object directly from a number of key/value
-     * pairs.
-     *
-     * @throws IllegalArgumentException if {@code rest.length} is not even.
-     */
-    public static Properties toProperties(String key, String value, String... rest) {
-        if (rest.length % 2 != 0) {
-            throw new IllegalArgumentException("Needs an even number for key/value pairs");
-        }
-
-        Properties properties = new Properties();
-        properties.setProperty(key, value);
-        for (int i = 0; i < rest.length; i += 2) {
-            properties.setProperty(rest[i], rest[i + 1]);
-        }
-        return properties;
     }
 
     /**
-     * Creates a {@code Properties} object from a map, with every element in
-     * the map being registered as a property. Note that even though
-     * {@code Properties} itself extends {@code Map<Object, Object>}, both
-     * property names and values are required to be strings by this method.
-     * If any of the values are *not* strings, their {@code toString()} method
-     * will be called to obtain their string representation. {@code} map
-     * entries will *not* end up in the resulting {@code Properties} object.
+     * Creates a {@link Properties} object from a map. Any {@code null} keys
+     * and/or values in the map will not be registered as properties.
      */
-    public static Properties toProperties(Map<String, ?> data) {
+    public static Properties toProperties(Map<String, String> data) {
         Properties properties = new Properties();
 
-        for (Map.Entry<String, ?> entry : data.entrySet()) {
-            if (entry.getValue() != null) {
-                properties.setProperty(entry.getKey(), entry.getValue().toString());
+        for (Map.Entry<String, String> entry : data.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null) {
+                properties.setProperty(entry.getKey(), entry.getValue());
             }
         }
 
@@ -263,22 +185,40 @@ public final class LoadUtils {
     }
 
     /**
+     * Creates a map from a {@link Properties} object. Any {@code null} or empty
+     * property values will not be included in the map.
+     */
+    public static Map<String, String> toMap(Properties properties) {
+        Map<String, String> result = new HashMap<>();
+
+        for (String property : properties.stringPropertyNames()) {
+            String value = properties.getProperty(property, null);
+            if (value != null && !value.isEmpty()) {
+                result.put(property, value);
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Serializes a {@code Properties} object to the specified writer. This method
-     * is different from the standard {@link java.util.Properties#store(Writer, String)}
-     * in that it writes the properties in a consistent and predictable order. 
+     * differs from the standard {@link java.util.Properties#store(Writer, String)}
+     * in that it writes the properties in a deterministic (alphabetical) order.
      * The writer is closed afterwards.
      *
      * @throws IOException if an I/O error occurs while writing. 
      */
     public static void saveProperties(Properties properties, Writer dest) throws IOException {
-        List<String> sortedNames = properties.keySet().stream()
-            .map(name -> (String) name)
+        List<String> names = properties.stringPropertyNames().stream()
             .sorted()
-            .collect(Collectors.toList());
+            .toList();
 
         try (PrintWriter writer = new PrintWriter(dest)) {
-            for (String name : sortedNames) {
-                writer.println(name + "=" + properties.getProperty(name));
+            for (String name : names) {
+                String encodedName = PROPERTY_NAME.removeFrom(name);
+                String value = properties.getProperty(name, "");
+                writer.println(encodedName + "=" + value);
             }
         }
     }
@@ -307,249 +247,5 @@ public final class LoadUtils {
         } catch (IOException e) {
             throw new AssertionError(e);
         }
-    }
-    
-    private static String normalizeFileExtension(String ext) {
-        if (ext.startsWith(".")) {
-            ext = ext.substring(1);
-        }
-        return ext.toLowerCase();
-    }
-    
-    /**
-     * Returns a file filter that will only accept files that match one of the
-     * specified file extensions. The file extension check is case-insensitive.
-     * @param extensions File extensions to accept (without the leading dot).
-     *
-     * @throws IllegalArgumentException if the provided list is empty.
-     */
-    public static FilenameFilter getFileExtensionFilter(String... extensions) {
-        Preconditions.checkArgument(extensions.length > 0, "No file extensions provided");
-
-        List<String> extensionList = ImmutableList.copyOf(extensions);
-        return (dir, name) -> extensionList.contains(Files.getFileExtension(name).toLowerCase());
-    }
-    
-    /**
-     * Returns a file filter that accepts files with a name matching a glob 
-     * pattern. Refer to http://en.wikipedia.org/wiki/Glob_(programming) for
-     * a list of supported constructs. 
-     */
-    public static FilenameFilter getGlobFilter(String globPattern) {
-        Pattern fileNamePattern = convertGlobPattern(globPattern);
-        return (dir, name) -> fileNamePattern.matcher(name).matches();
-    }
-    
-    private static Pattern convertGlobPattern(String globPattern) {
-        StringBuilder buffer = new StringBuilder();
-        buffer.append("\\Q");
-        for (int i = 0; i < globPattern.length(); i++) {
-            char c = globPattern.charAt(i);
-            switch (c) {
-                case '\\' : buffer.append(globPattern.charAt(++i)); break;
-                case '?' : buffer.append("\\E.\\Q"); break;
-                case '*' : buffer.append("\\E.*?\\Q"); break;
-                case '[' : buffer.append("\\E["); break;
-                case ']' : buffer.append("]\\Q"); break;
-                default : buffer.append(c); break;
-            }
-        }
-        buffer.append("\\E");
-        // Strip off empty escape sequences
-        String pattern = buffer.toString().replace("\\Q\\E", "");
-        return Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-    }
-
-    /**
-     * Converts a {@link java.io.FilenameFilter} to a {@link java.io.FileFilter}.
-     */
-    public static FileFilter toFileFilter(FilenameFilter filter) {
-        return file -> filter.accept(file.getParentFile(), file.getName());
-    }
-    
-    /**
-     * Converts a {@link java.io.FileFilter} to a {@link java.io.FilenameFilter}.
-     */
-    public static FilenameFilter toFilenameFilter(FileFilter filter) {
-        return (dir, name) -> filter.accept(new File(dir, name));
-    }
-    
-    /**
-     * Creates a URL from the specified string. This method can be used to create
-     * a {@link java.net.URL} without having to try/catch the checked excepton.
-     * @throws IllegalArgumentException if {@code url} is not a valid URL.
-     */
-    public static URL toURL(String url) {
-        try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Malformed URL: " + url, e);
-        }
-    }
-    
-    /**
-     * Returns the URL for the specified local file.
-     * @throws IllegalArgumentException if no URL could be created for the file.
-     */
-    public static URL toURL(File file) {
-        try {
-            return file.toURI().toURL();
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Invalid URL: " + file);
-        }
-    }
-    
-    /**
-     * Returns the URI for the specified path and eats the exception.
-     * @throws IllegalArgumentException if {@code uri} is not a valid URI.
-     */
-    public static URI toURI(String uri) {
-        try {
-            return new URI(uri);
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid URL: " + uri, e);
-        }
-    }
-    
-    /**
-     * Calls {@code Closeables.close()} and logs any {@code IOException}s it 
-     * might throw.
-     *
-     * @deprecated Usage of this method should be replaced with try-with-resources
-     *             blocks in new code.
-     */
-    @Deprecated
-    public static void closeQuietly(Closeable closeable) {
-        try {
-            Closeables.close(closeable, true);
-        } catch (IOException e) {
-            throw new AssertionError(e);
-        }
-    }
-    
-    /**
-     * Calls {@code Closeables.close()} and completely ignores any
-     * {@code IOException}s it might throw. In most cases the similar
-     * {@link #closeQuietly(Closeable)} should be preferred, so that
-     * the exception is at least logged, but in some cases exceptions
-     * might be so trivial that even having them in the log file is
-     * not desirable.
-     */
-    public static void closeAndIgnore(Closeable closeable) {
-        if (closeable != null) {
-            try {
-                closeable.close();;
-            } catch (IOException e) {
-                // Ignore exception
-            }
-        }
-    }
-
-    /**
-     * Returns a temporary file that will be deleted when the JVM exits. The
-     * file will have a random name.
-     * @param extension Extension to give the file, or {@code null} for none.
-     */
-    private static File getTempFile(File dir, String extension) {
-        long timestamp = System.currentTimeMillis();
-        long random = Math.round(Math.random() * 1000000L);
-        
-        String name = "temp_" + String.valueOf(timestamp) + String.valueOf(random);
-        if ((extension != null) && (extension.length() > 0)) {
-            name += "." + normalizeFileExtension(extension);
-        }
-        
-        File tempFile = new File(dir, name);
-        tempFile.deleteOnExit();
-        return tempFile;
-    }
-    
-    /**
-     * Returns a file in the platform's location for storing temporary files,
-     * that will be deleted when the JVM exits. The file will have a random
-     * name. Note that this method will not actually create the file, it will 
-     * just return a {@code File} object pointing to it.
-     *
-     * @throws UnsupportedOperationException if the current platform has no
-     *         directory for storing temporary files.
-     */
-    public static File getTempFile(String extension) {
-        File tempDir = Platform.getTempDir();
-        return getTempFile(tempDir, extension);
-    }
-    
-    /**
-     * Writes data to a temporary file that will be deleted when the JVM exits.
-     * @throws IOException if an I/O error occurs while writing.
-     */
-    public static File createTempFile(File dir, InputStream data) throws IOException {
-        File tempFile = getTempFile(dir, "");
-        writeTempFile(tempFile, data);
-        return tempFile;
-    }
-    
-    /**
-     * Writes data to a temporary file that will be deleted when the JVM exits.
-     * The file is created in the platform's location for storing temporary files.
-     * @throws IOException if an I/O error occurs while writing.
-     */
-    public static File createTempFile(InputStream data) throws IOException {
-        File tempFile = getTempFile("");
-        writeTempFile(tempFile, data);
-        return tempFile;
-    }
-    
-    private static void writeTempFile(File tempFile, InputStream data) throws IOException {
-        FileOutputStream out = new FileOutputStream(tempFile);
-        try {
-            ByteStreams.copy(data, out);
-        } finally {
-            Closeables.close(data, true);
-            Closeables.close(out, true);
-        }
-    }
-    
-    /**
-     * Writes text to a temporary file that will be deleted when the JVM exits.
-     * @param name Requested name for the file. If a file with that name already
-     *        exists an exception will be thrown.
-     * @throws IOException if an I/O error occurs while writing.
-     * @throws IllegalArgumentException if a file with the requested name already 
-     *         exists.
-     */
-    public static File createTempFile(File dir, String name, String text, Charset encoding) 
-            throws IOException {
-        File tempFile = new File(dir, name);
-        if (tempFile.exists()) {
-            throw new IllegalArgumentException("File already exists: " + tempFile.getAbsolutePath());
-        }
-        tempFile.deleteOnExit();
-        FileUtils.write(text, encoding, tempFile);
-        return tempFile;
-    }
-    
-    /**
-     * Writes text to a temporary file that will be deleted when the JVM exits.
-     * The file is created in the platform's location for storing temporary files.
-     * @throws IOException if an I/O error occurs while writing.
-     */
-    public static File createTempFile(String text, Charset encoding) throws IOException {
-        File tempFile = getTempFile("");
-        FileUtils.write(text, encoding, tempFile);
-        return tempFile;
-    }
-    
-    /**
-     * Creates a temporary directory that will be deleted when the JVM exits.
-     * The directory is created in the platform's location for storing temporary
-     * files.
-     * @throws IOException if the directory cannot be created.
-     */
-    public static File createTempDir() throws IOException {
-        File tempDir = getTempFile("");
-        if (!tempDir.mkdir()) {
-            throw new IOException("Cannot create temp directory");
-        }
-        return tempDir;
     }
 }

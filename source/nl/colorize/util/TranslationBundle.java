@@ -6,8 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -42,7 +40,17 @@ public final class TranslationBundle {
     private Map<String, String> defaultTranslation;
     private Map<Locale, TranslationBundle> translations;
 
-    public TranslationBundle(Map<String, String> defaultTranslation) {
+    /**
+     * Creates a {@link TranslationBundle} based on the specified default
+     * translation. Additional translations can be added afterwards.
+     * <p>
+     * In most cases, translation data will be stored in {@code .properties}
+     * files. The factory methods {@link #fromProperties(Properties)} and/or
+     * {@link #fromPropertiesFile(ResourceFile)} can be used to create an
+     * instance directly from such a file, rather than first parsing the file
+     * and then using this constructor.
+     */
+    private TranslationBundle(Map<String, String> defaultTranslation) {
         this.defaultTranslation = ImmutableMap.copyOf(defaultTranslation);
         this.translations = new HashMap<>();
     }
@@ -114,43 +122,31 @@ public final class TranslationBundle {
         return ImmutableSet.copyOf(defaultTranslation.keySet());
     }
 
-    public static TranslationBundle fromProperties(Properties defaultTranslation) {
-        Map<String, String> converted = new HashMap<>();
-        for (Object keyObject : defaultTranslation.keySet()) {
-            String key = (String) keyObject;
-            converted.put(key, defaultTranslation.getProperty(key));
-        }
-
-        return new TranslationBundle(converted);
-    }
-
-    public static TranslationBundle fromFile(ResourceFile file) {
-        return fromProperties(LoadUtils.loadProperties(file, Charsets.UTF_8));
+    /**
+     * Factory method that creates a {@link TranslationBundle} from a map with
+     * key/value pairs for the default translation.
+     */
+    public static TranslationBundle fromMap(Map<String, String> defaultTranslation) {
+        return new TranslationBundle(defaultTranslation);
     }
 
     /**
-     * Loads the translation bundle from the contents of a {@code .properties}
-     * file.
-     *
-     * @deprecated Prefer {@link #fromProperties(Properties)}, this method is
-     *             only provided for platforms where loading {@link Properties}
-     *             is not available, so only a limited subset of the
-     *             {@code .properties} file format is supported.
+     * Factory method that creates a {@link TranslationBundle} from an existing
+     * {@link Properties} instance.
      */
-    @Deprecated
-    public static TranslationBundle fromProperties(String properties) {
-        Map<String, String> text = new HashMap<>();
+    public static TranslationBundle fromProperties(Properties defaultTranslation) {
+        return new TranslationBundle(LoadUtils.toMap(defaultTranslation));
+    }
 
-        for (String line : Splitter.on("\n").trimResults().split(properties)) {
-            int index = line.indexOf('=');
-            if (index != -1) {
-                String key = line.substring(0, index).trim();
-                String value = line.substring(index + 1).trim().replace("\\n", "\n");
-                text.put(key, value);
-            }
-        }
-
-        return new TranslationBundle(text);
+    /**
+     * Convenience factory method that loads data from a {@code .properties}
+     * file, and then uses that data to create a {@link TranslationBundle}
+     * instance. The file is assumed to use the UTF-8 character encoding, and
+     * loaded using {@link LoadUtils#loadProperties(ResourceFile)}.
+     */
+    public static TranslationBundle fromPropertiesFile(ResourceFile file) {
+        Properties properties = LoadUtils.loadProperties(file);
+        return fromProperties(properties);
     }
 
     /**

@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Categorizes the frequency of data points within different bins. The histogram
@@ -101,7 +100,7 @@ public class Histogram<B> {
     public List<String> getSeriesByTotalValue() {
         return series.stream()
             .sorted((a, b) -> getTotalSeriesValue(b) - getTotalSeriesValue(a))
-            .collect(Collectors.toList());
+            .toList();
     }
 
     public int getValue(String seriesName, B bin) {
@@ -114,14 +113,14 @@ public class Histogram<B> {
             "Unknown series: " + seriesName);
 
         return values.entrySet().stream()
-            .filter(entry -> entry.getKey().getLeft().equals(seriesName))
+            .filter(entry -> entry.getKey().left().equals(seriesName))
             .mapToInt(Map.Entry::getValue)
             .sum();
     }
 
     public int getTotalBinValue(B bin) {
         return values.entrySet().stream()
-            .filter(entry -> entry.getKey().getRight().equals(bin))
+            .filter(entry -> entry.getKey().right().equals(bin))
             .mapToInt(Map.Entry::getValue)
             .sum();
     }

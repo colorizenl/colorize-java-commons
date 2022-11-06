@@ -28,7 +28,8 @@ import java.util.logging.Logger;
 
 /**
  * Helper methods for initializing and configuring {@code java.util.logging}
- * loggers programmatically.
+ * loggers programmatically. A default logging configuration is automatically
+ * applied to all logger in the {@code nl.colorize} namespace.
  */
 public final class LogHelper {
 
@@ -36,15 +37,12 @@ public final class LogHelper {
     
     private static final String ROOT_COLORIZE_LOGGER_NAME = "nl.colorize";
 
-    private static final String COLORIZE_LOGGING_CONFIGURATION =
-        "handlers=java.util.logging.ConsoleHandler\n" +
-        "java.util.logging.ConsoleHandler.formatter=" + CompactFormatter.class.getName();
+    private static final String COLORIZE_LOGGING_CONFIGURATION = String.join("\n",
+        "handlers=java.util.logging.ConsoleHandler",
+        "java.util.logging.ConsoleHandler.formatter=" + CompactFormatter.class.getName()
+    );
 
     private LogHelper() {
-    }
-    
-    private static Logger lookupLogger(String name) {
-        return Logger.getLogger(name);
     }
     
     /**
@@ -60,7 +58,7 @@ public final class LogHelper {
      * its existing, possibly inherited, configuration.
      */
     public static Logger getLogger(String name) {
-        Logger logger = lookupLogger(name);
+        Logger logger = Logger.getLogger(name);
         
         // TeaVM redirects logging to the browser console and
         // will crash trying to redirect it.
@@ -181,6 +179,18 @@ public final class LogHelper {
      */
     public static Handler createStringHandler(StringWriter stringWriter) {
         return createStringHandler(stringWriter, new CompactFormatter());
+    }
+
+    /**
+     * Creates a log message formatter that uses a compact format with log records
+     * only taking up a single line. This makes it easier to process log files in
+     * other tools, or scan them manually.
+     * <p>
+     * Messages are logged using the default time zone for date and time. See
+     * {@link Platform#getDefaultTimeZone()} for more information.
+     */
+    public static Formatter createCompactFormatter() {
+        return new CompactFormatter();
     }
 
     /**

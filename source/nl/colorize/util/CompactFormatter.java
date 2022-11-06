@@ -7,45 +7,22 @@
 package nl.colorize.util;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Set;
-import java.util.TimeZone;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 /**
- * Log message formatter that uses a compact format so that log messages only
- * contain a single line. This makes it easier to visually scan log files.
+ * Creates a log message formatter that uses a compact format with log records
+ * only taking up a single line. This makes it easier to process log files in
+ * other tools, or scan them manually.
  * <p>
- * By default, log messages are reported in the Europe/Amsterdam time zone.
- * If this time zone is not available on the platform it reverts to the
- * platform's default time zone. The time zone can also be set explicitly
- * by providing it in the constructor.
+ * Messages are logged using the default time zone for date and time. See
+ * {@link Platform#getDefaultTimeZone()} for more information.
  */
 public class CompactFormatter extends Formatter {
-
-    private TimeZone timezone;
-
-    private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
-    private static final String DEFAULT_TIME_ZONE = "Europe/Amsterdam";
-
-    public CompactFormatter(TimeZone timezone) {
-        this.timezone = timezone;
-    }
-
-    public CompactFormatter() {
-        Set<String> availableTimeZones = ImmutableSet.copyOf(TimeZone.getAvailableIDs());
-
-        if (availableTimeZones.contains(DEFAULT_TIME_ZONE)) {
-            timezone = TimeZone.getTimeZone(DEFAULT_TIME_ZONE);
-        } else {
-            timezone = TimeZone.getDefault();
-        }
-    }
 
     @Override
     public synchronized String format(LogRecord record) {
@@ -67,8 +44,8 @@ public class CompactFormatter extends Formatter {
     }
 
     private String format(Date timestamp) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-        dateFormat.setTimeZone(timezone);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        dateFormat.setTimeZone(Platform.getDefaultTimeZone());
         return dateFormat.format(timestamp);
     }
 }

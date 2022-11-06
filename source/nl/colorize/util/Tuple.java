@@ -17,23 +17,7 @@ import java.util.Map;
  * @param <L> Type of the first (left) element.
  * @param <R> Type of the second (right) element.
  */
-public class Tuple<L, R> implements Map.Entry<L, R> {
-    
-    private L left;
-    private R right;
-
-    public Tuple(L left, R right) {
-        this.left = left;
-        this.right = right;
-    }
-    
-    public L getLeft() {
-        return left;
-    }
-    
-    public R getRight() {
-        return right;
-    }
+public record Tuple<L, R>(L left, R right) implements Map.Entry<L, R> {
 
     @Override
     public L getKey() {
@@ -61,14 +45,14 @@ public class Tuple<L, R> implements Map.Entry<L, R> {
      * Returns a new tuple with the inverse of this tuple's elements.
      */
     public Tuple<R, L> inverse() {
-        return new Tuple<R, L>(right, left);
+        return new Tuple<>(right, left);
     }
     
     /**
      * Returns a new tuple {@code (newLeft, this.getRight())}.
      */
     public Tuple<L, R> withLeft(L newLeft) {
-        return new Tuple<L, R>(newLeft, right);
+        return new Tuple<>(newLeft, right);
     }
     
     /**
@@ -77,27 +61,7 @@ public class Tuple<L, R> implements Map.Entry<L, R> {
     public Tuple<L, R> withRight(R newRight) {
         return new Tuple<L, R>(left, newRight);
     }
-    
-    /**
-     * Returns if this tuple is equal to {@code o}. Two tuples are considered
-     * equal if {@link java.lang.Object#equals(Object)} returns true for both
-     * of their elements, and if the elements are in the same order.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Tuple) {
-            Tuple<?, ?> other = (Tuple<?, ?>) o;
-            return Objects.equal(left, other.left) && Objects.equal(right, other.right);
-        } else {
-            return false;
-        }
-    }
-    
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(left, right);
-    }
-    
+
     /**
      * Returns the string representation of this tuple. The returned string is
      * in the format "(X, Y)", where X and Y are determined by the string
@@ -109,6 +73,6 @@ public class Tuple<L, R> implements Map.Entry<L, R> {
     }
     
     public static <L, R> Tuple<L, R> of(L left, R right) {
-        return new Tuple<L, R>(left, right);
+        return new Tuple<>(left, right);
     }
 }

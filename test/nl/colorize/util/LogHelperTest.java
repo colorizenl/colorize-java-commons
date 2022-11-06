@@ -10,12 +10,14 @@ import com.google.common.base.Charsets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringWriter;
+import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.FileHandler;
@@ -79,16 +81,17 @@ public class LogHelperTest {
     }
 
     @Test
-    public void testFileHandler() throws IOException {
-        File tempFile = LoadUtils.getTempFile(".log");
+    public void testFileHandler(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "test.log");
         FileHandler fileHandler = LogHelper.createFileHandler(tempFile, Charsets.UTF_8);
-        fileHandler.setFormatter(new CompactFormatter());
+        fileHandler.setFormatter(LogHelper.createCompactFormatter());
 
         Logger logger = LogHelper.getLogger("nl.test.x.y.z");
         logger.addHandler(fileHandler);
         logger.info("Test log message");
 
-        assertEquals("INFO     Test log message\n", FileUtils.read(tempFile, Charsets.UTF_8)
+        assertEquals("INFO     Test log message\n",
+            Files.readString(tempFile.toPath(), Charsets.UTF_8)
             .replaceFirst("[\\d-: ]+", ""));
     }
     
@@ -112,7 +115,8 @@ public class LogHelperTest {
     public void testStringHandler() {
         StringWriter stringWriter = new StringWriter();
         Logger logger = LogHelper.getLogger(getClass().getName());
-        logger.addHandler(LogHelper.createStringHandler(stringWriter, new CompactFormatter()));
+        logger.addHandler(LogHelper.createStringHandler(stringWriter,
+            LogHelper.createCompactFormatter()));
         logger.info("Test");
 
         assertEquals("INFO     Test\n", stringWriter.toString().replaceFirst("[\\d-: ]+", ""));

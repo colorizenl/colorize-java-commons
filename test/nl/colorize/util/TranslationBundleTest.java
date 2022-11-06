@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -29,7 +30,7 @@ class TranslationBundleTest {
             "key.c", "this is {0}'s MessageFormat"
         );
 
-        TranslationBundle bundle = new TranslationBundle(text);
+        TranslationBundle bundle = TranslationBundle.fromMap(text);
 
         assertEquals("value", bundle.getText("key.a"));
         assertEquals("this is 1 parameter", bundle.getText("key.b", "1"));
@@ -40,7 +41,7 @@ class TranslationBundleTest {
     @Test
     void fromUTF8() {
         Map<String, String> text = ImmutableMap.of("key.e", "привет{0}");
-        TranslationBundle bundle = new TranslationBundle(text);
+        TranslationBundle bundle = TranslationBundle.fromMap(text);
 
         assertEquals("привет!", bundle.getText("key.e", "!"));
     }
@@ -58,8 +59,8 @@ class TranslationBundleTest {
             "key.b", "dit is {0} parameter"
         );
 
-        TranslationBundle bundle = new TranslationBundle(textEN);
-        bundle.addTranslation(new Locale("nl"), new TranslationBundle(textNL));
+        TranslationBundle bundle = TranslationBundle.fromMap(textEN);
+        bundle.addTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
 
         assertEquals("waarde", bundle.getText(new Locale("nl"), "key.a"));
         assertEquals("dit is 1 parameter", bundle.getText(new Locale("nl"), "key.b", "1"));
@@ -80,8 +81,8 @@ class TranslationBundleTest {
             "key.c", "dit is iets anders"
         );
 
-        TranslationBundle bundle = new TranslationBundle(textEN);
-        bundle.addTranslation(new Locale("nl"), new TranslationBundle(textNL));
+        TranslationBundle bundle = TranslationBundle.fromMap(textEN);
+        bundle.addTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
 
         assertEquals(ImmutableSet.of("key.a", "key.b", "key.c"), bundle.getKeys(new Locale("nl")));
         assertEquals(ImmutableSet.of("key.a", "key.b"), bundle.getKeys());
@@ -101,8 +102,9 @@ class TranslationBundleTest {
 
     @Test
     void loadFromText() {
-        TranslationBundle bundle = TranslationBundle.fromProperties(
-            "a=this is a test\nb = this is also a test");
+        Properties properties = LoadUtils.loadProperties(new StringReader(
+            "a=this is a test\nb = this is also a test"));
+        TranslationBundle bundle = TranslationBundle.fromProperties(properties);
 
         assertEquals("this is a test", bundle.getText("a"));
         assertEquals("this is also a test", bundle.getText("b"));
@@ -110,8 +112,8 @@ class TranslationBundleTest {
 
     @Test
     void formatEntryWithLineBreak() {
-        Map<String, String> text = ImmutableMap.of("key.a", "first\nsecond {0}\nthird");
-        TranslationBundle bundle = new TranslationBundle(text);
+        Map<String, String> text = Map.of("key.a", "first\nsecond {0}\nthird");
+        TranslationBundle bundle = TranslationBundle.fromMap(text);
 
         assertEquals("first\nsecond 2\nthird", bundle.getText("key.a", "2"));
     }

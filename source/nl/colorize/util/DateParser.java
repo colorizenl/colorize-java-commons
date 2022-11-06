@@ -23,9 +23,9 @@ import java.util.regex.Pattern;
  * example, {@code SimpleDateFormat} is not thread safe, and parsing dates
  * throws a checked exception.
  * <p>
- * If the input string does not contain an explicit time zone, this class will
- * use the {@code Europe/Amsterdam} time zone as default. This can be changed
- * using the {@code #DEFAULT_TIME_ZONE_PROPERTY} system property.
+ * If the input string does not contain an explicit time zone, the default
+ * time zone will be used. See {@link Platform#getDefaultTimeZone()} for more
+ * information.
  * <p>
  * <strong>Note:</strong> The {@code java.time} API introduced in Java 8 pretty
  * much solves most of the usability problems this class attempts to work
@@ -35,9 +35,6 @@ import java.util.regex.Pattern;
  * {@code java.time} is available in all environments.
  */
 public final class DateParser {
-
-    public static final String DEFAULT_TIME_ZONE_PROPERTY = "colorize.timezone";
-    public static final TimeZone AMSTERDAM_TIME_ZONE = TimeZone.getTimeZone("Europe/Amsterdam");
 
     private static final Map<Pattern, String> PATTERNS = new ImmutableMap.Builder<Pattern, String>()
         .put(Pattern.compile("\\d{8}"), "yyyyMMdd")
@@ -116,16 +113,7 @@ public final class DateParser {
 
     private static SimpleDateFormat create(String dateFormat) {
         SimpleDateFormat instance = new SimpleDateFormat(dateFormat);
-        instance.setTimeZone(getTimeZone());
+        instance.setTimeZone(Platform.getDefaultTimeZone());
         return instance;
-    }
-
-    private static TimeZone getTimeZone() {
-        String requestedTimeZone = System.getProperty(DEFAULT_TIME_ZONE_PROPERTY);
-        TimeZone timeZone = AMSTERDAM_TIME_ZONE;
-        if (requestedTimeZone != null && !requestedTimeZone.isEmpty()) {
-            timeZone = TimeZone.getTimeZone(requestedTimeZone);
-        }
-        return timeZone;
     }
 }

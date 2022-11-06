@@ -6,6 +6,9 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
+import com.google.common.io.CharStreams;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,21 +24,17 @@ import java.util.List;
  * files can be located both in the classpath and in the local file system. This 
  * class can be used to pass around handles to resource files without first
  * having to open those files.
+ * <p>
+ * Resource file paths will always use forward slashes as delimiters, regardless
+ * of the platform's file separator.
  */
-public final class ResourceFile {
+public record ResourceFile(String path) {
     
-    private String path;
-    
-    public ResourceFile(String path) {    
+    public ResourceFile(String path) {
+        Preconditions.checkArgument(!path.trim().isEmpty(), "Empty path");
         this.path = normalizePath(path);
-        checkPath();
     }
-    
-    public ResourceFile(ResourceFile dir, String path) {
-        this.path = normalizePath(dir.getPath(), path);
-        checkPath();
-    }
-    
+
     public ResourceFile(File file) {
         this(file.getAbsolutePath());
     }
@@ -52,32 +51,7 @@ public final class ResourceFile {
         }
         return normalizedPath;
     }
-    
-    private String normalizePath(String parentPath, String childPath) {
-        String normalizedParentPath = normalizePath(parentPath);
-        String normalizedPath = normalizePath(childPath);
-        if (normalizedPath.startsWith(normalizedParentPath)) {
-            return normalizedPath;
-        } else {
-            return normalizedParentPath + "/" + normalizedPath;
-        }
-    }
-    
-    private void checkPath() {
-        if (path.trim().length() == 0) {
-            throw new IllegalArgumentException("Empty path");
-        }
-    }
-    
-    /**
-     * Returns the normalized path that is used to locate the file referenced 
-     * by this class. The path will always use forward slashes as delimiters, 
-     * regardless of the platform's conventions.
-     */
-    public String getPath() {
-        return path;
-    }
-    
+
     /**
      * Returns the name of this resource file. The name is the part of the path
      * after the last path separator. For example, the path "/a/b/c.txt" will
@@ -97,6 +71,7 @@ public final class ResourceFile {
      * @throws FileNotFoundException if an I/O error occurs while reading the file.
      */
     public InputStream openStream() throws FileNotFoundException {
+        // Attempt 1: Locate file in classpath.
         ClassLoader classLoader = ResourceFile.class.getClassLoader();
         InputStream inClassPath = classLoader.getResourceAsStream(path);
 
@@ -104,6 +79,7 @@ public final class ResourceFile {
             return inClassPath;
         }
 
+        // Attempt 2: Locate file in local file system.
         File inFileSystem = new File(path);
 
         if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
@@ -112,9 +88,10 @@ public final class ResourceFile {
 
         throw new FileNotFoundException("Resource file not found: " + path);
     }
-    
+
     /**
      * Convenience method that opens a reader to the referenced file.
+     *
      * @throws IOException if an I/O error occurs while reading the file.
      */
     public BufferedReader openReader(Charset charset) throws IOException {
@@ -124,38 +101,41 @@ public final class ResourceFile {
     
     /**
      * Convenience method that reads in the binary contents of this resource file.
-     * @throws IllegalStateException if the resource file does not exist.
+     *
+     * @throws ResourceFileException if the resource file does not exist.
      */
     public byte[] readBytes() {
-        try {
-            return LoadUtils.readToByteArray(openStream());
+        try (InputStream stream = openStream()) {
+            return stream.readAllBytes();
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot read resource file " + path, e);
+            throw new ResourceFileException(this, "Cannot read resource file");
         }
     }
     
     /**
      * Convenience method that reads in the textual contents of this resource file.
-     * @throws IllegalStateException if the resource file does not exist.
+     *
+     * @throws ResourceFileException if the resource file does not exist.
      */
     public String read(Charset charset) {
-        try {
-            return LoadUtils.readToString(openReader(charset));
+        try (BufferedReader reader = openReader(charset)) {
+            return CharStreams.toString(reader);
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot read resource file " + path, e);
+            throw new ResourceFileException(this, "Cannot read resource file");
         }
     }
     
     /**
      * Convenience method that reads in the textual contents of this resource file
      * and returns the contents as a list of lines.
-     * @throws IllegalStateException if the resource file does not exist.
+     *
+     * @throws ResourceFileException if the resource file does not exist.
      */
     public List<String> readLines(Charset charset) {
-        try {
-            return LoadUtils.readLines(openReader(charset));
+        try (BufferedReader reader = openReader(charset)) {
+            return reader.lines().toList();
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot read resource file " + path, e);
+            throw new ResourceFileException(this, "Cannot read resource file");
         }
     }
     
@@ -165,25 +145,11 @@ public final class ResourceFile {
     public boolean exists() {
         try (InputStream ignored = openStream()) {
             return true;
-        } catch (IOException e) {
+        } catch (IOException | ResourceFileException e) {
             return false;
         }
     }
-    
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof ResourceFile) {
-            ResourceFile other = (ResourceFile) o;
-            return path.equals(other.path);
-        }
-        return false;
-    }
 
-    @Override
-    public int hashCode() {
-        return path.hashCode();
-    }
-    
     @Override
     public String toString() {
         return path;

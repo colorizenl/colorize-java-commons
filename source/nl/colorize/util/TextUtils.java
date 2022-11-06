@@ -13,6 +13,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -92,14 +93,14 @@ public final class TextUtils {
         }
         return str;
     }
-    
+
     public static String removeTrailing(String str, String trailing) {
         while (str.endsWith(trailing)) {
             str = str.substring(0, str.length() - trailing.length());
         }
         return str;
     }
-    
+
     public static String removeLeadingAndTrailing(String str, String leading, String trailing) {
         str = removeLeading(str, leading);
         str = removeTrailing(str, trailing);
@@ -178,13 +179,17 @@ public final class TextUtils {
      * @throws IOException if an I/O error occurs while reading.
      */
     public static List<String> matchLines(Reader input, Pattern regex, int group) throws IOException {
-        List<String> matches = new ArrayList<String>();
-        for (String line : LoadUtils.readLines(input)) {
-            Matcher matcher = regex.matcher(line);
-            if (matcher.matches()) {
-                matches.add(matcher.group(group));
-            }
+        List<String> matches = new ArrayList<>();
+
+        try (BufferedReader reader = toBufferedReader(input)) {
+            reader.lines().forEach(line -> {
+                Matcher matcher = regex.matcher(line);
+                if (matcher.matches()) {
+                    matches.add(matcher.group(group));
+                }
+            });
         }
+
         return matches;
     }
     
@@ -275,7 +280,24 @@ public final class TextUtils {
         buffer.append(input.substring(toIndex + to.length()));
         return buffer.toString();
     }
-    
+
+    /**
+     * Counts the indent for the specified line. Tabs are counted as 4 spaces.
+     */
+    public static int countIndent(String line) {
+        int indent = 0;
+
+        for (int i = 0; i < Math.min(line.length(), 80); i++) {
+            if (line.charAt(i) == ' ') {
+                indent++;
+            } else if (line.charAt(i) == '\t') {
+                indent += 4;
+            }
+        }
+
+        return indent;
+    }
+
     /**
      * Returns the longest possible string that is a prefix for both {@code a}
      * and {@code b}. Returns an empty string if there is no common prefix.
@@ -367,6 +389,7 @@ public final class TextUtils {
      * is done using the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
      * Levenshtein distance</a>, relative to the length of the string, against the
      * provided threshold.
+     *
      * @throws IllegalArgumentException if the threshold is outside the range between
      *         0.0 (strings must be equal) and 1.0 (any string is allowed).
      */
@@ -386,5 +409,13 @@ public final class TextUtils {
     private static boolean isFuzzyMatch(String str, String candidate, float threshold) {
         float distance = calculateRelativeLevenshteinDistance(str, candidate);
         return distance <= threshold;
+    }
+
+    private static BufferedReader toBufferedReader(Reader reader) {
+        if (reader instanceof BufferedReader) {
+            return (BufferedReader) reader;
+        } else {
+            return new BufferedReader(reader);
+        }
     }
 }
