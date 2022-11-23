@@ -13,6 +13,7 @@ import com.google.common.escape.Escapers;
 import com.google.common.io.Closeables;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
+import nl.colorize.util.PlatformFamily;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -383,7 +384,7 @@ public class CommandRunner {
     }
     
     public boolean isExecuteSupported() {
-        return !Platform.isGoogleCloud();
+        return !Platform.getPlatformFamily().isCloud();
     }
     
     public boolean isShellModeSupported() {
@@ -395,9 +396,8 @@ public class CommandRunner {
     }
     
     private boolean isSandboxedEnvironment() {
-        return Platform.isGoogleCloud() ||
-                Platform.isMacAppSandboxEnabled() ||
-                Platform.isAndroid();
+        PlatformFamily platform = Platform.getPlatformFamily();
+        return platform.isCloud() || platform.isMobile() || Platform.isMacAppSandboxEnabled();
     }
     
     private boolean isUnixLikePlatform() {

@@ -8,9 +8,9 @@ package nl.colorize.util.http;
 
 /**
  * HTTP response status codes, as defined by the HTTP/1.1 standard, as defined
- * in RFC 2616  = https://tools.ietf.org/html/rfc2616#section-10).
+ * in <a href="https://tools.ietf.org/html/rfc2616#section-10">RFC 2616</a>.
  */
-public final class HttpStatus {
+public interface HttpStatus {
     
     // Informational 1xx
     public static final int CONTINUE = 100;
@@ -72,9 +72,6 @@ public final class HttpStatus {
     public static final int VARIANT_ALSO_NEGOTATES = 506;
     public static final int NOT_EXTENDED = 510;
     public static final int NETWORK_AUTHENTICATION_REQUIRED = 511;
-
-    private HttpStatus() {
-    }
 
     public static boolean isRedirect(int status) {
         return status >= 300 && status <= 399;

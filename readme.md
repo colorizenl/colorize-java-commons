@@ -9,9 +9,10 @@ The library provides the following features:
 - Component library for Swing applications
 - Lightweight command line argument parser
 - Lightweight translation framework
-- Cross-platform API for sending HTTP requests
+- Cross-platform HTTP request API
 - Reading and writing CSV
 - Utilities for working with statistics
+- Generic retry mechanism
 - Automatic application logging configuration
 - Cross-platform storage for application data/configuration/preferences
 - Various other utility classes
@@ -22,7 +23,6 @@ The library focuses on portability, and supports a wide variety of platforms and
 - Mac OS
 - Linux
 - Google Cloud
-- AWS
 - Android
 - iOS (via [RoboVM](http://robovm.mobidevelop.com) or [Multi-OS Engine](https://multi-os-engine.org))
 - Browser (via [TeaVM](http://teavm.org))
@@ -36,13 +36,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2022.13</version>
+        <version>2022.15</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2022.13"
+        implementation "nl.colorize:colorize-java-commons:2022.15"
     }
     
 Documentation
@@ -108,8 +108,8 @@ The following Gradle build tasks are available:
 - `gradle publish` publishes to Maven central
 
 Note: Publishing the library to Maven Central requires the Gradle properties `ossrhUser` and 
-`ossrhPassword`. If you want to use the library locally, remove or change the `publishing` section
-in `build.gradle`.
+`ossrhPassword`. If you want to use the library locally, simply provide dummy values for these
+properties in `~/.gradle/gradle.properties`.
 
 License
 -------

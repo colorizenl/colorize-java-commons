@@ -7,17 +7,14 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.CharStreams;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.util.List;
 
 /**
  * Reference to a resource file (files included with the application). Resource
@@ -28,7 +25,7 @@ import java.util.List;
  * Resource file paths will always use forward slashes as delimiters, regardless
  * of the platform's file separator.
  */
-public record ResourceFile(String path) {
+public record ResourceFile(String path) implements Resource {
     
     public ResourceFile(String path) {
         Preconditions.checkArgument(!path.trim().isEmpty(), "Empty path");
@@ -65,12 +62,8 @@ public record ResourceFile(String path) {
         return path.substring(index + 1);
     }
     
-    /**
-     * Opens a stream to the resource file represented by this file handle.
-     *
-     * @throws FileNotFoundException if an I/O error occurs while reading the file.
-     */
-    public InputStream openStream() throws FileNotFoundException {
+    @Override
+    public InputStream openStream() {
         // Attempt 1: Locate file in classpath.
         ClassLoader classLoader = ResourceFile.class.getClassLoader();
         InputStream inClassPath = classLoader.getResourceAsStream(path);
@@ -83,62 +76,22 @@ public record ResourceFile(String path) {
         File inFileSystem = new File(path);
 
         if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
-            return new FileInputStream(inFileSystem);
+            try {
+                return new FileInputStream(inFileSystem);
+            } catch (IOException e) {
+                throw new ResourceFileException(this, e);
+            }
         }
 
-        throw new FileNotFoundException("Resource file not found: " + path);
+        throw new ResourceFileException("Resource file not found: " + path);
     }
 
-    /**
-     * Convenience method that opens a reader to the referenced file.
-     *
-     * @throws IOException if an I/O error occurs while reading the file.
-     */
-    public BufferedReader openReader(Charset charset) throws IOException {
+    @Override
+    public BufferedReader openReader(Charset charset) {
         InputStreamReader reader = new InputStreamReader(openStream(), charset);
         return new BufferedReader(reader);
     }
-    
-    /**
-     * Convenience method that reads in the binary contents of this resource file.
-     *
-     * @throws ResourceFileException if the resource file does not exist.
-     */
-    public byte[] readBytes() {
-        try (InputStream stream = openStream()) {
-            return stream.readAllBytes();
-        } catch (IOException e) {
-            throw new ResourceFileException(this, "Cannot read resource file");
-        }
-    }
-    
-    /**
-     * Convenience method that reads in the textual contents of this resource file.
-     *
-     * @throws ResourceFileException if the resource file does not exist.
-     */
-    public String read(Charset charset) {
-        try (BufferedReader reader = openReader(charset)) {
-            return CharStreams.toString(reader);
-        } catch (IOException e) {
-            throw new ResourceFileException(this, "Cannot read resource file");
-        }
-    }
-    
-    /**
-     * Convenience method that reads in the textual contents of this resource file
-     * and returns the contents as a list of lines.
-     *
-     * @throws ResourceFileException if the resource file does not exist.
-     */
-    public List<String> readLines(Charset charset) {
-        try (BufferedReader reader = openReader(charset)) {
-            return reader.lines().toList();
-        } catch (IOException e) {
-            throw new ResourceFileException(this, "Cannot read resource file");
-        }
-    }
-    
+
     /**
      * Returns true if the resource file exists in one of the searched locations.
      */

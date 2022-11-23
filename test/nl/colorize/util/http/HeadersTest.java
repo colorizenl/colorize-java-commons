@@ -6,117 +6,115 @@
 
 package nl.colorize.util.http;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import nl.colorize.util.Tuple;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class HeadersTest {
+class HeadersTest {
 
     @Test
-    public void testKeepInsertionOrder() {
-        Headers headers = new Headers();
-        headers.add("a", "2");
-        headers.add("b", "3");
+    void keepOrder() {
+        Headers headers = new Headers()
+            .append("Content-Type", "application/json")
+            .append("Accept", "application/json");
 
-        assertEquals(ImmutableSet.of("a", "b"), headers.getNames());
-        assertEquals("a", headers.getNames().iterator().next());
+        String expected = """
+            Content-Type: application/json
+            Accept: application/json
+            """;
+
+        assertEquals(expected, headers.toString());
     }
 
     @Test
-    public void testAddMultipleHeadersWithSameName() {
-        Headers headers = new Headers();
-        headers.add("a", "2");
-        headers.add("a", "3");
+    void allowSameHeaderMultipleTimes() {
+        Headers headers = new Headers()
+            .append("Content-Type", "application/json")
+            .append("Test", "2")
+            .append("Test", "3");
 
-        assertEquals(ImmutableList.of("2", "3"), headers.getValues("a"));
-        assertEquals("2", headers.getValue("a"));
+        String expected = """
+            Content-Type: application/json
+            Test: 2
+            Test: 3
+            """;
+
+        assertEquals(expected, headers.toString());
     }
 
     @Test
-    public void testReplaceHeader() {
-        Headers headers = new Headers();
-        headers.add("a", "2");
-        headers.replace("a", "3");
+    void headerNamesAreCaseInsensitive() {
+        Headers headers = new Headers()
+            .append("Test", "2")
+            .append("test", "3");
 
-        assertEquals(ImmutableList.of("3"), headers.getValues("a"));
-        assertEquals("3", headers.getValue("a"));
+        assertEquals("2", headers.get("Test").orElse(null));
+        assertEquals("2", headers.get("test").orElse(null));
+        assertEquals(List.of("2", "3"), headers.getAll("Test"));
+        assertEquals(List.of("2", "3"), headers.getAll("test"));
     }
 
     @Test
-    public void testNamesAreNotCaseSensitive() {
-        Headers headers = new Headers();
-        headers.add("a", "2");
-        headers.add("A", "3");
+    void appendHeaders() {
+        Headers headers = new Headers(Tuple.of("A", "2"), Tuple.of("B", "3"))
+            .append("A", "4")
+            .append("C", "5");
 
-        assertEquals(ImmutableSet.of("a"), headers.getNames());
-        assertEquals(ImmutableList.of("2", "3"), headers.getValues("a"));
+        String expected = """
+            A: 2
+            B: 3
+            A: 4
+            C: 5
+            """;
+
+        assertEquals(expected, headers.toString());
     }
 
     @Test
-    public void testCannotNullHeader() {
-        Headers headers = new Headers();
+    void replaceHeaders() {
+        Headers headers = new Headers(Tuple.of("A", "2"), Tuple.of("B", "3"))
+            .replace("A", "4")
+            .replace("C", "5");
 
-        assertThrows(IllegalArgumentException.class, () -> headers.add(null, "test"));
+        String expected = """
+            B: 3
+            A: 4
+            C: 5
+            """;
+
+        assertEquals(expected, headers.toString());
     }
 
     @Test
-    public void testCannotHaveEmptyHeaderName() {
-        Headers headers = new Headers();
-
-        assertThrows(IllegalArgumentException.class, () -> headers.add("", "test"));
+    void cannotUseInvalidName() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            Tuple<String, String> header = Tuple.of("Some:Name", "Value");
+            new Headers(header);
+        });
     }
 
     @Test
-    public void testCanHaveEmptyHeaderValue() {
-        Headers headers = new Headers();
-        headers.add("test", "");
+    void cannotHaveNewLineInValue() {
+        Headers headers = new Headers()
+            .append("A", "2:3");
 
-        assertTrue(headers.has("test"));
+        assertThrows(IllegalArgumentException.class, () -> headers.append("A", "2\n3"));
     }
 
     @Test
-    public void testMerge() {
-        Headers first = new Headers();
-        first.add("a", "2");
-        first.add("b", "3");
+    void retainHeaderNames() {
+        Headers headers = new Headers()
+            .append("A", "2")
+            .append("B", "3")
+            .append("A", "4")
+            .append("a", "5");
 
-        Headers second = new Headers();
-        second.add("b", "4");
-        second.add("c", "5");
-
-        first.merge(second);
-
-        assertEquals(ImmutableSet.of("a", "b", "c"), first.getNames());
-        assertEquals(ImmutableList.of("3", "4"), first.getValues("b"));
-    }
-
-    @Test
-    public void testReplace() {
-        Headers first = new Headers();
-        first.add("a", "2");
-        first.add("b", "3");
-
-        Headers second = new Headers();
-        second.add("b", "4");
-        second.add("c", "5");
-
-        first.replace(second);
-
-        assertEquals(ImmutableSet.of("b", "c"), first.getNames());
-        assertEquals(ImmutableList.of("4"), first.getValues("b"));
-    }
-
-    @Test
-    public void testGetEntries() {
-        Headers headers = new Headers();
-        headers.add("a", "2");
-        headers.add("b", "3");
-        headers.add("b", "4");
-
-        assertEquals("[(a, 2), (b, 3), (b, 4)]", headers.getEntries().toString());
+        assertEquals(List.of("A", "B", "A", "a"), headers.getHeaderNames());
+        assertEquals(List.of("2", "4", "5"), headers.getAll("A"));
+        assertEquals(List.of("2", "4", "5"), headers.getAll("a"));
     }
 }

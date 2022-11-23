@@ -12,13 +12,18 @@ import java.util.logging.Logger;
 
 /**
  * Callback interface that can either produce a response of type {@code <T>} or
- * an error.
+ * an error. Only the response handler is required. By default, exceptions are
+ * simply logged, but it is also possible to provide an explit exception handler.
  */
+@FunctionalInterface
 public interface Callback<T> {
 
     public void onResponse(T response);
 
-    public void onError(Throwable error);
+    default void onError(Throwable error) {
+        Logger logger = LogHelper.getLogger(Callback.class);
+        logger.log(Level.WARNING, "Operation failed", error);
+    }
 
     public static <T> Callback<T> from(Consumer<T> handler, Consumer<Throwable> errorHandler) {
         return new Callback<T>() {
@@ -32,9 +37,5 @@ public interface Callback<T> {
                 errorHandler.accept(error);
             }
         };
-    }
-
-    public static <T> Callback<T> from(Consumer<T> handler, Logger logger) {
-        return from(handler, error -> logger.log(Level.WARNING, "Operation failed", error));
     }
 }

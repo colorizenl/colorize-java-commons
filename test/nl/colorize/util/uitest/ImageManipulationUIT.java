@@ -6,13 +6,10 @@
 
 package nl.colorize.util.uitest;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
+import nl.colorize.util.http.URLLoader;
+import nl.colorize.util.swing.FormPanel;
+import nl.colorize.util.swing.SwingUtils;
+import nl.colorize.util.swing.Utils2D;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -22,13 +19,14 @@ import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-
-import com.google.common.base.Charsets;
-
-import nl.colorize.util.http.URLLoader;
-import nl.colorize.util.swing.FormPanel;
-import nl.colorize.util.swing.SwingUtils;
-import nl.colorize.util.swing.Utils2D;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Graphical test for all image manipulation functions.
@@ -82,9 +80,10 @@ public class ImageManipulationUIT extends JPanel {
     private void loadPhoto() {
         // This currently loads a photo from the website, so if
         // the website changes this test will break.
-        URLLoader loader = URLLoader.get("http://www.colorize.nl/images/about_studio.png", Charsets.UTF_8);
-        try {
-            photo = Utils2D.loadImage(loader.sendRequest().openBodyStream());
+        URLLoader loader = URLLoader.get("http://www.colorize.nl/images/about_studio.png");
+
+        try (InputStream stream = loader.send().openStream()) {
+            photo = Utils2D.loadImage(stream);
             photo = Utils2D.makeImageCompatible(photo);
             photo = Utils2D.addPadding(photo, PADDING);
         } catch (IOException e) {

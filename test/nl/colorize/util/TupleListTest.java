@@ -10,6 +10,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -61,13 +63,30 @@ class TupleListTest {
         Tuple<String, Integer> b = Tuple.of("b", 3);
         Stream<Tuple<String, Integer>> stream = ImmutableList.of(a, b).stream();
 
-        assertEquals("[(a, 2), (b, 3)]", TupleList.from(stream).toString());
+        assertEquals("[(a, 2), (b, 3)]", TupleList.fromStream(stream).toString());
     }
 
     @Test
     void fromMap() {
         Map<String, Integer> map = ImmutableMap.of("a", 2, "b", 3);
 
-        assertEquals("[(a, 2), (b, 3)]", TupleList.from(map).toString());
+        assertEquals("[(a, 2), (b, 3)]", TupleList.fromMap(map).toString());
+    }
+
+    @Test
+    void fromValues() {
+        TupleList<String, Integer> tuples = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
+
+        assertEquals(2, tuples.size());
+        assertEquals("[(a, 2), (b, 3)]", tuples.toString());
+    }
+
+    @Test
+    void forEach() {
+        TupleList<String, Integer> tuples = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
+        List<Object> counter = new ArrayList<>();
+        tuples.forEach((left, right) -> counter.add(left + "/" + right));
+
+        assertEquals("[a/2, b/3]", counter.toString());
     }
 }

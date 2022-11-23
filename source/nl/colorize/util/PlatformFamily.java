@@ -7,11 +7,9 @@
 package nl.colorize.util;
 
 /**
- * Enumerates all platform families that are supported by this library.
- * The term "family" generally refers to multiple versions or distributions
- * of an operating system that are (mostly) compatible with each other. So,
- * Windows 7 and Windows 10 are both considered Windows, and Ubuntu and
- * Debian are both considered Linux.
+ * Lists supported platform families. Examples of such a "family" are Windows
+ * or macOS, rather than specific platform <em>versions</em> such as Windows
+ * 11 or macOS Ventura. Used in conjunction with {@link Platform}.
  */
 public enum PlatformFamily {
 
@@ -19,7 +17,6 @@ public enum PlatformFamily {
     MAC("macOS"),
     LINUX("Linux"),
     GOOGLE_CLOUD("Google Cloud"),
-    AWS("AWS"),
     ANDROID("Android"),
     IOS("iOS"),
     TEAVM("TeaVM"),
@@ -36,7 +33,7 @@ public enum PlatformFamily {
     }
 
     public boolean isCloud() {
-        return this == AWS || this == GOOGLE_CLOUD;
+        return this == GOOGLE_CLOUD;
     }
 
     public boolean isMobile() {
@@ -45,6 +42,10 @@ public enum PlatformFamily {
 
     public boolean isBrowser() {
         return this == TEAVM;
+    }
+
+    public boolean hasLocalFileSystem() {
+        return !isCloud() && !isBrowser();
     }
 
     @Override

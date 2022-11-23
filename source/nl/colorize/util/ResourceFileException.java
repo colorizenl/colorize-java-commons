@@ -7,7 +7,7 @@
 package nl.colorize.util;
 
 /**
- * Indicates a problem while processing one of the application's resource files,
+ * Indicates a problem while accessing one of the application resource files,
  * either because the file cannot be found or because it cannot be read.
  * <p>
  * The purpose of this exception is similar to how {@link java.io.IOException}

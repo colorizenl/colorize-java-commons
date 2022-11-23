@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -80,7 +79,7 @@ public class ResourceFileTest {
         ResourceFile resourceFile = new ResourceFile("nonExisting.xml");
         assertFalse(resourceFile.exists());
 
-        assertThrows(FileNotFoundException.class, resourceFile::openStream);
+        assertThrows(ResourceFileException.class, resourceFile::openStream);
     }
     
     @Test

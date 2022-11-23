@@ -6,179 +6,131 @@
 
 package nl.colorize.util.http;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
 import nl.colorize.util.Tuple;
+import nl.colorize.util.TupleList;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
- * Headers that can be added to HTTP requests and responses. Multiple headers
- * with the same name can be added, and header names are not case sensitive.
+ * Immutable representation of the HTTP headers sent as part of HTTP request
+ * and response messages. Used in conjunction with {@link URLLoader}, which
+ * supports/uses a variety of HTTP clients depending on the platform.
+ * <p>
+ * HTTP headers are sometimes represented using a {@code Map<String, String>},
+ * but this does not allow for the following:
+ * <ul>
+ *   <li>Headers have an explicitly defined order.</li>
+ *   <li>The same header can occur multiple times.</li>
+ *   <li>Header names are case-insensitive.</li>
+ * </ul>
+ * <em>Implementation note:</em> The headers are stored using an (immutable)
+ * list of tuples. This allows the class to respect the header properties
+ * listed above. In practice the performance impact is neglectable, as nearly
+ * all requests and responses only contain a small number of headers.
  */
 public class Headers {
 
-    private Multimap<HeaderName, String> entries;
+    private TupleList<String, String> entries;
+
+    private static CharMatcher NAME_MATCHER = CharMatcher.javaLetterOrDigit().or(CharMatcher.anyOf("-"));
+    private static CharMatcher VALUE_MATCHER = CharMatcher.anyOf("\r\n").negate();
+
+    public Headers(TupleList<String, String> entries) {
+        for (Tuple<String, String> entry : entries) {
+            Preconditions.checkArgument(NAME_MATCHER.matchesAllOf(entry.getKey()),
+                "Invalid HTTP header name: " + entry.getKey());
+
+            Preconditions.checkArgument(VALUE_MATCHER.matchesAllOf(entry.getValue()),
+                "Invalid HTTP header value: " + entry.getValue());
+        }
+
+        this.entries = entries.immutable();
+    }
+
+    @SafeVarargs
+    public Headers(Tuple<String, String>... entries) {
+        this(TupleList.of(entries).immutable());
+    }
 
     public Headers() {
-        this.entries = ArrayListMultimap.create();
-    }
-
-    public Headers(Map<String, String> entries) {
-        this();
-        add(entries);
+        this(TupleList.empty());
     }
 
     /**
-     * Adds the specified header, regardless of whether other headers with the
-     * same name already exist.
+     * Iterates over header names. Note that header names can appear multiple
+     * times in the list, if there are multiple occurrences of that header.
      */
-    public void add(String name, String value) {
-        Preconditions.checkArgument(name != null && !name.isEmpty(), "Invalid HTTP header name: " + name);
-        Preconditions.checkArgument(value != null, "Invalid HTTP header value: " + value);
-
-        entries.put(new HeaderName(name), value);
-    }
-
-    public void add(Map<String, String> entries) {
-        for (Map.Entry<String, String> entry : entries.entrySet()) {
-            add(entry.getKey(), entry.getValue());
-        }
+    public List<String> getHeaderNames() {
+        return entries.stream()
+            .map(Tuple::left)
+            .toList();
     }
 
     /**
-     * Adds the specified header, replacing any headers with the same name that
-     * might already exist.
+     * Returns the value of the header with the specified name. If the header
+     * occurs multiple times, the first occurrence is returned.
      */
-    public void replace(String name, String value) {
-        entries.removeAll(new HeaderName(name));
-        add(name, value);
-    }
-
-    /**
-     * Adds all entries in the specified other set of headers.
-     */
-    public void merge(Headers other) {
-        entries.putAll(other.entries);
-    }
-
-    /**
-     * Removes all existing headers, then adds all entries in the specified
-     * other set of headers.
-     */
-    public void replace(Headers other) {
-        entries.clear();
-        entries.putAll(other.entries);
-    }
-
-    public void clear() {
-        entries.clear();
-    }
-
-    /**
-     * Returns the value for the header with the specified name. If multiple
-     * headers with that name are present, the first one will be returned. If
-     * the header is not present this will return {@code null}.
-     */
-    public String getValue(String name) {
-        return getValue(name, null);
-    }
-
-    /**
-     * Returns the value for the header with the specified name, or the default
-     * value if no such header exists. If multiple headers with that name are
-     * present, the first one will be returned.
-     */
-    public String getValue(String name, String defaultValue) {
-        Collection<String> values = entries.get(new HeaderName(name));
-        if (values.isEmpty()) {
-            return defaultValue;
-        }
-        return values.iterator().next();
+    public Optional<String> get(String name) {
+        return entries.stream()
+            .filter(header -> match(header, name))
+            .map(Tuple::right)
+            .findFirst();
     }
 
     /**
      * Returns all values for headers with the specified name. If the header is
-     * not present this will return an empty list.
+     * not present, this will return an empty list.
      */
-    public List<String> getValues(String name) {
-        Collection<String> values = entries.get(new HeaderName(name));
-        return ImmutableList.copyOf(values);
+    public List<String> getAll(String name) {
+        return entries.stream()
+            .filter(header -> match(header, name))
+            .map(Tuple::right)
+            .toList();
+    }
+
+    public void forEach(BiConsumer<String, String> callback) {
+        entries.forEach(callback);
+    }
+
+    private boolean match(Tuple<String, String> header, String name) {
+        return header.left().equalsIgnoreCase(name);
     }
 
     /**
-     * Returns the names of all headers that have been added.
+     * Returns a new {@link Headers} instance that consists of this list of
+     * headers plus the specified additional header appended to the end of the
+     * list.
      */
-    public Set<String> getNames() {
-        Set<String> names = new LinkedHashSet<>();
-        for (HeaderName headerName : entries.keySet()) {
-            names.add(headerName.header);
-        }
-        return names;
+    public Headers append(String name, String value) {
+        TupleList<String, String> result = TupleList.create();
+        result.addAll(entries);
+        result.add(name, value);
+        return new Headers(result);
     }
 
     /**
-     * Returns a list of all header name/value pairs. This may include multiple
-     * headers with the same name.
+     * Returns a new {@link Headers} instance that replaces all occurrences of
+     * the header with the specified name.
      */
-    public List<Tuple<String, String>> getEntries() {
-        return entries.entries().stream()
-            .map(entry -> Tuple.of(entry.getKey().header, entry.getValue()))
-            .collect(Collectors.toList());
-    }
+    public Headers replace(String name, String value) {
+        List<Tuple<String, String>> filtered = entries.stream()
+            .filter(header -> !match(header, name))
+            .toList();
 
-    public boolean has(String name) {
-        return entries.containsKey(new HeaderName(name));
+        TupleList<String, String> result = TupleList.create();
+        result.addAll(filtered);
+        result.add(name, value);
+        return new Headers(result);
     }
 
     @Override
     public String toString() {
-        return entries.entries().stream()
-            .map(entry -> entry.getKey().header + ": " + entry.getValue())
-            .collect(Collectors.joining("\n"));
-    }
-
-    /**
-     * Used to represent a case-insensitive HTTP header name. The header names
-     * do preserve their original case, so {@code Content-Type} will be considered
-     * equal to {@code content-type}, but still keeps the uppercase letters in
-     * its textual representation.
-     */
-    private static class HeaderName {
-
-        private String header;
-        private int hash;
-
-        public HeaderName(String header) {
-            this.header = header;
-            this.hash = header.toLowerCase().hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o instanceof HeaderName) {
-                HeaderName other = (HeaderName) o;
-                return other.header.equalsIgnoreCase(header);
-            } else {
-                return false;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return hash;
-        }
-
-        @Override
-        public String toString() {
-            return header;
-        }
+        StringBuilder buffer = new StringBuilder();
+        entries.forEach((name, value) -> buffer.append(name + ": " + value + "\n"));
+        return buffer.toString();
     }
 }

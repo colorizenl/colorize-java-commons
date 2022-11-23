@@ -20,8 +20,7 @@ public class PlatformTest {
     @Test
     public void testPlatformDetection() {
         assertTrue(Platform.isWindows() || Platform.isMac() || Platform.isLinux());
-        assertFalse(Platform.isGoogleCloud());
-        assertFalse(Platform.isAndroid());
+        assertFalse(Platform.getPlatformFamily().isCloud());
         assertFalse(Platform.isTeaVM());
     }
 

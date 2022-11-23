@@ -6,52 +6,85 @@
 
 package nl.colorize.util.http;
 
+import com.google.common.net.HttpHeaders;
+import nl.colorize.util.Resource;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.charset.Charset;
-import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
- * Represents a HTTP response that is returned after sending a HTTP request to
- * a URL.
+ * Represents an HTTP response that is returned after sending an HTTP request
+ * to a URL. Used in conjunction with {@link URLLoader}, which supports/uses a
+ * variety of HTTP clients depending on the platform.
  * <p>
- * This class is similar to the {@code HttpResponse} class that is part of the
- * new HTTP client that was introduced in Java 11. However, it serves a slightly
- * different purpose, as {@code HttpResponse} can only be used when receiving
- * a response from the HTTP client. In contrast, this class can also be used
- * to build a HTTP response programmatically.
+ * <strong>Note:</strong> The {@code connectionProperties} field is populated
+ * depending on the HTTP client. Since {@link URLLoader} supports multiple HTTP
+ * clients depending on the platform, these properties can have different types
+ * depending on the HTTP client, and some properties might not be available for
+ * certain HTTP clients. Use the {@code PROPERTY_X} fields to access common
+ * connection properties.
  */
-public class URLResponse extends HttpMessage {
+public record URLResponse(
+    int status,
+    Headers headers,
+    byte[] body,
+    Charset encoding,
+    Map<String, Object> connectionProperties
+) implements Resource {
 
-    private int status;
-    private List<Certificate> certificates;
-
-    public URLResponse(int status, String body, Charset encoding) {
-        this(status, body.getBytes(encoding), encoding);
+    /**
+     * Returns the value of the HTTP header with the specified name. Using this
+     * method is equivalent to {@code headers().get(name)}.
+     */
+    public Optional<String> getHeader(String name) {
+        return headers.get(name);
     }
 
-    public URLResponse(int status, byte[] body, Charset encoding) {
-        super(encoding);
-
-        this.status = status;
-        this.certificates = new ArrayList<>();
-        setBody(body);
+    /**
+     * Returns all values for the HTTP header with the specified name. Using
+     * this method is equivalent to {@code headers().getAll(name)}.
+     */
+    public List<String> getHeaderValues(String name) {
+        return headers.getAll(name);
     }
 
-    public URLResponse(int status) {
-        super();
-        this.status = status;
+    /**
+     * Returns the value of the HTTP {@code Content-Type} header.
+     */
+    public Optional<String> getContentType() {
+        return getHeader(HttpHeaders.CONTENT_TYPE);
     }
 
-    public int getStatus() {
-        return status;
+    @Override
+    public InputStream openStream() {
+        return new ByteArrayInputStream(body);
     }
 
-    public void addCertificate(Certificate certificate) {
-        certificates.add(certificate);
+    @Override
+    public BufferedReader openReader(Charset charset) {
+        return new BufferedReader(new StringReader(read(charset)));
     }
 
-    public List<Certificate> getCertificates() {
-        return certificates;
+    @Override
+    public String read(Charset charset) {
+        return new String(body, charset);
+    }
+
+    /**
+     * Parses the response body to text, using the same character encoding that
+     * was used to send the request.
+     */
+    public String getBody() {
+        return read(encoding);
+    }
+
+    public Optional<Object> getConnectionProperty(String name) {
+        return Optional.ofNullable(connectionProperties.get(name));
     }
 }

@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.ben-manes.versions" version "0.42.0"
+    id "com.github.ben-manes.versions" version "0.43.0"
 }
 
 apply plugin: "java-library"
@@ -8,7 +8,7 @@ apply plugin: "maven-publish"
 apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2022.13"
+version = "2022.15"
 sourceCompatibility = "17"
 targetCompatibility = "17"
 compileJava.options.encoding = "UTF-8"
@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     api "com.google.guava:guava:31.1-jre"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.9.0"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.9.1"
 }
 
 java {

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,7 +51,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     public List<L> getLeft() {
         return tuples.stream()
             .map(Tuple::left)
-            .collect(Collectors.toList());
+            .toList();
     }
 
     /**
@@ -59,7 +60,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     public List<R> getRight() {
         return tuples.stream()
             .map(Tuple::right)
-            .collect(Collectors.toList());
+            .toList();
     }
 
     public TupleList<R, L> inverse() {
@@ -79,15 +80,30 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
         return new TupleList<>(ImmutableList.copyOf(tuples));
     }
 
+    public void forEach(BiConsumer<L, R> callback) {
+        for (Tuple<L, R> entry : tuples) {
+            callback.accept(entry.left(), entry.right());
+        }
+    }
+
     public static <L, R> TupleList<L, R> create() {
         return new TupleList<>();
     }
 
-    public static <L, R> TupleList<L, R> from(Stream<Tuple<L, R>> tuples) {
+    @SafeVarargs
+    public static <L, R> TupleList<L, R> of(Tuple<L, R>... entries) {
+        TupleList<L, R> result = TupleList.create();
+        for (Tuple<L, R> entry : entries) {
+            result.add(entry);
+        }
+        return result;
+    }
+
+    public static <L, R> TupleList<L, R> fromStream(Stream<Tuple<L, R>> tuples) {
         return new TupleList<>(tuples.collect(Collectors.toList()));
     }
 
-    public static <L, R> TupleList<L, R> from(Map<L, R> values) {
+    public static <L, R> TupleList<L, R> fromMap(Map<L, R> values) {
         List<Tuple<L, R>> tuples = values.entrySet().stream()
             .map(entry -> Tuple.of(entry.getKey(), entry.getValue()))
             .collect(Collectors.toList());

@@ -14,8 +14,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
+
+import static nl.colorize.util.PlatformFamily.LINUX;
+import static nl.colorize.util.PlatformFamily.MAC;
+import static nl.colorize.util.PlatformFamily.TEAVM;
+import static nl.colorize.util.PlatformFamily.WINDOWS;
 
 /**
  * Provides access to the underlying platform. This includes information such 
@@ -25,42 +28,35 @@ import java.util.function.Supplier;
  * environment variables, or the {@link java.lang.System} class. However,
  * working directly with these properties is error-prone, since the properties
  * are scattered across various locations, need to be parsed by applications,
- * and do not always behave consistently across different platforms.In addition
+ * and do not always behave consistently across different platforms. In addition
  * to that, the standard APIs have not always been updated to reflect modern
  * best practices for each platform. For example, the {@code java.util.prefs}
  * API for storing application preferences was never updated for the introduction
- * of the Mac App Store in 2010, or Mac App Store sandboxing in 2014. This class 
- * therefore provides methods for storing application data, user data, and
- * application preferences in the recommended location for each platform.
+ * of the Mac App Store in 2010, or Mac App Store sandboxing in 2014. This class
+ * therefore provides a way to manage application data and preferences in a way
+ * that is considered suitable and native for each platform.
  * <p>
- * By default, this class supports a number of desktop, server, cloud, and mobile
- * platforms:
- * <ul>
- *   <li>Windows (desktop, server)</li>
- *   <li>macOS (desktop, formerly known as OS X)</li>
- *   <li>Linux (desktop, server)</li>
- *   <li>Google Cloud Platform (cloud)</li>
- *   <li>AWS (cloud)</li>
- *   <li>Android (mobile)</li>
- *   <li>iOS (mobile, via RoboVM)</li>
- *   <li>TeaVM (browser)</li>
- * </ul>
- * <p>
- * Note that the above list refers to platform <em>families</em>, not individual
- * platform versions. For example, "Windows" includes support from Windows XP to
- * Windows Server 2008 to Windows 10. Use {@link #getPlatformName()} to obtain
- * the platform's display name including the version number, and use
- * {@link #getPlatformFamily()} to obtain the platform family.
- * <p>
- * If a platform is not explicitly supported this class can still be used, but
- * the platform's conventions might not be followed.
+ * This class differentiates between platform <em>name</em> and platform
+ * <em>family</em>. Examples of the former are Windows 11 or macOS Ventura,
+ * while examples of the latter are simply "Windows" or "macOS". Application
+ * behavior is typically more likely to be influenced by platform family than
+ * by specific platform versions. See {@link PlatformFamily} for the list of
+ * supported platform families. If a platform is not explicitly supported this
+ * class can still be used, but platform conventions might not be followed.
  */
 public final class Platform {
 
-    private static AtomicBoolean teaVM = new AtomicBoolean(false);
     private static TimeZone cachedDefaultTimeZone = null;
 
-    public static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
+    protected static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
+
+    private static final Map<String, PlatformFamily> OS_NAMES = Map.of(
+        "windows", WINDOWS,
+        "os x", MAC,
+        "macos", MAC,
+        "teavm", TEAVM,
+        "linux", LINUX
+    );
 
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
@@ -75,149 +71,91 @@ public final class Platform {
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
         .put("10.15", "Catalina")
-        // Big Sur is both 10.16 and 11.0
         .put("10.16", "Big Sur")
+        // Big Sur is both 10.16 and 11.0
         .put("11.", "Big Sur")
         .put("12.", "Monterey")
         .put("13.", "Ventura")
         .build();
     
     private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
-    private static final Version UNKNOWN_ANDROID_VERSION = Version.parse("0.0");
     private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
 
     private Platform() {
     }
 
     /**
-     * Returns the platform's human-readable name, such as "Windows 10" or
-     * "macOS Catalina". For platform-specific logic, it is more reliable to
-     * use {@link #getPlatformFamily()} rather than parsing the string
-     * returned by this method.
+     * Returns the display name for the current platform. Examples are "Windows
+     * 11" or "macOS Ventura". As explained in the class documentation,
+     * application logic is more likely to be influenced by platform family
+     * than by specific platform versions and/or variants. Applications should
+     * therefore prefer {@link #getPlatformFamily()} rather than parsing the
+     * display name string returned by this method.
+     * <p>
+     * When running via TeaVM, this method will always return "TeaVM",
+     * regardless of the underlying operating system and/or browser.
      */
-    public static String getPlatformName() {    
-        String os = System.getProperty("os.name", "Unknown");
-        String vendor = System.getProperty("java.vendor", "Unknown");
-        
-        // Handle cases where the os.name system property does not return
-        // the commonly used name of the OS. For example, on Android the
-        // value of this system property is "Linux", which is technically
-        // correct but not very useful.
-        if (vendor.toLowerCase().contains("android")) {
-            return "Android " + getAndroidVersion();
-        } else if (isGoogleCloud()) {
-            return "Google Cloud";
-        } else if (os.toLowerCase().contains("os x") || os.toLowerCase().contains("macos")) {
-            return "macOS " + getMacOSVersionName();
-        } else if (isAWS()) {
-            return "AWS";
-        } else if (isTeaVM()) {
-            return "TeaVM";
-        } else {
-            return os;
-        }
+    public static String getPlatformName() {
+        PlatformFamily platformFamily = getPlatformFamily();
+
+        return switch (platformFamily) {
+            case WINDOWS -> System.getProperty("os.name", "Unknown");
+            case MAC -> "macOS " + getMacVersionName();
+            default -> platformFamily.toString();
+        };
     }
     
-    private static String getMacOSVersionName() {
-        String version = System.getProperty("os.version");
-        for (Map.Entry<String, String> entry : MAC_VERSION_NAMES.entrySet()) {
-            if (version.startsWith(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return version;
+    private static String getMacVersionName() {
+        String osVersion = System.getProperty("os.version");
+
+        return MAC_VERSION_NAMES.keySet().stream()
+            .filter(v -> osVersion.startsWith(v))
+            .map(MAC_VERSION_NAMES::get)
+            .findFirst()
+            .orElse(osVersion);
     }
-    
-    private static Version getAndroidVersion() {
-        try {
-            Class<?> buildVersionClass = Class.forName("android.os.Build$VERSION");
-            String release = (String) buildVersionClass.getField("RELEASE").get(null);
-            return Version.parse(release).truncate(2);
-        } catch (Exception e) {
-            return UNKNOWN_ANDROID_VERSION;
-        }
-    }
-    
+
     /**
-     * Returns the current platform family. Use {@link #getPlatformName()} for
-     * obtaining the platform's display name as a string, including the exact
-     * platform version name. Refer to the {@link PlatformFamily} documentation
-     * for more information on what is considered a "family".
+     * Returns the {@link PlatformFamily} for the current platform. Applications
+     * should prefer this method over {@link #getPlatformName()} for
+     * platform-specific behavior, though the latter might be used if different
+     * behavior for specific platform versions or variants is needed.
+     * <p>
+     * When running via TeaVM, this method will always return
+     * {@link PlatformFamily#TEAVM}, regardless of the underlying operating
+     * system and/or browser.
      */
     public static PlatformFamily getPlatformFamily() {
-        Map<PlatformFamily, Supplier<Boolean>> mapper =
-                new ImmutableMap.Builder<PlatformFamily, Supplier<Boolean>>()
-            .put(PlatformFamily.WINDOWS, Platform::isWindows)
-            .put(PlatformFamily.MAC, Platform::isMac)
-            .put(PlatformFamily.LINUX, Platform::isLinux)
-            .put(PlatformFamily.GOOGLE_CLOUD, Platform::isGoogleCloud)
-            .put(PlatformFamily.AWS, Platform::isAWS)
-            .put(PlatformFamily.ANDROID, Platform::isAndroid)
-            .put(PlatformFamily.TEAVM, Platform::isTeaVM)
-            .build();
+        String os = System.getProperty("os.name", "Unknown").toLowerCase();
+        String vendor = System.getProperty("java.vendor", "Unknown").toLowerCase();
 
-        return mapper.keySet().stream()
-            .filter(family -> mapper.get(family).get())
+        if (vendor.contains("android")) {
+            return PlatformFamily.ANDROID;
+        } else if (System.getProperty("com.google.appengine.runtime.environment") != null) {
+            return PlatformFamily.GOOGLE_CLOUD;
+        }
+
+        return OS_NAMES.keySet().stream()
+            .filter(os::contains)
+            .map(OS_NAMES::get)
             .findFirst()
             .orElse(PlatformFamily.UNKNOWN);
     }
     
     public static boolean isWindows() {
-        return getPlatformName().startsWith("Windows");
+        return getPlatformFamily() == WINDOWS;
     }
     
     public static boolean isMac() {
-        return getPlatformName().startsWith("macOS");
+        return getPlatformFamily() == MAC;
     }
     
     public static boolean isLinux() {
-        return getPlatformName().startsWith("Linux");
-    }
-
-    public static boolean isGoogleCloud() {
-        return System.getenv("GAE_APPLICATION") != null ||
-            System.getProperty("com.google.appengine.runtime.version") != null;
-    }
-
-    /**
-     * @deprecated Google App Engine is no longer a separate SDK and has
-     *             been integrated into the Google Cloud SDK.
-     *             Use {@link #isGoogleCloud()} instead.
-     */
-    @Deprecated
-    public static boolean isGoogleAppEngine() {
-        return isGoogleCloud();
-    }
-
-    public static boolean isAWS() {
-        try {
-            Class.forName("software.amazon.awssdk.services.ec2.Ec2Client");
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public static boolean isAndroid() {
-        return getPlatformName().startsWith("Android");
-    }
-
-    private static boolean isLimitedPlatform() {
-        return isGoogleCloud() || isAWS() || isAndroid();
-    }
-
-    /**
-     * Marks the current platform as running in the browser via TeaVM. Unlike
-     * other platforms, it is not possible to detect this automatically, so
-     * applications must call this method manually in their {@code main}
-     * method in order to enable TeaVM support.
-     */
-    public static void enableTeaVM() {
-        teaVM.set(true);
+        return getPlatformFamily() == LINUX;
     }
 
     public static boolean isTeaVM() {
-        return teaVM.get();
+        return getPlatformFamily() == TEAVM;
     }
 
     /**
@@ -278,24 +216,11 @@ public final class Platform {
         // The system property is "" on Google App Engine and "0" on Android.
         if (javaVersion != null && javaVersion.length() >= 2 && Version.canParse(javaVersion)) {
             return Version.parse(javaVersion);
-        } else if (isAndroid()) {
-            return getAndroidJavaVersion();
         } else {
             return MIN_REQUIRED_JAVA_VERSION;
         }
     }
-    
-    private static Version getAndroidJavaVersion() {
-        Version androidVersion = getAndroidVersion();
-        Version nougat = Version.parse("7.0"); // API level 24
-        
-        if (androidVersion.isAtLeast(nougat)) {
-            return Version.parse("1.8.0-android");
-        } else {
-            return Version.parse("1.7.0-android");
-        }
-    }
-    
+
     /**
      * Returns a {@code File} that points to the current working directory.
      *
@@ -381,10 +306,10 @@ public final class Platform {
             // of the language of the user interface.
             File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
             return new File(applicationSupport, app);
-        } else if (isLimitedPlatform()) {
-            throw new UnsupportedOperationException();
-        } else {
+        } else if (getPlatformFamily().hasLocalFileSystem()) {
             return new File(getUserHomeDir(), "." + app);
+        } else {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -432,10 +357,10 @@ public final class Platform {
             // The "Documents" directory has the same name on non-English
             // versions of macOS, according to Apple's documentation.
             return new File(System.getenv("HOME") + "/Documents");
-        } else if (isLimitedPlatform()) {
-            throw new UnsupportedOperationException();
-        } else {
+        } else if (getPlatformFamily().hasLocalFileSystem()) {
             return getUserHomeDir();
+        } else {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -507,9 +432,9 @@ public final class Platform {
     /**
      * Returns the default timezone. By default, this will return the
      * {@code Europe/Amsterdam} time zone. The default time zone can be set
-     * explicitly using the environment variable
-     * {@link #COLORIZE_TIMEZONE_ENV}. If the requested time zone is not
-     * available on the current platform, the GMT time zone is used instead.
+     * explicitly using the environment variable "COLORIZE_TIMEZONE". If the
+     * requested time zone is not available on the current platform, the GMT
+     * time zone is used instead.
      */
     public static TimeZone getDefaultTimeZone() {
         if (cachedDefaultTimeZone != null) {
