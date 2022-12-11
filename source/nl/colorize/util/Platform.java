@@ -131,6 +131,8 @@ public final class Platform {
 
         if (vendor.contains("android")) {
             return PlatformFamily.ANDROID;
+        } else if (System.getenv("GAE_APPLICATION") != null) {
+            return PlatformFamily.GOOGLE_CLOUD;
         } else if (System.getProperty("com.google.appengine.runtime.environment") != null) {
             return PlatformFamily.GOOGLE_CLOUD;
         }
