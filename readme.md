@@ -1,31 +1,29 @@
 Colorize Java Commons
 =====================
 
-Java library containing utility classes for web, desktop, and mobile applications. It is used by 
-all Java-based applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
-The library provides the following features:
+Set of Java libraries for web, desktop, and mobile applications. It is used in all Java-based
+applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
 
+The library focuses on portability, and supports a wide variety of platforms and environments.
+It can be used in back-end applications, in cloud environments, in desktop applications on 
+Windows/Mac/Linux, in mobile apps on Android and iOS, and in the browser (via
+[TeaVM](http://teavm.org)).
+
+The reason for this large variety of environments is that the library started out as a foundation 
+for cross-platform desktop applications. It was later adopted for back-end applications, and
+now supports both scenarios.
+
+![Colorize Java Commons outline](_development/outline.svg)
+
+- Cross-platform application data/configuration/preferences/resources
+- Translation framework
+- Utilities for working with statistics (e.g. histograms, date range)
+- Lightweight command line argument parser
+- Additional common data structures (e.g. tuple, version number)
+- Cross-platform HTTP request API
 - Animation framework including keyframe animation and interpolation
 - Component library for Swing applications
-- Lightweight command line argument parser
-- Lightweight translation framework
-- Cross-platform HTTP request API
-- Reading and writing CSV
-- Utilities for working with statistics
-- Generic retry mechanism
-- Automatic application logging configuration
-- Cross-platform storage for application data/configuration/preferences
 - Various other utility classes
-
-The library focuses on portability, and supports a wide variety of platforms and environments:
-
-- Windows
-- Mac OS
-- Linux
-- Google Cloud
-- Android
-- iOS (via [RoboVM](http://robovm.mobidevelop.com) or [Multi-OS Engine](https://multi-os-engine.org))
-- Browser (via [TeaVM](http://teavm.org))
 
 Usage
 -----
@@ -36,13 +34,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2022.16</version>
+        <version>2023.1</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2022.16"
+        implementation "nl.colorize:colorize-java-commons:2023.1"
     }
     
 Documentation
@@ -114,7 +112,7 @@ properties in `~/.gradle/gradle.properties`.
 License
 -------
 
-Copyright 2007-2022 Colorize
+Copyright 2007-2023 Colorize
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.

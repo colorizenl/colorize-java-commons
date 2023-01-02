@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -27,8 +27,7 @@ import java.util.Optional;
  * depending on the HTTP client. Since {@link URLLoader} supports multiple HTTP
  * clients depending on the platform, these properties can have different types
  * depending on the HTTP client, and some properties might not be available for
- * certain HTTP clients. Use the {@code PROPERTY_X} fields to access common
- * connection properties.
+ * certain HTTP clients.
  */
 public record URLResponse(
     int status,

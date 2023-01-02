@@ -1,38 +1,38 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.stats;
 
+import nl.colorize.util.DateParser;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static nl.colorize.util.Formatting.toDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DateRangeTest {
 
     @Test
     void contains() {
-        DateRange range = new DateRange(toDate("2018-10-10"),
-            toDate("2019-01-07"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-10"),
+            DateParser.parse("2019-01-07"));
 
-        assertFalse(range.contains(toDate("2018-10-09")));
-        assertTrue(range.contains(toDate("2018-10-10")));
-        assertTrue(range.contains(toDate("2018-11-10")));
-        assertFalse(range.contains(toDate("2019-01-07")));
-        assertFalse(range.contains(toDate("2019-01-08")));
+        assertFalse(range.contains(DateParser.parse("2018-10-09")));
+        assertTrue(range.contains(DateParser.parse("2018-10-10")));
+        assertTrue(range.contains(DateParser.parse("2018-11-10")));
+        assertFalse(range.contains(DateParser.parse("2019-01-07")));
+        assertFalse(range.contains(DateParser.parse("2019-01-08")));
     }
 
     @Test
     void splitDays() {
-        DateRange range = new DateRange(toDate("2018-10-01"),
-            toDate("2018-10-03"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-01"),
+            DateParser.parse("2018-10-03"));
         List<DateRange> intervals = range.split(DateRange.Interval.DAY);
 
         assertEquals(3, intervals.size());
@@ -43,8 +43,8 @@ class DateRangeTest {
 
     @Test
     void splitWeeks() {
-        DateRange range = new DateRange(toDate("2018-10-10"),
-            toDate("2018-10-21"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-10"),
+            DateParser.parse("2018-10-21"));
         List<DateRange> intervals = range.split(DateRange.Interval.WEEK);
 
         assertEquals(2, intervals.size());
@@ -54,8 +54,8 @@ class DateRangeTest {
 
     @Test
     void splitMonths() {
-        DateRange range = new DateRange(toDate("2018-10-01"),
-            toDate("2019-01-15"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-01"),
+            DateParser.parse("2019-01-15"));
         List<DateRange> intervals = range.split(DateRange.Interval.MONTH);
 
         assertEquals(4, intervals.size());
@@ -67,8 +67,8 @@ class DateRangeTest {
 
     @Test
     void splitQuarters() {
-        DateRange range = new DateRange(toDate("2018-10-01"),
-            toDate("2019-01-15"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-01"),
+            DateParser.parse("2019-01-15"));
         List<DateRange> intervals = range.split(DateRange.Interval.QUARTER);
 
         assertEquals(2, intervals.size());
@@ -78,8 +78,8 @@ class DateRangeTest {
 
     @Test
     void splitYears() {
-        DateRange range = new DateRange(Formatting.toDate("2018-10-01"),
-            Formatting.toDate("2018-12-15"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-01"),
+            DateParser.parse("2018-12-15"));
         List<DateRange> intervals = range.split(DateRange.Interval.YEAR);
 
         assertEquals(1, intervals.size());
@@ -88,13 +88,15 @@ class DateRangeTest {
 
     @Test
     void matchInterval() {
-        DateRange range = new DateRange(toDate("2018-10-01"),
-            toDate("2018-12-15"));
+        DateRange range = new DateRange(DateParser.parse("2018-10-01"),
+            DateParser.parse("2018-12-15"));
         DateRange.Interval interval = DateRange.Interval.MONTH;
 
-        assertEquals("10/2018", range.matchInterval(interval, toDate("2018-10-01")).get().toString());
-        assertEquals("11/2018", range.matchInterval(interval, toDate("2018-11-01")).get().toString());
-        assertFalse(range.matchInterval(interval, toDate("2019-11-01")).isPresent());
+        assertEquals("10/2018",
+            range.matchInterval(interval, DateParser.parse("2018-10-01")).get().toString());
+        assertEquals("11/2018",
+            range.matchInterval(interval, DateParser.parse("2018-11-01")).get().toString());
+        assertFalse(range.matchInterval(interval, DateParser.parse("2019-11-01")).isPresent());
     }
 
     @Test

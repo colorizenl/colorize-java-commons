@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -20,6 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TextUtilsTest {
+
+    @Test
+    public void testToTitleCase() {
+        assertEquals("S", TextUtils.toTitleCase("s"));
+        assertEquals("John Doe", TextUtils.toTitleCase("john doe"));
+        assertEquals("John Doe", TextUtils.toTitleCase("JOHN_DOE"));
+    }
     
     @Test
     public void testCountOccurrences() {

@@ -1,13 +1,15 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.Tuple;
+import nl.colorize.util.TupleList;
 
 import java.util.ArrayList;
 import java.util.Collections;

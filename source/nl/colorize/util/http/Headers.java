@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -101,11 +101,24 @@ public class Headers {
     }
 
     /**
-     * Returns a new {@link Headers} instance that consists of this list of
-     * headers plus the specified additional header appended to the end of the
-     * list.
+     * Returns a new {@link Headers} instance consisting of all existing headers
+     * plus the specified new one.
+     *
+     * @deprecated Use {@link #concat(String, String)} instead. This method has
+     *             been renamed to {@code concat} to make it more explicit that
+     *             the original instance is not modified.
      */
+    @Deprecated
     public Headers append(String name, String value) {
+        return concat(name, value);
+    }
+
+    /**
+     * Returns a new {@link Headers} instance that consists of this list of
+     * headers plus the specified additional header concatenated to the end of
+     * the list.
+     */
+    public Headers concat(String name, String value) {
         TupleList<String, String> result = TupleList.create();
         result.addAll(entries);
         result.add(name, value);

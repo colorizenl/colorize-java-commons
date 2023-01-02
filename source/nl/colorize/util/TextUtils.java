@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2022 Colorize
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -34,11 +34,32 @@ public final class TextUtils {
 
     public static final Splitter LINE_SPLITTER = Splitter.on("\n");
     public static final Joiner LINE_JOINER = Joiner.on("\n");
+    private static final Pattern WORD_SEPARATOR = Pattern.compile("[ _]");
+    private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR).omitEmptyStrings();
     
     private static final CharMatcher TEXT_MATCHER =
         CharMatcher.forPredicate(Character::isLetterOrDigit).or(CharMatcher.whitespace());
 
     private TextUtils() {
+    }
+
+    /**
+     * Returns the string {@code str} formatted in "title format". This will make
+     * the first letter of each word uppercase, and the rest of the word lowercase.
+     * Both whitespace characters and underscores are considered word separators.
+     */
+    public static String toTitleCase(String str) {
+        if (str.trim().length() == 0) {
+            return str;
+        }
+
+        StringBuilder sb = new StringBuilder(str.length());
+        for (String word : WORD_SPLITTER.split(str)) {
+            sb.append(Character.toUpperCase(word.charAt(0)));
+            sb.append(word.substring(1).toLowerCase());
+            sb.append(' ');
+        }
+        return sb.substring(0, sb.length() - 1);
     }
     
     /**
