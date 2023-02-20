@@ -14,7 +14,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -93,5 +95,21 @@ public class LoadUtilsTest {
         Map<String, String> map = LoadUtils.toMap(properties);
 
         assertEquals("{a=2}", map.toString());
+    }
+
+    @Test
+    void emulateUnicodeProperties() {
+        List<String> source = new ArrayList<>();
+        source.add("a=some text");
+        source.add("b=text that spans \\");
+        source.add("  multiple lines");
+        source.add("c=some other text");
+
+        Properties properties = new Properties();
+        LoadUtils.emulateUnicodeProperties(String.join("\n", source), properties);
+
+        assertEquals("some text", properties.getProperty("a"));
+        assertEquals("text that spans multiple lines", properties.getProperty("b"));
+        assertEquals("some other text", properties.getProperty("c"));
     }
 }

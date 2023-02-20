@@ -6,13 +6,15 @@
 
 package nl.colorize.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -104,8 +106,7 @@ public final class LoadUtils {
                 properties.load(source);
             } else {
                 String contents = CharStreams.toString(source);
-                ByteArrayInputStream buffer = new ByteArrayInputStream(contents.getBytes(UTF_8));
-                properties.load(buffer);
+                emulateUnicodeProperties(contents, properties);
             }
         } catch (IOException e) {
             throw new ResourceFileException("I/O error while reading .properties file", e);
@@ -116,6 +117,22 @@ public final class LoadUtils {
 
     private static boolean isUnicodePropertiesFilesSupported() {
         return !Platform.isTeaVM();
+    }
+
+    @VisibleForTesting
+    protected static void emulateUnicodeProperties(String contents, Properties properties) {
+        Splitter lineSplitter = Splitter.on("\n").trimResults();
+        List<String> trimmedLines = lineSplitter.splitToList(contents);
+        String merged = Joiner.on("\n").join(trimmedLines).replace("\\\n", "");
+        List<String> lines = lineSplitter.splitToList(merged);
+
+        for (String line : lines) {
+            if (!line.trim().isEmpty() && !line.startsWith("#") && line.contains("=")) {
+                String name = line.substring(0, line.indexOf("="));
+                String value = line.substring(line.indexOf("=") + 1);
+                properties.setProperty(name, value);
+            }
+        }
     }
 
     /**
@@ -161,10 +178,24 @@ public final class LoadUtils {
     /**
      * Loads a properties file from a string containing the file contents.
      * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
+     * <p>
+     * This method will load the {@code .properties} file from a reader. If the
+     * current platform supports {@code .properties} files with any character
+     * encoding, the reader's character encoding is used to load the file. If
+     * the platform only supports {@code .properties} files with the ISO-8859-1
+     * character encoding, this encoding is used as a fallback, regardless of
+     * the reader's actual character encoding. On such platforms, files that
+     * contain non-ASCII characters will not be loaded correctly.
      */
     public static Properties loadProperties(String contents) {
-        try (StringReader reader = new StringReader(contents)) {
-            return loadProperties(reader);
+        if (isUnicodePropertiesFilesSupported()) {
+            try (StringReader reader = new StringReader(contents)) {
+                return loadProperties(reader);
+            }
+        } else {
+            Properties properties = new Properties();
+            emulateUnicodeProperties(contents, properties);
+            return properties;
         }
     }
 

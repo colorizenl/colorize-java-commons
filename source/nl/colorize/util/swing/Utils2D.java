@@ -50,12 +50,13 @@ import java.text.AttributedString;
 import java.util.Base64;
 
 /**
- * Utility methods for Java 2D, mainly focused on image manipulation. 
+ * Utility methods for Java 2D, mainly focused on image manipulation. Some of
+ * the graphical effects are based on the (brilliantly titled) book Filthy Rich
+ * Clients.
  */
 public final class Utils2D {
     
-    private static final CharMatcher NEWLINE_MATCHER = CharMatcher.is('\n');
-    private static final Splitter NEWLINE_SPLITTER = Splitter.on(NEWLINE_MATCHER).trimResults();
+    private static final Splitter NEWLINE_SPLITTER = Splitter.on(CharMatcher.is('\n')).trimResults();
     private static final float LINE_SPACING_FACTOR = 1.8f;
 
     private Utils2D() {
@@ -188,8 +189,8 @@ public final class Utils2D {
      */
     public static BufferedImage makeImageCompatible(BufferedImage original) {
         GraphicsConfiguration graphicsConfig = GraphicsEnvironment.getLocalGraphicsEnvironment()
-                .getDefaultScreenDevice()
-                .getDefaultConfiguration();
+            .getDefaultScreenDevice()
+            .getDefaultConfiguration();
         
         if (graphicsConfig.getColorModel().equals(original.getColorModel())) {
             return original;

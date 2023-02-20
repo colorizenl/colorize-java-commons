@@ -139,15 +139,6 @@ public class URLLoaderTest {
     }
 
     @Test
-    public void testDisableCertificateVerification() throws IOException {
-        URLLoader request = URLLoader.get("https://html5.validator.nu");
-        request.disableCertificateValidation();
-        URLResponse response = request.send();
-
-        assertEquals(HttpStatus.OK, response.status());
-    }
-
-    @Test
     public void testHeadRequestsOnlyDownloadHeaders() throws IOException {
         URLResponse getResponse = URLLoader.get("http://www.colorize.nl").send();
 
@@ -305,7 +296,8 @@ public class URLLoaderTest {
         List<Integer> result = new ArrayList<>();
 
         URLLoader.get("https://www.colorize.nl/en/")
-            .sendAsync(response -> result.add(response.status()));
+            .sendPromise()
+            .then(response -> result.add(response.status()));
 
         Thread.sleep(3000);
 

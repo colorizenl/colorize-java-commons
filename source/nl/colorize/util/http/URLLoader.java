@@ -10,10 +10,10 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
-import nl.colorize.util.Callback;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.PlatformFamily;
+import nl.colorize.util.Promise;
 import nl.colorize.util.TextUtils;
 import nl.colorize.util.TupleList;
 
@@ -393,20 +393,24 @@ public class URLLoader {
 
     /**
      * Asynchronous version of {@link #send()} that sends the request from a
-     * separate thread and invokes a callback with the result.
+     * separate thread and returns a {@link Promise} to process the result.
      */
-    public void sendAsync(Callback<URLResponse> callback) {
+    public Promise<URLResponse> sendPromise() {
+        Promise<URLResponse> promise = new Promise<>();
+
         Runnable task = () -> {
             try {
                 URLResponse response = send();
-                callback.onResponse(response);
+                promise.resolve(response);
             } catch (IOException e) {
-                callback.onError(e);
+                promise.reject(e);
             }
         };
 
         Thread thread = new Thread(task, "Colorize-URLLoader");
         thread.start();
+
+        return promise;
     }
 
     private HttpURLConnection openConnection(URI target) throws IOException {

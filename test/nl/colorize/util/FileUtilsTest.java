@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 
+import static com.google.common.base.Charsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,22 +26,22 @@ public class FileUtilsTest {
     @Test
     public void testWriteLines() throws Exception {
         List<String> lines = ImmutableList.of("first", "second", "third");
-        File tempFile = FileUtils.createTempFile("", Charsets.UTF_8);
-        FileUtils.write(lines, Charsets.UTF_8, tempFile);
+        File tempFile = FileUtils.createTempFile("", UTF_8);
+        FileUtils.write(lines, UTF_8, tempFile);
 
-        assertEquals(lines, Files.readAllLines(tempFile.toPath(), Charsets.UTF_8));
+        assertEquals(lines, Files.readAllLines(tempFile.toPath(), UTF_8));
     }
     
     @Test
     public void testReadFirstLines() throws Exception {
-        File tempFile = FileUtils.createTempFile("a\nb\nc\nd\ne\n", Charsets.UTF_8);
+        File tempFile = FileUtils.createTempFile("a\nb\nc\nd\ne\n", UTF_8);
         
         assertEquals(ImmutableList.of("a", "b", "c"), 
-                FileUtils.readFirstLines(tempFile, Charsets.UTF_8, 3));
+                FileUtils.readFirstLines(tempFile, UTF_8, 3));
         assertEquals(ImmutableList.of("a", "b", "c", "d", "e"), 
-                FileUtils.readFirstLines(tempFile, Charsets.UTF_8, 5));
+                FileUtils.readFirstLines(tempFile, UTF_8, 5));
         assertEquals(ImmutableList.of("a", "b", "c", "d", "e"), 
-                FileUtils.readFirstLines(tempFile, Charsets.UTF_8, 6));
+                FileUtils.readFirstLines(tempFile, UTF_8, 6));
     }
     
     @Test
@@ -55,7 +55,7 @@ public class FileUtilsTest {
     
     @Test
     public void testDelete() throws IOException {
-        File tempFile = FileUtils.createTempFile("test", Charsets.UTF_8);
+        File tempFile = FileUtils.createTempFile("test", UTF_8);
         FileUtils.delete(tempFile);
         
         assertFalse(tempFile.exists());
@@ -89,20 +89,20 @@ public class FileUtilsTest {
 
     @Test
     public void testRewriteWithFunction() throws IOException {
-        File tempFile = FileUtils.createTempFile("a\nb\nc\nd", Charsets.UTF_8);
+        File tempFile = FileUtils.createTempFile("a\nb\nc\nd", UTF_8);
 
-        FileUtils.rewrite(tempFile, Charsets.UTF_8, line -> "2" + line);
+        FileUtils.rewrite(tempFile, UTF_8, line -> "2" + line);
 
         assertEquals(ImmutableList.of("2a", "2b", "2c", "2d"),
-            Files.readAllLines(tempFile.toPath(), Charsets.UTF_8));
+            Files.readAllLines(tempFile.toPath(), UTF_8));
     }
 
     @Test
     void copyDirectory(@TempDir File tempDir) throws IOException {
-        Files.writeString(new File(tempDir, "a.txt").toPath(), "test", Charsets.UTF_8);
+        Files.writeString(new File(tempDir, "a.txt").toPath(), "test", UTF_8);
         new File(tempDir, "b").mkdir();
         Files.writeString(new File(tempDir.getAbsolutePath() + "/b/c.txt").toPath(),
-            "test", Charsets.UTF_8);
+            "test", UTF_8);
 
         File outputDir = FileUtils.createTempDir();
         outputDir = new File(outputDir, "target");
@@ -117,10 +117,10 @@ public class FileUtilsTest {
     @Test
     void deleteDirectory() throws IOException {
         File tempDir = FileUtils.createTempDir();
-        Files.writeString(new File(tempDir, "a.txt").toPath(), "test", Charsets.UTF_8);
+        Files.writeString(new File(tempDir, "a.txt").toPath(), "test", UTF_8);
         new File(tempDir, "b").mkdir();
         Files.writeString(new File(tempDir.getAbsolutePath() + "/b/c.txt").toPath(),
-            "test", Charsets.UTF_8);
+            "test", UTF_8);
 
         FileUtils.deleteDirectory(tempDir);
 
@@ -138,10 +138,10 @@ public class FileUtilsTest {
 
     @Test
     void rewriteWithReplacement() throws IOException {
-        File tempFile = FileUtils.createTempFile("a\nb\nc", Charsets.UTF_8);
-        FileUtils.rewriteLine(tempFile, "b", "d", Charsets.UTF_8);
+        File tempFile = FileUtils.createTempFile("a\nb\nc", UTF_8);
+        FileUtils.rewriteLine(tempFile, "b", "d", UTF_8);
 
-        assertEquals("a\nd\nc\n", Files.readString(tempFile.toPath(), Charsets.UTF_8));
+        assertEquals("a\nd\nc\n", Files.readString(tempFile.toPath(), UTF_8));
     }
 
     @Test
@@ -160,5 +160,22 @@ public class FileUtilsTest {
         assertTrue(filter.accept(new File("/tmp"), "test.PNG"));
         assertFalse(filter.accept(new File("/tmp"), "test.txt"));
         assertFalse(filter.accept(new File("/tmp"), "test.jpg.txt"));
+    }
+
+    @Test
+    void countDirectorySize(@TempDir File tempDir) throws IOException {
+        Files.writeString(new File(tempDir, "1.txt").toPath(), "some text", UTF_8);
+        Files.writeString(new File(tempDir, "2.txt").toPath(), "some more text", UTF_8);
+
+        assertEquals(23L, FileUtils.countDirectorySize(tempDir));
+    }
+
+    @Test
+    void mkdirWithName(@TempDir File tempDir) throws IOException {
+        File dir = FileUtils.mkdir(tempDir, "test");
+
+        assertTrue(dir.exists());
+        assertTrue(dir.isDirectory());
+        assertEquals("test", dir.getName());
     }
 }

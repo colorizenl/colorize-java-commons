@@ -153,7 +153,17 @@ public final class FileUtils {
             }
         }
     }
-    
+
+    /**
+     * Creates a new directory with the specified name and location, then
+     * returns the directory that was just created.
+     */
+    public static File mkdir(File parentDir, String name) throws IOException {
+        File dir = new File(parentDir, name);
+        mkdir(dir);
+        return dir;
+    }
+
     /**
      * Deletes a file. Unlike {@link File#delete()}, an exception will be thrown
      * if the file could not be deleted. If the file does not exist this method
@@ -295,6 +305,20 @@ public final class FileUtils {
             ext = ext.substring(1);
         }
         return ext.toLowerCase();
+    }
+
+    /**
+     * Returns the size of the specified directory, in bytes.
+     */
+    public static long countDirectorySize(File dir) throws IOException {
+        Preconditions.checkArgument(dir.exists() && dir.isDirectory(),
+            "No such directory: " + dir.getAbsolutePath());
+
+        return Files.walk(dir.toPath())
+            .map(Path::toFile)
+            .filter(file -> !file.isDirectory())
+            .mapToLong(File::length)
+            .sum();
     }
 
     /**
