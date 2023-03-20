@@ -6,7 +6,6 @@
 
 package nl.colorize.util.uitest;
 
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.animation.Animatable;
 import nl.colorize.util.animation.Interpolation;
 import nl.colorize.util.animation.Timeline;
@@ -57,9 +56,12 @@ public class InterpolationUIT extends JPanel implements Animatable {
     private static final Stroke EXAMPLE_ANIM_STROKE = new BasicStroke(1.5f);
     private static final float EXAMPLE_ANIM_DURATION = 2f;
 
-    private static final List<Interpolation> INTERPOLATION_METHODS = ImmutableList.of(
-        Interpolation.DISCRETE, Interpolation.LINEAR, Interpolation.EASE,
-        Interpolation.CUBIC, Interpolation.QUADRATIC, Interpolation.QUINTIC
+    private static final List<Interpolation> INTERPOLATION_METHODS = List.of(
+        Interpolation.DISCRETE,
+        Interpolation.LINEAR,
+        Interpolation.EASE,
+        Interpolation.CUBIC,
+        Interpolation.QUADRATIC
     );
 
     public static void main(String[] args) {

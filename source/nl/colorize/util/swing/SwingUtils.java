@@ -57,7 +57,12 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -78,7 +83,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Miscelleaneous utility and convenience methods for working with Swing. 
+ * Miscelleaneous utility and convenience methods for working with Swing. This
+ * generally relates to creating component with slightly different graphics
+ * and/or behavior.
  */
 public final class SwingUtils {
     
@@ -442,10 +449,23 @@ public final class SwingUtils {
      */
     public static void setOpaque(JComponent component, boolean opaque) {
         component.setOpaque(opaque);
+
         for (int i = 0; i < component.getComponentCount(); i++) {
-            Component child = component.getComponent(i);
-            if (child instanceof JComponent) {
-                setOpaque((JComponent) child, opaque);
+            if (component.getComponent(i) instanceof JComponent child) {
+                setOpaque(child, opaque);
+            }
+        }
+    }
+
+    /**
+     * Calls {@link javax.swing.JComponent#setFocusable(boolean)} recursively.
+     */
+    public static void setFocusable(JComponent component, boolean focusable) {
+        component.setFocusable(focusable);
+
+        for (int i = 0; i < component.getComponentCount(); i++) {
+            if (component.getComponent(i) instanceof JComponent child) {
+                setFocusable(child, focusable);
             }
         }
     }
@@ -664,6 +684,11 @@ public final class SwingUtils {
         };
     }
 
+    /**
+     * Creates a label with the specified font and color. If the font is
+     * {@code null} the label will use the platform's default font for the
+     * current look-and-feel.
+     */
     public static JLabel createLabel(String text, Font font, Color textColor) {
         JLabel label = new JLabel(text);
         label.setOpaque(false);
@@ -692,7 +717,47 @@ public final class SwingUtils {
         removeLookAndFeel(button, true);
         return button;
     }
-    
+
+    /**
+     * Creates a {@link KeyListener} that will only listen to key pressed
+     * events, and will invoke the specified callback when such events occur.
+     */
+    public static KeyListener createKeyPressedListener(Consumer<KeyEvent> callback) {
+        return new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                callback.accept(e);
+            }
+        };
+    }
+
+    /**
+     * Creates a {@link KeyListener} that will only listen to key released
+     * events, and will invoke the specified callback when such events occur.
+     */
+    public static KeyListener createKeyReleasedListener(Consumer<KeyEvent> callback) {
+        return new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                callback.accept(e);
+            }
+        };
+    }
+
+    /**
+     * Creates a {@link ComponentListener} that will only listen to component
+     * resize events, and will invoke the specified callback when such events
+     * occur.
+     */
+    public static ComponentListener createResizeListener(Runnable callback) {
+        return new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                callback.run();
+            }
+        };
+    }
+
     /**
      * Creates a button suitable for usage in a toolbar. The size of the button
      * and the size of the icon will depend on the platform's user interface
@@ -819,7 +884,7 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns a text field that always returns a valid number when its
+     * Returns a text field that always returns a valid integer when its
      * {@code getText()} method is called. If the value that was actually
      * entered is not a number it will return 0 instead.
      */
@@ -830,6 +895,25 @@ public final class SwingUtils {
                 String text = super.getText();
                 try {
                     return String.valueOf(Integer.parseInt(text));
+                } catch (NumberFormatException e) {
+                    return "0";
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a text field that always returns a valid float when its
+     * {@code getText()} method is called. If the value that was actually
+     * entered is not a number it will return 0 instead.
+     */
+    public static JTextField createNumericTextField(float initialValue) {
+        return new JTextField(String.valueOf(initialValue)) {
+            @Override
+            public String getText() {
+                String text = super.getText();
+                try {
+                    return String.valueOf(Float.parseFloat(text));
                 } catch (NumberFormatException e) {
                     return "0";
                 }

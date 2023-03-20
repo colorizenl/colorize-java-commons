@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// Colorize MultimediaLib
-// Copyright 2009-2023 Colorize
+// Colorize Java Commons
+// Copyright 2007-2023 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -9,8 +9,7 @@ package nl.colorize.util.cli;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import nl.colorize.util.AppProperties;
-import nl.colorize.util.LoadUtils;
+import nl.colorize.util.Property;
 
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -18,33 +17,32 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Can be used to define and parse arguments for a command line interface. This
- * class only supports named arguments and flags, arguments without an explicit
- * name are not supported.
+ * Define supported arguments for a command line interface, then parse the
+ * provided arguments accordingly. This class only allows named arguments and
+ * flags, arguments without an explicit name are not supported.
  * <p>
  * This class exists because Args4j has not been updated since 2016. However,
  * it provides an API that is quite different from Args4j's annotation-based
- * approach. Instead, it is more similar to command line arguments support in
- * other languages, such as Python's argparse.
+ * approach. Instead, it is more similar to defining command line arguments
+ * using Python's {@code argparse}.
  * <p>
  * The following example shows how to define a simple command line interface:
  * <p>
  * <pre>
  *     public static void main(String[] argv) {
- *         AppProperties args = new CommandLineArgumentParser("MyApp")
+ *         CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp")
  *             .addRequired("--input", "Input directory");
  *             .addOptional("--output", "Output directory");
  *             .addFlag("--overwrite", "Overwrites existing values");
  *             .parseArgs(argv)
  *
- *         File inputDir = args.getFile("input");
- *         File outputDir = args.getFile("input", new File("/tmp"));
- *         boolean overwrite = args.getBool("overwrite");
+ *         File inputDir = args.get("input").getFile();
+ *         File outputDir = args.get("input").getFile(new File("/tmp"));
+ *         boolean overwrite = args.get("overwrite").getBool();
  *     }
  * </pre>
  * <p>
@@ -58,6 +56,7 @@ public class CommandLineArgumentParser {
 
     private String applicationName;
     private Map<String, Argument> definedArgs;
+    private Map<Argument, String> parsedArgs;
     private PrintWriter out;
 
     protected CommandLineArgumentParser(String applicationName, PrintWriter out) {
@@ -157,7 +156,7 @@ public class CommandLineArgumentParser {
      * missing or invalid, the usage information will be displayed and the
      * application will terminate.
      */
-    public AppProperties parseArgs(String... args) {
+    public CommandLineArgumentParser parseArgs(String... args) {
         try {
             return tryParseArgs(args);
         } catch (CommandLineInterfaceException e) {
@@ -176,27 +175,26 @@ public class CommandLineArgumentParser {
      * @throws CommandLineInterfaceException if the requirements for mandatory
      *         command line arguments are not met.
      */
-    public AppProperties tryParseArgs(String... argv) throws CommandLineInterfaceException {
+    public CommandLineArgumentParser tryParseArgs(String... argv) throws CommandLineInterfaceException {
         List<String> providedArgs = processArgsList(argv);
-        Map<Argument, String> parsedArgs = new HashMap<>();
+        parsedArgs = new HashMap<>();
         int index = 0;
 
         while (index < providedArgs.size()) {
             Argument arg = lookupDefinedArgument(providedArgs.get(index));
 
             if (arg.flag) {
-                register(arg, "true", parsedArgs);
+                register(arg, "true");
                 index += 1;
             } else {
-                register(arg, providedArgs.get(index + 1), parsedArgs);
+                register(arg, providedArgs.get(index + 1));
                 index += 2;
             }
         }
 
-        checkRequiredArguments(parsedArgs.keySet());
+        checkRequiredArguments();
 
-        Map<String, String> values = finalizeArgumentValues(parsedArgs);
-        return new ArgumentValues(values);
+        return this;
     }
 
     /**
@@ -224,14 +222,14 @@ public class CommandLineArgumentParser {
         return arg;
     }
 
-    private void register(Argument arg, String value, Map<Argument, String> parsedArgs) {
+    private void register(Argument arg, String value) {
         if (!parsedArgs.containsKey(arg)) {
             parsedArgs.put(arg, value);
         }
     }
 
-    private void checkRequiredArguments(Set<Argument> parsed) throws CommandLineInterfaceException {
-        Set<String> parsedNames = parsed.stream()
+    private void checkRequiredArguments() throws CommandLineInterfaceException {
+        Set<String> parsedNames = parsedArgs.keySet().stream()
             .map(Argument::name)
             .collect(Collectors.toSet());
 
@@ -242,22 +240,32 @@ public class CommandLineArgumentParser {
         }
     }
 
-    private Map<String, String> finalizeArgumentValues(Map<Argument, String> parsedArgs) {
-        Map<String, String> values = new HashMap<>();
+    /**
+     * Returns the value of the command line argument with the specified name,
+     * or the default value if the argument was defined as optional.
+     *
+     * @throws IllegalStateException if this method is called before any
+     *         command line arguments have been parsed.
+     */
+    public Property get(String name) {
+        Preconditions.checkState(parsedArgs != null,
+            "Command line arguments have not been parsed yet");
 
-        // All flags have an implicit default value of false, i.e. when
-        // they are not specified.
-        for (Argument arg : definedArgs.values()) {
-            if (arg.flag) {
-                values.put(getNormalizedArgumentName(arg.name), "false");
-            }
+        String normalizedName = getNormalizedArgumentName(name);
+        Argument definedArg = definedArgs.get(normalizedName);
+        String value = parsedArgs.get(definedArg);
+
+        if (value != null && !value.isEmpty()) {
+            return Property.of(value);
+        } else if (definedArg.required) {
+            // This should never happen since we have already checked all required
+            // arguments at this point.
+            throw new AssertionError("Missing required argument '" + definedArg + "'");
+        } else if (definedArg.flag) {
+            return Property.of("false");
+        } else {
+            return Property.allowNull();
         }
-
-        for (Argument arg : parsedArgs.keySet()) {
-            values.put(getNormalizedArgumentName(arg.name), parsedArgs.get(arg));
-        }
-
-        return values;
     }
 
     /**
@@ -269,31 +277,6 @@ public class CommandLineArgumentParser {
         @Override
         public String toString() {
             return name;
-        }
-    }
-
-    /**
-     * Extends the {@link AppProperties} interface to perform the argument name
-     * normalization by this class. This allows arguments to be accessed by both
-     * identifier name (e.g. "output") and their actual command line name (e.g.
-     * "-o" or "--output").
-     */
-    private class ArgumentValues implements AppProperties {
-
-        private Properties properties;
-
-        public ArgumentValues(Map<String, String> values) {
-            this.properties = LoadUtils.toProperties(values);
-        }
-
-        @Override
-        public Properties getProperties() {
-            return properties;
-        }
-
-        @Override
-        public String get(String name, String defaultValue) {
-            return properties.getProperty(getNormalizedArgumentName(name), defaultValue);
         }
     }
 }

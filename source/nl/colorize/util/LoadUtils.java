@@ -95,7 +95,7 @@ public final class LoadUtils {
      * The reader is closed by this method after the {@code .properties} file
      * has been loaded.
      *
-     * @throws ResourceFileException if an I/O error occurs while reading the
+     * @throws ResourceException if an I/O error occurs while reading the
      *         properties file.
      */
     public static Properties loadProperties(Reader source) {
@@ -109,7 +109,7 @@ public final class LoadUtils {
                 emulateUnicodeProperties(contents, properties);
             }
         } catch (IOException e) {
-            throw new ResourceFileException("I/O error while reading .properties file", e);
+            throw new ResourceException("I/O error while reading .properties file", e);
         }
 
         return properties;
@@ -139,14 +139,14 @@ public final class LoadUtils {
      * Loads a {@code .properties file} using the specified character encoding.
      * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
      *
-     * @throws ResourceFileException if an I/O error occurs while reading the
+     * @throws ResourceException if an I/O error occurs while reading the
      *         properties file.
      */
     public static Properties loadProperties(ResourceFile file, Charset charset) {
         try (Reader reader = file.openReader(charset)) {
             return loadProperties(reader);
         } catch (IOException e) {
-            throw new ResourceFileException(file, "Cannot read properties file");
+            throw new ResourceException("Cannot read properties file from " + file, e);
         }
     }
 
@@ -155,7 +155,7 @@ public final class LoadUtils {
      * encoding. Parsing the file is done using
      * {@link LoadUtils#loadProperties(Reader)}.
      *
-     * @throws ResourceFileException if an I/O error occurs while reading the
+     * @throws ResourceException if an I/O error occurs while reading the
      *         properties file.
      */
     public static Properties loadProperties(ResourceFile file) {
@@ -230,6 +230,30 @@ public final class LoadUtils {
         }
 
         return result;
+    }
+
+    /**
+     * Returns a new {@link Properties} object that only includes properties
+     * from the original that have a name matching the specified prefix.
+     * <p>
+     * The property names in the result instance will have the prefix removed
+     * from their name. For example, if the original included a property "a.x",
+     * and the prefix is "a.", the result will include a property named "x".
+     */
+    public static Properties filterPrefix(Properties original, String prefix) {
+        Preconditions.checkArgument(!prefix.isEmpty(), "Empty prefix");
+
+        Properties filtered = new Properties();
+
+        for (String name : original.stringPropertyNames()) {
+            if (name.startsWith(prefix) && !name.equals(prefix)) {
+                String nameWithoutPrefix = name.substring(prefix.length());
+                String value = original.getProperty(name);
+                filtered.put(nameWithoutPrefix, value);
+            }
+        }
+
+        return filtered;
     }
 
     /**

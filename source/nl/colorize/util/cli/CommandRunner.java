@@ -7,13 +7,12 @@
 package nl.colorize.util.cli;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
-import com.google.common.io.Closeables;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.PlatformFamily;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -29,6 +28,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+
+import static nl.colorize.util.Platform.LINUX;
+import static nl.colorize.util.Platform.MAC;
+import static nl.colorize.util.Platform.WINDOWS;
 
 /**
  * Runs an external process and captures its output. This can optionally be done
@@ -63,7 +66,7 @@ import java.util.logging.Logger;
  */
 @Deprecated
 public class CommandRunner {
-    
+
     private List<String> command;
     private boolean shellMode;
     private String remoteHost;
@@ -83,7 +86,8 @@ public class CommandRunner {
         .addEscape('\\', "\\\\")
         .addEscape('!', "\\!")
         .build();
-    
+
+    private static final List<Platform> SUPPORTED_PLATFORMS = List.of(WINDOWS, MAC, LINUX);
     private static final Joiner COMMAND_JOINER = Joiner.on(' ').skipNulls();
     private static final char SSH_COMMAND_WRAP_CHAR = '"';
     private static final Logger LOGGER = LogHelper.getLogger(CommandRunner.class);
@@ -91,20 +95,19 @@ public class CommandRunner {
     /**
      * Creates a {@code CommandRunner} that will execute the specified command.
      * The process will not start until {@link #execute()} is called.
+     *
      * @throws SecurityException when attempting to use {@code CommandRunner}
      *         in a sandboxed environment, due to the security risks. Refer to
      *         the class documentation for more information. 
      * @throws IllegalArgumentException if the command is empty.
      */
     public CommandRunner(List<String> cmd) {
-        if (isSandboxedEnvironment()) {
+        if (!SUPPORTED_PLATFORMS.contains(Platform.getPlatform())) {
             throw new SecurityException("CommandRunner not allowed in sandboxed environments");
         }
-        
-        if (cmd.isEmpty()) {
-            throw new IllegalArgumentException("Empty command");
-        }
-        
+
+        Preconditions.checkArgument(!cmd.isEmpty(), "Empty command");
+
         command = ImmutableList.copyOf(cmd);
         shellMode = false;
         timeout = 0L;
@@ -129,6 +132,7 @@ public class CommandRunner {
      * block until the external process is done. The output of the process
      * can be obtained afterwards by calling {@link #getExitCode()} and
      * {@link #getOutput()}.
+     *
      * @throws IOException if an error occurs while reading the output from the
      *         external process.
      * @throws TimeoutException if the external process's running time exceeds
@@ -139,11 +143,6 @@ public class CommandRunner {
      *         starting an external process.
      */
     public void execute() throws IOException, TimeoutException {
-        if (!isExecuteSupported()) {
-            throw new UnsupportedOperationException("Running an external process is " +
-                    "not supported on the current platform");
-        }
-        
         setDone(false);
         exitCode = -1;
         output = new StringWriter();
@@ -191,12 +190,10 @@ public class CommandRunner {
     
     private void runProcess() throws IOException, InterruptedException {
         Process process = startProcess();
-        BufferedReader outputReader = null;
-        
-        try {
+
+        try (BufferedReader outputReader = readOutput(process)) {
             // Read the process output using the platform's default 
             // character encoding.
-            outputReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             captureProcessOutput(outputReader);
             
             exitCode = process.waitFor();
@@ -204,9 +201,12 @@ public class CommandRunner {
                 throw new IOException("Command returned exit code " + exitCode);
             }
         } finally {
-            Closeables.close(outputReader, true);
             process.destroy();
         }
+    }
+
+    private BufferedReader readOutput(Process process) {
+        return new BufferedReader(new InputStreamReader(process.getInputStream()));
     }
 
     private Process startProcess() throws IOException {
@@ -282,7 +282,7 @@ public class CommandRunner {
     }
     
     public void setShellMode(boolean shellMode) {
-        if (shellMode && !isShellModeSupported()) {
+        if (shellMode && !isUnixLikePlatform()) {
             throw new UnsupportedOperationException("Shell mode is not supported on " + 
                     "the current platform");
         }
@@ -294,7 +294,7 @@ public class CommandRunner {
     }
     
     public void setRemoteHost(String remoteHost, String remoteUser) {
-        if (remoteHost != null && !isRemoteHostSupported()) {
+        if (remoteHost != null && !isUnixLikePlatform()) {
             throw new UnsupportedOperationException("Executing commands on a remote host " + 
                     "is not supported on the current platform");
         }
@@ -382,26 +382,9 @@ public class CommandRunner {
         }
         return output.toString().trim();
     }
-    
-    public boolean isExecuteSupported() {
-        return !Platform.getPlatformFamily().isCloud();
-    }
-    
-    public boolean isShellModeSupported() {
-        return isUnixLikePlatform();
-    }
-    
-    public boolean isRemoteHostSupported() {
-        return isUnixLikePlatform();
-    }
-    
-    private boolean isSandboxedEnvironment() {
-        PlatformFamily platform = Platform.getPlatformFamily();
-        return platform.isCloud() || platform.isMobile() || Platform.isMacAppSandboxEnabled();
-    }
-    
+
     private boolean isUnixLikePlatform() {
-        return Platform.isMac() || Platform.isLinux();
+        return !Platform.isWindows();
     }
     
     @Override

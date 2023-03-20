@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PromiseTest {
 
@@ -34,9 +37,9 @@ class PromiseTest {
 
         Promise<String> promise = new Promise<>();
         promise.then(values::add, errors::add);
-        runInThread(500, () -> promise.resolve("A"));
+        runInThread(200, () -> promise.resolve("A"));
 
-        Thread.sleep(1000);
+        Thread.sleep(500);
 
         assertEquals(List.of("A"), values);
         assertEquals(0, errors.size());
@@ -50,15 +53,9 @@ class PromiseTest {
         Promise<String> promise = new Promise<>();
         promise.then(values::add, errors::add);
 
-        runInThread(500, () -> {
-            try {
-                throw new IllegalStateException("Operation failed");
-            } catch (IllegalStateException e) {
-                promise.reject(e);
-            }
-        });
+        runInThread(200, () -> promise.reject(new IllegalStateException("Operation failed")));
 
-        Thread.sleep(1000);
+        Thread.sleep(500);
 
         assertEquals(0, values.size());
         assertEquals(1, errors.size());
@@ -71,9 +68,9 @@ class PromiseTest {
 
         Promise<String> promise = new Promise<>();
         promise.then(values::add).then(values::add).thenCatch(errors::add);
-        runInThread(500, () -> promise.resolve("A"));
+        runInThread(200, () -> promise.resolve("A"));
 
-        Thread.sleep(1000);
+        Thread.sleep(500);
 
         assertEquals(List.of("A", "A"), values);
         assertEquals(0, errors.size());
@@ -99,14 +96,86 @@ class PromiseTest {
         Promise<String> promise = new Promise<>();
         promise.then(values::add).then(values::add).thenCatch(errors::add);
         promise.cancel();
-        runInThread(500, () -> promise.resolve("A"));
+        runInThread(200, () -> promise.resolve("A"));
 
         promise.then(values::add, errors::add);
 
-        Thread.sleep(1000);
+        Thread.sleep(500);
 
         assertEquals(0, values.size());
         assertEquals(0, errors.size());
+    }
+
+    @Test
+    void all() throws InterruptedException {
+        List<List<String>> values = new ArrayList<>();
+        List<Exception> errors = new ArrayList<>();
+
+        Promise<String> promiseA = new Promise<>();
+        runInThread(300, () -> promiseA.resolve("A"));
+
+        Promise<String> promiseB = new Promise<>();
+        runInThread(100, () -> promiseB.resolve("B"));
+
+        Promise.all(promiseA, promiseB)
+            .then(values::add)
+            .thenCatch(errors::add);
+
+        Thread.sleep(500);
+
+        assertEquals("[[A, B]]", values.toString());
+        assertEquals(0, errors.size());
+    }
+
+    @Test
+    void allWithError() throws InterruptedException {
+        List<List<String>> values = new ArrayList<>();
+        List<Exception> errors = new ArrayList<>();
+
+        Promise<String> promiseA = new Promise<>();
+        runInThread(300, () -> promiseA.resolve("A"));
+
+        Promise<String> promiseB = new Promise<>();
+        runInThread(100, () -> promiseB.reject(new IllegalStateException("Operation failed")));
+
+        Promise.all(promiseA, promiseB)
+            .then(values::add)
+            .thenCatch(errors::add);
+
+        Thread.sleep(500);
+
+        assertEquals(0, values.size());
+        assertEquals(1, errors.size());
+    }
+
+    @Test
+    void getPendingResult() {
+        Promise<String> promise = new Promise<>();
+
+        assertFalse(promise.getValue().isPresent());
+    }
+
+    @Test
+    void getResolvedResult() throws InterruptedException {
+        Promise<String> promise = new Promise<>();
+        runInThread(100, () -> promise.resolve("A"));
+
+        assertFalse(promise.getValue().isPresent());
+
+        Thread.sleep(500);
+
+        assertTrue(promise.getValue().isPresent());
+        assertEquals("A", promise.getValue().get());
+    }
+
+    @Test
+    void throwExceptionForRejectedResult() throws InterruptedException {
+        Promise<String> promise = new Promise<>();
+        runInThread(100, () -> promise.reject(new IllegalStateException("Operation failed")));
+
+        Thread.sleep(500);
+
+        assertThrows(RuntimeException.class, () -> promise.getValue());
     }
 
     private void runInThread(long delay, Runnable task) {

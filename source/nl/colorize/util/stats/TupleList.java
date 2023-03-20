@@ -4,7 +4,7 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.stats;
 
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -46,6 +45,16 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     }
 
     /**
+     * Adds a tuple to the list, then returns this {@link TupleList} instance.
+     * This method is similar to {@link #add(Object, Object)} but can be used
+     * for method chaining.
+     */
+    public TupleList<L, R> append(L left, R right) {
+        add(left, right);
+        return this;
+    }
+
+    /**
      * Returns a list consisting of the left element of every tuple.
      */
     public List<L> getLeft() {
@@ -66,7 +75,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     public TupleList<R, L> inverse() {
         List<Tuple<R, L>> inverseTuples = tuples.stream()
             .map(Tuple::inverse)
-            .collect(Collectors.toList());
+            .toList();
 
         return new TupleList<R, L>(inverseTuples);
     }
@@ -93,20 +102,19 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     @SafeVarargs
     public static <L, R> TupleList<L, R> of(Tuple<L, R>... entries) {
         TupleList<L, R> result = TupleList.create();
-        for (Tuple<L, R> entry : entries) {
-            result.add(entry);
-        }
+        result.addAll(List.of(entries));
         return result;
     }
 
     public static <L, R> TupleList<L, R> fromStream(Stream<Tuple<L, R>> tuples) {
-        return new TupleList<>(tuples.collect(Collectors.toList()));
+        return new TupleList<>(tuples.toList());
     }
 
     public static <L, R> TupleList<L, R> fromMap(Map<L, R> values) {
         List<Tuple<L, R>> tuples = values.entrySet().stream()
             .map(entry -> Tuple.of(entry.getKey(), entry.getValue()))
-            .collect(Collectors.toList());
+            .toList();
+
         return new TupleList<>(tuples);
     }
 

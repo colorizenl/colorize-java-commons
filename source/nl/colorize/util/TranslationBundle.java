@@ -6,6 +6,7 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -144,8 +145,11 @@ public final class TranslationBundle {
      * instance. The file is assumed to use the UTF-8 character encoding, and
      * loaded using {@link LoadUtils#loadProperties(ResourceFile)}.
      */
-    public static TranslationBundle fromPropertiesFile(ResourceFile file) {
-        Properties properties = LoadUtils.loadProperties(file);
+    public static TranslationBundle fromPropertiesFile(ResourceFile propertiesFile) {
+        Preconditions.checkArgument(propertiesFile.getName().endsWith(".properties"),
+            propertiesFile + " is not a .properties file");
+
+        Properties properties = LoadUtils.loadProperties(propertiesFile);
         return fromProperties(properties);
     }
 

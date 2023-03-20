@@ -12,10 +12,9 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.PlatformFamily;
 import nl.colorize.util.Promise;
 import nl.colorize.util.TextUtils;
-import nl.colorize.util.TupleList;
+import nl.colorize.util.stats.TupleList;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -364,8 +363,7 @@ public class URLLoader {
      */
     private URLResponse sendRequest() throws IOException {
         boolean force = System.getProperty(FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "").equals("true");
-        PlatformFamily platform = Platform.getPlatformFamily();
-        boolean classicHttpClient = platform.isBrowser() || platform.isMobile() || force;
+        boolean classicHttpClient = Platform.isTeaVM() || force;
 
         if (classicHttpClient) {
             URI fullURL = getFullURL();

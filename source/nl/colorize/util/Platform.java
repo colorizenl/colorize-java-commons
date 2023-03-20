@@ -12,17 +12,14 @@ import com.google.common.collect.ImmutableMap;
 import javax.swing.filechooser.FileSystemView;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static nl.colorize.util.PlatformFamily.LINUX;
-import static nl.colorize.util.PlatformFamily.MAC;
-import static nl.colorize.util.PlatformFamily.TEAVM;
-import static nl.colorize.util.PlatformFamily.WINDOWS;
-
 /**
- * Provides access to the underlying platform. This includes information such 
- * as the platform's name and the location for storing application data.
+ * Provides access to the underlying platform. This includes basic information
+ * such as the platform's name, but also platform-specific behavior such as the
+ * expected location for storing application data.
  * <p>
  * Most of this information can also be obtained from system properties, 
  * environment variables, or the {@link java.lang.System} class. However,
@@ -35,28 +32,20 @@ import static nl.colorize.util.PlatformFamily.WINDOWS;
  * of the Mac App Store in 2010, or Mac App Store sandboxing in 2014. This class
  * therefore provides a way to manage application data and preferences in a way
  * that is considered suitable and native for each platform.
- * <p>
- * This class differentiates between platform <em>name</em> and platform
- * <em>family</em>. Examples of the former are Windows 11 or macOS Ventura,
- * while examples of the latter are simply "Windows" or "macOS". Application
- * behavior is typically more likely to be influenced by platform family than
- * by specific platform versions. See {@link PlatformFamily} for the list of
- * supported platform families. If a platform is not explicitly supported this
- * class can still be used, but platform conventions might not be followed.
  */
-public final class Platform {
+public enum Platform {
 
-    private static TimeZone cachedDefaultTimeZone = null;
+    WINDOWS("Windows", "windows"),
+    MAC("macOS", "mac"),
+    LINUX("Linux", "linux"),
+    GOOGLE_CLOUD("Google Cloud", "googlecloud"),
+    ANDROID("Android", "android"),
+    IOS("iOS", "robovm"),
+    TEAVM("TeaVM", "teavm"),
+    UNKNOWN("Unknown", "unknown");
 
-    protected static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
-
-    private static final Map<String, PlatformFamily> OS_NAMES = Map.of(
-        "windows", WINDOWS,
-        "os x", MAC,
-        "macos", MAC,
-        "teavm", TEAVM,
-        "linux", LINUX
-    );
+    private String displayName;
+    private String osName;
 
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
@@ -71,40 +60,80 @@ public final class Platform {
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
         .put("10.15", "Catalina")
-        .put("10.16", "Big Sur")
-        // Big Sur is both 10.16 and 11.0
+        .put("10.16", "Big Sur") // Big Sur is both 10.16 and 11.0
         .put("11.", "Big Sur")
         .put("12.", "Monterey")
         .put("13.", "Ventura")
         .build();
-    
-    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
-    private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
 
-    private Platform() {
+    private static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
+    private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
+    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
+
+    private Platform(String displayName, String osName) {
+        this.displayName = displayName;
+        this.osName = osName;
     }
 
     /**
-     * Returns the display name for the current platform. Examples are "Windows
-     * 11" or "macOS Ventura". As explained in the class documentation,
-     * application logic is more likely to be influenced by platform family
-     * than by specific platform versions and/or variants. Applications should
-     * therefore prefer {@link #getPlatformFamily()} rather than parsing the
-     * display name string returned by this method.
+     * Returns the display name for this platform family. Examples are "macOS",
+     * "Windows", and "Google Cloud". The platform family does not include the
+     * platform version, use {@link #getPlatformName()} to obtain the complete
+     * display name.
+     */
+    @Override
+    public String toString() {
+        return displayName;
+    }
+
+    /**
+     * Returns the current platform <em>family</em>. This does not return the
+     * specific platform version, as most platform-specific behavior is based
+     * on the platform family rather than the specific versions.
+     * {@link #getPlatformName()} can be used to obtain the full platform
+     * display name if version-specific behavior is required.
+     * <p>
+     * When running on TeaVM, this method will always return {@link #TEAVM},
+     * regardless of the underlying operating system and/or browser.
+     */
+    public static Platform getPlatform() {
+        String os = System.getProperty("os.name", "Unknown").toLowerCase();
+        String vendor = System.getProperty("java.vendor", "Unknown").toLowerCase();
+
+        if (vendor.contains("android")) {
+            return ANDROID;
+        } else if (System.getenv("GAE_APPLICATION") != null) {
+            return GOOGLE_CLOUD;
+        } else if (System.getProperty("com.google.appengine.runtime.environment") != null) {
+            return GOOGLE_CLOUD;
+        }
+
+        return Arrays.stream(values())
+            .filter(platform -> os.contains(platform.osName))
+            .findFirst()
+            .orElse(UNKNOWN);
+    }
+
+    /**
+     * Returns the display name for the current platform, for example "Windows
+     * 11" or "macOS Ventura". Platform-specific behavior is more likely to be
+     * based on the platform family rather than the specific platform.
+     * Applications should therefore prefer {@link #getPlatform()} instead of
+     * parsing the display name string returned by this method.
      * <p>
      * When running via TeaVM, this method will always return "TeaVM",
      * regardless of the underlying operating system and/or browser.
      */
     public static String getPlatformName() {
-        PlatformFamily platformFamily = getPlatformFamily();
+        Platform platform = getPlatform();
 
-        return switch (platformFamily) {
+        return switch (platform) {
             case WINDOWS -> System.getProperty("os.name", "Unknown");
             case MAC -> "macOS " + getMacVersionName();
-            default -> platformFamily.toString();
+            default -> platform.toString();
         };
     }
-    
+
     private static String getMacVersionName() {
         String osVersion = System.getProperty("os.version");
 
@@ -115,82 +144,34 @@ public final class Platform {
             .orElse(osVersion);
     }
 
-    /**
-     * Returns the {@link PlatformFamily} for the current platform. Applications
-     * should prefer this method over {@link #getPlatformName()} for
-     * platform-specific behavior, though the latter might be used if different
-     * behavior for specific platform versions or variants is needed.
-     * <p>
-     * When running via TeaVM, this method will always return
-     * {@link PlatformFamily#TEAVM}, regardless of the underlying operating
-     * system and/or browser.
-     */
-    public static PlatformFamily getPlatformFamily() {
-        String os = System.getProperty("os.name", "Unknown").toLowerCase();
-        String vendor = System.getProperty("java.vendor", "Unknown").toLowerCase();
-
-        if (vendor.contains("android")) {
-            return PlatformFamily.ANDROID;
-        } else if (System.getenv("GAE_APPLICATION") != null) {
-            return PlatformFamily.GOOGLE_CLOUD;
-        } else if (System.getProperty("com.google.appengine.runtime.environment") != null) {
-            return PlatformFamily.GOOGLE_CLOUD;
-        }
-
-        return OS_NAMES.keySet().stream()
-            .filter(os::contains)
-            .map(OS_NAMES::get)
-            .findFirst()
-            .orElse(PlatformFamily.UNKNOWN);
-    }
-    
     public static boolean isWindows() {
-        return getPlatformFamily() == WINDOWS;
+        return getPlatform() == WINDOWS;
     }
     
     public static boolean isMac() {
-        return getPlatformFamily() == MAC;
+        return getPlatform() == MAC;
     }
-    
+
     public static boolean isLinux() {
-        return getPlatformFamily() == LINUX;
+        return getPlatform() == LINUX;
     }
 
-    public static boolean isTeaVM() {
-        return getPlatformFamily() == TEAVM;
-    }
-
-    /**
-     * Returns true if the application is running inside of the Mac app sandbox.
-     * When running inside of the sandbox access to system resources is limited 
-     * to the entitlements specified when signing the app. Using the sandbox is
-     * mandatory for apps distributed through the Mac App Store, but optional
-     * for those distributed outside of the App Store with Developer ID.
-     */
-    public static boolean isMacAppSandboxEnabled() {
-        //TOOD Developer ID applications can also use the sandbox, although
-        //     this is not mandatory.
-        return isMacAppStore();
+    public static boolean isGoogleCloud() {
+        return getPlatform() == GOOGLE_CLOUD;
     }
     
+    public static boolean isTeaVM() {
+        return getPlatform() == TEAVM;
+    }
+
     /**
      * Returns true if the application was downloaded from the Mac App Store.
-     * Note that App Store applications are always sandboxed (see
-     * {@link #isMacAppSandboxEnabled()} for more information).
      */
     public static boolean isMacAppStore() {
         String sandboxContainer = System.getenv("APP_SANDBOX_CONTAINER_ID");
         return isMac() && sandboxContainer != null && !sandboxContainer.isEmpty();
     }
-    
-    /**
-     * Returns the number of available processor cores. Note that this number
-     * might change over time, for example because of energy saver features.
-     */
-    public static int getSystemProcessors() {
-        return Runtime.getRuntime().availableProcessors();
-    }
-    
+
     /**
      * Returns the system's processor architecture as described by the "os.arch"
      * system property.
@@ -288,6 +269,11 @@ public final class Platform {
         }
     }
 
+    private static boolean hasWritableFileSystem() {
+        Platform platform = getPlatform();
+        return platform == WINDOWS || platform == MAC || platform == LINUX;
+    }
+
     /**
      * Returns the platform's directory for storing application data, for the
      * application with the specified name.
@@ -301,14 +287,14 @@ public final class Platform {
         if (isWindows()) {
             File applicationDataRoot = new File(System.getenv("APPDATA"));
             return new File(applicationDataRoot, app);
-        } else if (isMacAppSandboxEnabled()) {
+        } else if (isMacAppStore()) {
             return new File(System.getenv("HOME"));
         } else if (isMac()) {
             // These directory names are always in English, regardless
             // of the language of the user interface.
             File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
             return new File(applicationSupport, app);
-        } else if (getPlatformFamily().hasLocalFileSystem()) {
+        } else if (hasWritableFileSystem()) {
             return new File(getUserHomeDir(), "." + app);
         } else {
             throw new UnsupportedOperationException();
@@ -353,13 +339,13 @@ public final class Platform {
     public static File getUserDataDirectory() {
         if (isWindows()) {
             return getWindowsMyDocumentsDirectory();
-        } else if (isMacAppSandboxEnabled()) {
+        } else if (isMacAppStore()) {
             return new File(System.getenv("HOME"));
         } else if (isMac()) {
             // The "Documents" directory has the same name on non-English
             // versions of macOS, according to Apple's documentation.
             return new File(System.getenv("HOME") + "/Documents");
-        } else if (getPlatformFamily().hasLocalFileSystem()) {
+        } else if (hasWritableFileSystem()) {
             return getUserHomeDir();
         } else {
             throw new UnsupportedOperationException();
@@ -439,16 +425,12 @@ public final class Platform {
      * time zone is used instead.
      */
     public static TimeZone getDefaultTimeZone() {
-        if (cachedDefaultTimeZone != null) {
-            return cachedDefaultTimeZone;
-        }
-
         String requestedTimeZone = System.getenv(COLORIZE_TIMEZONE_ENV);
+
         if (requestedTimeZone == null || requestedTimeZone.isEmpty()) {
             requestedTimeZone = AMSTERDAM_TIME_ZONE;
         }
 
-        cachedDefaultTimeZone = TimeZone.getTimeZone(requestedTimeZone);
-        return cachedDefaultTimeZone;
+        return TimeZone.getTimeZone(requestedTimeZone);
     }
 }

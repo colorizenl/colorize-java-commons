@@ -15,16 +15,6 @@ now supports both scenarios.
 
 ![Colorize Java Commons outline](_development/outline.svg)
 
-- Cross-platform application data/configuration/preferences/resources
-- Translation framework
-- Utilities for working with statistics (e.g. histograms, date range)
-- Lightweight command line argument parser
-- Additional common data structures (e.g. tuple, version number)
-- Cross-platform HTTP request API
-- Animation framework including keyframe animation and interpolation
-- Component library for Swing applications
-- Various other utility classes
-
 Usage
 -----
 
@@ -34,13 +24,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2023.2</version>
+        <version>2023.5</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2023.2"
+        implementation "nl.colorize:colorize-java-commons:2023.5"
     }
     
 Documentation
@@ -61,15 +51,15 @@ since 2016. Instead, it is quite similar to Python's `argparse` module.
 The following example shows how to define a simple command line interface:
 
     public static void main(String[] argv) {
-        AppProperties args = new CommandLineArgumentParser(MyApp.class)
+        CommandLineArgumentParser args = new CommandLineArgumentParser(MyApp.class)
             .addRequired("--input", "Input directory")
             .addOptional("--output", "Output directory")
             .addFlag("--overwrite", "Overwrites existing values")
             .parseArgs(argv);
  
-        File inputDir = args.getFile("input");
-        File outputDir = args.getFile("input", new File("/tmp"));
-        boolean overwrite = args.getBool("overwrite");
+        File inputDir = args.get("input").getFile();
+        File outputDir = args.get("input").getFile(new File("/tmp"));
+        boolean overwrite = args.get("overwrite").getBool();
     }
 
 ### Swing component library
@@ -85,6 +75,17 @@ that moves the ball across the screen in 0.4 seconds, using easing animation int
     Timeline anim = new Timeline(Interpolation.EASE)
         .addKeyFrame(0f, 0f);
         .addKeyFrame(0.4f, 800f);
+
+The timeline can then be used for animation. The following example shows how to animate a Swing
+component's background color from red to blue:
+
+    JPanel target = new JPanel();
+    target.setOpaque(true);
+    target.setBackground(Color.RED);
+    target.setPreferredSize(new Dimension(200, 200));
+    
+    JButton animateButton = new JButton("Animate background color");
+    animateButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
 
 Build instructions
 ------------------

@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -111,5 +112,15 @@ public class LoadUtilsTest {
         assertEquals("some text", properties.getProperty("a"));
         assertEquals("text that spans multiple lines", properties.getProperty("b"));
         assertEquals("some other text", properties.getProperty("c"));
+    }
+
+    @Test
+    void filterPrefix() {
+        Properties original = LoadUtils.loadProperties(new StringReader("a.x=2\na.y=3\nb.x=4\nb.y=5"));
+        Properties filtered = LoadUtils.filterPrefix(original, "b.");
+
+        assertEquals(Set.of("x", "y"), filtered.stringPropertyNames());
+        assertEquals("4", filtered.getProperty("x"));
+        assertEquals("5", filtered.getProperty("y"));
     }
 }

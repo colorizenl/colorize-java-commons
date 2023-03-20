@@ -11,20 +11,19 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.stats.TupleList;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
  * Immutable record within a CSV file. Cells are separated by a delimiter,
- * records are separated by newlines. Cells can be referenced by column index.
- * Access by column name is also possible, via the {@link AppProperties}
- * interface, but requires column name information to be available.
+ * records are separated by newlines. Cells can be referenced by column index,
+ * or by column name if the CSV record includes column name information.
  */
-public class CSVRecord implements AppProperties {
+public class CSVRecord {
 
     private List<String> columns;
     private List<String> cells;
@@ -47,31 +46,71 @@ public class CSVRecord implements AppProperties {
      * Returns the value of the cell with the specified index. This method is
      * always available, while accessing cells by column name is only available
      * if the CSV containing column information.
+     *
+     * @throws IllegalArgumentException if the column index is invalid.
      */
     public String get(int index) {
-        Preconditions.checkArgument(index < cells.size(),
+        Preconditions.checkArgument(index >= 0 && index < cells.size(),
             "Invalid index " + index + ", record has " + cells.size() + " cells");
+
         return cells.get(index);
     }
 
     /**
-     * Returns a {@link Properties} view of this CSV record. This class is
-     * immutable, so changes to the {@link Properties} will not affect the CSV
-     * record itself.
+     * Returns the value for the cell with the specified column name.
      *
-     * @throws IllegalStateException if the CSV record only includes column
-     *         index information, but does not include column name information.
+     * @throws IllegalStateException if no column name information is available.
+     * @throws IllegalArgumentException if no column with that name exists.
      */
-    @Override
-    public Properties getProperties() {
-        Preconditions.checkState(!columns.isEmpty(),
-            "Column name information not available");
+    public Property get(String column) {
+        Preconditions.checkState(!columns.isEmpty(), "No column name information available");
+        Preconditions.checkArgument(columns.contains(column), "No such column: " + column);
 
-        Properties properties = new Properties();
+        int columnIndex = columns.indexOf(column);
+        String value = cells.get(columnIndex);
+        return Property.of(value);
+    }
+
+    /**
+     * Returns the list of cells in this CSV record. The list will be sorted to
+     * match the order in which the cells appear in the CSV.
+     */
+    public List<String> getCells() {
+        return ImmutableList.copyOf(cells);
+    }
+
+    public boolean hasColumnNameInformation() {
+        return !columns.isEmpty();
+    }
+
+    /**
+     * Returns a list of all named columns in this CSV record. The columns will
+     * be sorted in the same order as they appear in the CSV. If no column name
+     * information is available, this will return an empty list.
+     *
+     * @throws IllegalStateException if no column name information is available.
+     */
+    public List<String> getColumns() {
+        Preconditions.checkState(!columns.isEmpty(), "No column name information available");
+        return ImmutableList.copyOf(columns);
+    }
+
+    /**
+     * Returns a list of column values for all cells in this CSV record. Each
+     * tuple in the list consists of the column name and corresponding cell
+     * value. The list will be sorted to match the order in which the columns
+     * appear in the CSV.
+     *
+     * @throws IllegalStateException if no column name information is available.
+     */
+    public TupleList<String, String> getColumnValues() {
+        Preconditions.checkState(!columns.isEmpty(), "No column name information available");
+
+        TupleList<String, String> tuples = TupleList.create();
         for (int i = 0; i < columns.size(); i++) {
-            properties.setProperty(columns.get(i), cells.get(i));
+            tuples.add(columns.get(i), cells.get(i));
         }
-        return properties;
+        return tuples;
     }
 
     private String toCSV(String delimiter) {

@@ -135,7 +135,7 @@ public class ComboFileDialog {
             return showOverrideFileDialog(parent, selected);
         }
         
-        if (!hasValidExtension(selected, extension) && !Platform.isMacAppSandboxEnabled()) {
+        if (!hasValidExtension(selected, extension) && !Platform.isMacAppStore()) {
             // Use the default file extension if none was entered. Note that this
             // is not allowed when running in the Mac App Store sandbox.
             selected = new File(selected.getParentFile(), selected.getName() + "." + extension);

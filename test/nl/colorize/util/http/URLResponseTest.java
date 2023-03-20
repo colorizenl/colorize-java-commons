@@ -7,7 +7,7 @@
 package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
-import nl.colorize.util.Tuple;
+import nl.colorize.util.stats.Tuple;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

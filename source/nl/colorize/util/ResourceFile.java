@@ -79,11 +79,11 @@ public record ResourceFile(String path) implements Resource {
             try {
                 return new FileInputStream(inFileSystem);
             } catch (IOException e) {
-                throw new ResourceFileException(this, e);
+                throw new ResourceException("Error while accessing " + this, e);
             }
         }
 
-        throw new ResourceFileException("Resource file not found: " + path);
+        throw new ResourceException("Resource file not found: " + path);
     }
 
     @Override
@@ -98,7 +98,7 @@ public record ResourceFile(String path) implements Resource {
     public boolean exists() {
         try (InputStream ignored = openStream()) {
             return true;
-        } catch (IOException | ResourceFileException e) {
+        } catch (IOException | ResourceException e) {
             return false;
         }
     }

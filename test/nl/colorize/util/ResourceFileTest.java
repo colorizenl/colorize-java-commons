@@ -79,7 +79,7 @@ public class ResourceFileTest {
         ResourceFile resourceFile = new ResourceFile("nonExisting.xml");
         assertFalse(resourceFile.exists());
 
-        assertThrows(ResourceFileException.class, resourceFile::openStream);
+        assertThrows(ResourceException.class, resourceFile::openStream);
     }
     
     @Test

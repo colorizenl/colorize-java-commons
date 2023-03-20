@@ -124,31 +124,6 @@ public interface Interpolation {
     };
 
     /**
-     * Quantic easing interpolation.
-     * <p>
-     * <pre>
-     * . . . . . . x x x
-     * . . . . . x . . .
-     * . . . . . . . . .
-     * . . . . . . . . .
-     * . . . . x . . . .
-     * . . . . . . . . .
-     * . . . . . . . . .
-     * . . . x . . . . .
-     * x x x . . . . . .
-     * </pre>
-     */
-    public static final Interpolation QUINTIC = (x0, x1, delta) -> {
-        delta = clampDelta(delta) / 0.5f;
-        if (delta < 1f) {
-            return (x1 - x0) / 2f * delta * delta * delta * delta * delta + x0;
-        } else {
-            delta -= 2f;
-            return (x1 - x0) / 2f * (delta * delta * delta * delta * delta + 2f) + x0;
-        }
-    };
-
-    /**
      * Returns the interpolated value between {@code x0} and {@code x1}. The value
      * of {@code delta} is a number between 0 and 1 describing how much of the
      * animation has been completed.

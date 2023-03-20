@@ -8,8 +8,6 @@ package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import nl.colorize.util.Tuple;
-import nl.colorize.util.TupleList;
 
 import java.util.ArrayList;
 import java.util.Collections;

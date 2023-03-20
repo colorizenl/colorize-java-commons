@@ -8,10 +8,11 @@ package nl.colorize.util.http;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
-import nl.colorize.util.Tuple;
-import nl.colorize.util.TupleList;
+import nl.colorize.util.stats.Tuple;
+import nl.colorize.util.stats.TupleList;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -27,6 +28,7 @@ import java.util.function.BiConsumer;
  *   <li>The same header can occur multiple times.</li>
  *   <li>Header names are case-insensitive.</li>
  * </ul>
+ * <p>
  * <em>Implementation note:</em> The headers are stored using an (immutable)
  * list of tuples. This allows the class to respect the header properties
  * listed above. In practice the performance impact is neglectable, as nearly
@@ -41,11 +43,11 @@ public class Headers {
 
     public Headers(TupleList<String, String> entries) {
         for (Tuple<String, String> entry : entries) {
-            Preconditions.checkArgument(NAME_MATCHER.matchesAllOf(entry.getKey()),
-                "Invalid HTTP header name: " + entry.getKey());
+            Preconditions.checkArgument(NAME_MATCHER.matchesAllOf(entry.left()),
+                "Invalid HTTP header name: " + entry.left());
 
-            Preconditions.checkArgument(VALUE_MATCHER.matchesAllOf(entry.getValue()),
-                "Invalid HTTP header value: " + entry.getValue());
+            Preconditions.checkArgument(VALUE_MATCHER.matchesAllOf(entry.right()),
+                "Invalid HTTP header value: " + entry.right());
         }
 
         this.entries = entries.immutable();
@@ -54,6 +56,10 @@ public class Headers {
     @SafeVarargs
     public Headers(Tuple<String, String>... entries) {
         this(TupleList.of(entries).immutable());
+    }
+
+    public Headers(Map<String, String> entries) {
+        this(TupleList.fromMap(entries));
     }
 
     public Headers() {
@@ -143,7 +149,14 @@ public class Headers {
     @Override
     public String toString() {
         StringBuilder buffer = new StringBuilder();
-        entries.forEach((name, value) -> buffer.append(name + ": " + value + "\n"));
+
+        entries.forEach((name, value) -> {
+            buffer.append(name);
+            buffer.append(": ");
+            buffer.append(value);
+            buffer.append("\n");
+        });
+
         return buffer.toString();
     }
 }

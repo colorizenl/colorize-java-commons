@@ -4,12 +4,13 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.stats;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TupleTest {
 
@@ -35,5 +36,13 @@ public class TupleTest {
         assertEquals(tuple.hashCode(), new Tuple<>("first", "second").hashCode());
         assertNotEquals(tuple.hashCode(), new Tuple<>("second", "first").hashCode());
         assertNotEquals(tuple.hashCode(), new Tuple<>("first", "third").hashCode());
+    }
+
+    @Test
+    void tupleCanContainNull() {
+        Tuple<String, Object> tuple = Tuple.of("first", null);
+
+        assertNull(tuple.right());
+        assertEquals("(first, null)", tuple.toString());
     }
 }

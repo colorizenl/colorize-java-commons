@@ -57,13 +57,4 @@ public class InterpolationTest {
         assertEquals(0.875f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.75f), EPSILON);
         assertEquals(1f, Interpolation.QUADRATIC.interpolate(0f, 1f, 1f), EPSILON);
     }
-
-    @Test
-    public void testQuinticInterpolation() {
-        assertEquals(0f, Interpolation.QUINTIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.0156f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.9844f, Interpolation.QUINTIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.QUINTIC.interpolate(0f, 1f, 1f), EPSILON);
-    }
 }

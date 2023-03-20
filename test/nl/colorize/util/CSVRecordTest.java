@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,9 +74,8 @@ public class CSVRecordTest {
         List<CSVRecord> records = CSVRecord.parseCSV(csv, ";", true);
 
         assertEquals(2, records.size());
-        assertEquals("John", records.get(0).get("Name"));
-        assertEquals(38, records.get(0).getInt("Age"));
-        assertEquals(3, records.get(0).getInt("Other", 3));
+        assertEquals("John", records.get(0).get("Name").getString());
+        assertEquals(38, records.get(0).get("Age").getInt());
     }
 
     @Test
@@ -143,6 +141,7 @@ public class CSVRecordTest {
         List<CSVRecord> records = CSVRecord.parseCSV(csv, ";", true);
 
         assertEquals(1, records.size());
-        assertEquals(Set.of("Name", "Age"), records.get(0).getPropertyNames());
+        assertEquals(List.of("Name", "Age"), records.get(0).getColumns());
+        assertEquals("[(Name, John), (Age, 38)]", records.get(0).getColumnValues().toString());
     }
 }

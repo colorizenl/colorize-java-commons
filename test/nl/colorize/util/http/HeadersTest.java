@@ -6,7 +6,7 @@
 
 package nl.colorize.util.http;
 
-import nl.colorize.util.Tuple;
+import nl.colorize.util.stats.Tuple;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

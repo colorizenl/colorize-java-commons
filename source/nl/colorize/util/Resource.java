@@ -19,7 +19,8 @@ import java.util.List;
  * methods for reading its contents as either binary data or as text.
  * <p>
  * Since this interface represents a resource that is known to be available,
- * the methods in this class do *not* throw {@code IOException}.
+ * a {@link ResourceException} will be thrown if the resource cannot be
+ * accessed, instead of an {@code IOException}.
  */
 public interface Resource {
 
@@ -31,7 +32,7 @@ public interface Resource {
         try (InputStream stream = openStream()) {
             return stream.readAllBytes();
         } catch (IOException e) {
-            throw new RuntimeException("Resource access failed", e);
+            throw new ResourceException("Resource access failed", e);
         }
     }
 
@@ -39,7 +40,7 @@ public interface Resource {
         try (BufferedReader reader = openReader(charset)) {
             return CharStreams.toString(reader);
         } catch (IOException e) {
-            throw new RuntimeException("Resource access failed", e);
+            throw new ResourceException("Resource access failed", e);
         }
     }
 
@@ -47,7 +48,7 @@ public interface Resource {
         try (BufferedReader reader = openReader(charset)) {
             return reader.lines().toList();
         } catch (IOException e) {
-            throw new RuntimeException("Resource access failed", e);
+            throw new ResourceException("Resource access failed", e);
         }
     }
 }

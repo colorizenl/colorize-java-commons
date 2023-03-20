@@ -13,16 +13,13 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 /**
- * A set that includes integers between the start and end. Ranges represented by
- * this class are <em>inclusive</em>, meaning that the start and end are both
- * included in the range.
- * <p>
- * This class implements the {@link java.lang.Iterable} interface, so ranges can 
- * be used directly in foreach loops:
+ * A set that includes integers between the start and end. This class implements
+ * the {@link java.lang.Iterable} interface, so ranges can be used directly in
+ * foreach loops:
  *
  * <pre>
- *     for (Integer i : new Range(1, 4)) {
- *         System.out.println(i); // Prints 1, 2, 3, 4
+ *     for (Integer i : Range.inclusive(1, 4)) {
+ *         System.out.println(i); // Prints 1, 2, 3, 4.
  *     }
  * </pre>
  */
@@ -30,12 +27,16 @@ public record Range(int start, int end) implements Iterable<Integer>, Comparable
 
     /**
      * Creates a range with all integers between {@code start} (inclusive) and 
-     * {@code end} (also inclusive). If {@code start} and {@code end} are equal
-     * the range will consist of a single number.
+     * {@code end} (also inclusive).
      *
      * @throws IllegalArgumentException if the value for {@code start} is greater
      *         than the value for {@code end}.
+     *
+     * @deprecated In new code, prefer using {@link #inclusive(int, int)}
+     *             or {@link #exclusive(int, int)}. These factory methods allow
+     *             for more explicit behavior.
      */
+    @Deprecated
     public Range {
         Preconditions.checkArgument(end >= start, "Invalid range: " + start + ".." + end);
     }
@@ -132,6 +133,14 @@ public record Range(int start, int end) implements Iterable<Integer>, Comparable
     @Override
     public String toString() {
         return start + ".." + end;
+    }
+
+    public static Range inclusive(int start, int end) {
+        return new Range(start, end);
+    }
+
+    public static Range exclusive(int start, int end) {
+        return new Range(start, end - 1);
     }
 
     /**

@@ -178,4 +178,17 @@ public class FileUtilsTest {
         assertTrue(dir.isDirectory());
         assertEquals("test", dir.getName());
     }
+
+    @Test
+    void formatFileSize() {
+        assertEquals("0 bytes", FileUtils.formatFileSize(0L));
+        assertEquals("500 bytes", FileUtils.formatFileSize(500L));
+        assertEquals("1 KB", FileUtils.formatFileSize(1100L));
+        assertEquals("1.0 MB", FileUtils.formatFileSize(1_000_000L));
+        assertEquals("1.2 MB", FileUtils.formatFileSize(1_234_000L));
+        assertEquals("19.4 MB", FileUtils.formatFileSize(19_400_000L));
+        assertEquals("123.4 MB", FileUtils.formatFileSize(123_400_000L));
+        assertEquals("1.2 GB", FileUtils.formatFileSize(1_234_000_000L));
+        assertEquals("123.5 GB", FileUtils.formatFileSize(123_456_789_000L));
+    }
 }

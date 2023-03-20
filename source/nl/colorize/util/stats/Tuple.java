@@ -4,11 +4,9 @@
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util;
+package nl.colorize.util.stats;
 
 import com.google.common.base.Objects;
-
-import java.util.Map;
 
 /**
  * Data structure that consists of two ordered values, sometimes also referred
@@ -17,22 +15,7 @@ import java.util.Map;
  * @param <L> Type of the first (left) element.
  * @param <R> Type of the second (right) element.
  */
-public record Tuple<L, R>(L left, R right) implements Map.Entry<L, R> {
-
-    @Override
-    public L getKey() {
-        return left;
-    }
-
-    @Override
-    public R getValue() {
-        return right;
-    }
-
-    @Override
-    public R setValue(R value) {
-        throw new UnsupportedOperationException();
-    }
+public record Tuple<L, R>(L left, R right) {
 
     /**
      * Returns true if {@code element} is one of this tuple's elements.
@@ -49,17 +32,17 @@ public record Tuple<L, R>(L left, R right) implements Map.Entry<L, R> {
     }
     
     /**
-     * Returns a new tuple {@code (newLeft, this.getRight())}.
+     * Returns a new tuple {@code (newLeft, getRight())}.
      */
     public Tuple<L, R> withLeft(L newLeft) {
         return new Tuple<>(newLeft, right);
     }
     
     /**
-     * Returns a new tuple {@code (this.getLeft(), newRight)}.
+     * Returns a new tuple {@code (getLeft(), newRight)}.
      */
     public Tuple<L, R> withRight(R newRight) {
-        return new Tuple<L, R>(left, newRight);
+        return new Tuple<>(left, newRight);
     }
 
     /**

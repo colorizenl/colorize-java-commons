@@ -40,6 +40,13 @@ import java.util.stream.Collectors;
  */
 public final class FileUtils {
 
+    // Consistent with the definitions used by Apple in the Finder,
+    // see https://discussions.apple.com/thread/7375024.
+    private static final long KB = 1000L;
+    private static final long MB = 1_000_000L;
+    private static final long GB = 1_000_000_000L;
+    private static final long TB = 1_000_000_000_000L;
+
     private static final Logger LOGGER = LogHelper.getLogger(FileUtils.class);
 
     private FileUtils() {
@@ -319,6 +326,34 @@ public final class FileUtils {
             .filter(file -> !file.isDirectory())
             .mapToLong(File::length)
             .sum();
+    }
+
+    /**
+     * Returns a human-readable description of the specified file's size. The
+     * level of precision is automatically selected based on the value.
+     */
+    public static String formatFileSize(File file) {
+        return formatFileSize(file.length());
+    }
+
+    /**
+     * Returns a human-readable description of the specified file size in bytes.
+     * The level of precision is automatically selected based on the value.
+     */
+    public static String formatFileSize(long fileSize) {
+        Preconditions.checkArgument(fileSize >= 0L, "Invalid file size: " + fileSize);
+
+        if (fileSize < KB) {
+            return fileSize + " bytes";
+        } else if (fileSize < MB) {
+            return String.format("%.0f KB", fileSize / (double) KB);
+        } else if (fileSize < GB) {
+            return String.format("%.1f MB", fileSize / (double) MB);
+        } else if (fileSize < TB) {
+            return String.format("%.1f GB", fileSize / (double) GB);
+        } else {
+            return String.format("%.1f TB", fileSize / (double) TB);
+        }
     }
 
     /**
