@@ -8,8 +8,10 @@ package nl.colorize.util.stats;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.stats.Histogram;
+import nl.colorize.util.CSVRecord;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -63,5 +65,21 @@ class HistogramTest {
         hist.count("b", "y", 12);
 
         assertEquals(ImmutableList.of("b", "a"), hist.getSeriesByTotalValue());
+    }
+
+    @Test
+    void toCSV() {
+        Histogram<String> hist = Histogram.withBins(List.of("with", "without"));
+        hist.count("men", "with", 1);
+        hist.count("men", "without", 2);
+        hist.count("women", "with", 3);
+
+        String expected = """
+            series;with;without
+            men;1;2
+            women;3;0
+            """;
+
+        assertEquals(expected.trim(), CSVRecord.toCSV(hist.toCSV(), ";", true));
     }
 }

@@ -18,6 +18,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 /**
  * Interface for accessing one of the properties in a key/value store. The
@@ -156,7 +157,13 @@ public interface Property {
     }
 
     default Version getVersion() {
-        return Version.parse(getString());
+        try {
+            return Version.parse(getString());
+        } catch (IllegalArgumentException e) {
+            Logger logger = LogHelper.getLogger(Property.class);
+            logger.warning("Unable to parse property value '" + getString() + "' as version");
+            return Version.UNKNOWN;
+        }
     }
 
     default Version getVersionOr(Version defaultValue) {

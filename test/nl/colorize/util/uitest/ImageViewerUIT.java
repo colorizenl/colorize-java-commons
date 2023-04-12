@@ -8,10 +8,13 @@ package nl.colorize.util.uitest;
 
 import com.google.common.base.Preconditions;
 import nl.colorize.util.FileUtils;
+import nl.colorize.util.LogHelper;
+import nl.colorize.util.Platform;
 import nl.colorize.util.TranslationBundle;
 import nl.colorize.util.stats.Cache;
 import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.ImageViewer;
+import nl.colorize.util.swing.MacIntegration;
 import nl.colorize.util.swing.SwingUtils;
 import nl.colorize.util.swing.Table;
 import nl.colorize.util.swing.Utils2D;
@@ -26,8 +29,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * Simple test application for {@link ImageViewer} that displays all images in
@@ -36,12 +42,15 @@ import java.util.Random;
 public class ImageViewerUIT {
 
     private List<File> imageFiles;
+    private Set<File> seen;
+    private File selectedFile;
     private Cache<File, BufferedImage> imageCache;
 
     private ImageViewer imageViewer;
     private Table<File> imageList;
 
     private static final int IMAGE_CACHE_SIZE = 1100;
+    private static final Logger LOGGER = LogHelper.getLogger(ImageViewerUIT.class);
 
     public static void main(String[] args) {
         SwingUtils.initializeSwing();
@@ -52,6 +61,7 @@ public class ImageViewerUIT {
 
     public ImageViewerUIT() {
         this.imageFiles = new ArrayList<>();
+        this.seen = new HashSet<>();
         this.imageCache = Cache.from(this::loadImage, IMAGE_CACHE_SIZE);
 
         createImageViewer();
@@ -74,6 +84,9 @@ public class ImageViewerUIT {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
             if (e.getID() == KeyEvent.KEY_RELEASED && e.getKeyCode() == KeyEvent.VK_SPACE) {
                 selectRandomImage();
+                return true;
+            } else if (e.getID() == KeyEvent.KEY_RELEASED && e.getKeyCode() == KeyEvent.VK_O) {
+                openSelectedFile();
                 return true;
             } else {
                 return false;
@@ -110,12 +123,10 @@ public class ImageViewerUIT {
         if (selected != null) {
             File dir = selected.getParentFile();
             imageFiles = locateImageFiles(dir);
+            seen.clear();
             imageCache.forgetAll();
             refreshImageList();
-
-            if (!imageFiles.isEmpty()) {
-                selectRandomImage();
-            }
+            selectRandomImage();
         }
     }
 
@@ -137,16 +148,39 @@ public class ImageViewerUIT {
     }
 
     private void selectRandomImage() {
-        if (!imageFiles.isEmpty()) {
-            int index = new Random().nextInt(imageFiles.size());
-            BufferedImage displayedImage = imageCache.get(imageFiles.get(index));
-            imageViewer.display(displayedImage);
+        if (imageFiles.isEmpty()) {
+            selectedFile = null;
+            return;
         }
+
+        if (seen.size() == imageFiles.size()) {
+            seen.clear();
+        }
+
+        List<File> remaining = imageFiles.stream()
+            .filter(file -> !seen.contains(file))
+            .toList();
+
+        int index = new Random().nextInt(remaining.size());
+        selectedFile = remaining.get(index);
+        BufferedImage displayedImage = imageCache.get(selectedFile);
+        imageViewer.display(displayedImage);
+        seen.add(selectedFile);
     }
 
     private void selectImage(File file) {
         if (file != null) {
             imageViewer.display(imageCache.get(file));
+        }
+    }
+
+    private void openSelectedFile() {
+        if (selectedFile != null) {
+            if (Platform.isMac()) {
+                MacIntegration.revealInFinder(selectedFile);
+            } else {
+                SwingUtils.openFile(selectedFile);
+            }
         }
     }
 }

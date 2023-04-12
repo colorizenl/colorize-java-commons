@@ -8,6 +8,7 @@ package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.CSVRecord;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -142,6 +143,32 @@ public class Histogram<B> {
             binValues.put(seriesName, getValue(seriesName, bin));
         }
         return binValues;
+    }
+
+    /**
+     * Returns the contents of this histogram as CSV records. The histogram's
+     * bins will act as columns in the CSV, though they will be prefixed with
+     * a column named "series" which will be used to store the series name. If
+     * the histogram uses non-string bins, {@code toString()} will be called
+     * on the bin objects to obtain the column names. The series in the
+     * histogram will be used as rows, with the name of each series acting as
+     * the first cell.
+     */
+    public List<CSVRecord> toCSV() {
+        List<String> columns = new ArrayList<>();
+        columns.add("series");
+        bins.forEach(bin -> columns.add(bin.toString()));
+
+        List<CSVRecord> records = new ArrayList<>();
+
+        for (String seriesName : series) {
+            List<String> cells = new ArrayList<>();
+            cells.add(seriesName);
+            bins.forEach(bin -> cells.add(String.valueOf(getValue(seriesName, bin))));
+            records.add(CSVRecord.create(columns, cells));
+        }
+
+        return records;
     }
 
     /**

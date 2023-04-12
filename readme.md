@@ -24,13 +24,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2023.5</version>
+        <version>2023.6</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2023.5"
+        implementation "nl.colorize:colorize-java-commons:2023.6"
     }
     
 Documentation
@@ -90,8 +90,7 @@ component's background color from red to blue:
 Build instructions
 ------------------
 
-The build is cross-platform and supports Windows, macOS, and Linux, but requires the following 
-software to be available:
+Building the library requires the following:
 
 - [Java JDK](http://java.oracle.com) 17+
 - [Gradle](http://gradle.org)
@@ -115,14 +114,14 @@ License
 
 Copyright 2007-2023 Colorize
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+> Licensed under the Apache License, Version 2.0 (the "License");
+> you may not use this file except in compliance with the License.
+> You may obtain a copy of the License at
+>
+>    http://www.apache.org/licenses/LICENSE-2.0
+>
+> Unless required by applicable law or agreed to in writing, software
+> distributed under the License is distributed on an "AS IS" BASIS,
+> WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+> See the License for the specific language governing permissions and
+> limitations under the License.

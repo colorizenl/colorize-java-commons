@@ -145,6 +145,7 @@ public final class Version implements Comparable<Version> {
     
     /**
      * Parses a version number from the specified version string.
+     *
      * @throws IllegalArgumentException if the version string cannot be parsed.
      */
     public static Version parse(String versionString) {

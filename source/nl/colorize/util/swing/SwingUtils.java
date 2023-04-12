@@ -6,6 +6,7 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
 import nl.colorize.util.Platform;
@@ -70,6 +71,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -329,8 +331,8 @@ public final class SwingUtils {
     /**
      * Opens the platform's default browser with the specified URL. If the platform
      * has no browser or doesn't allow access to it this method does nothing.
+     * Returns false if the browser could not be opened.
      *
-     * @return True if the browser was opened.
      * @throws IllegalArgumentException if {@code uri} is not a valid URI.
      */
     public static boolean openBrowser(String uri) {
@@ -343,6 +345,28 @@ public final class SwingUtils {
             desktop.browse(URI.create(uri));
             return true;
         } catch (IOException | UnsupportedOperationException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Opens the specified file in the platform's default application for that
+     * file type. Returns false if the file could not be opened.
+     *
+     * @throws IllegalArgumentException if the provided file does not exist.
+     */
+    public static boolean openFile(File file) {
+        Preconditions.checkArgument(file.exists(), file.getAbsolutePath() + " does not exist");
+
+        if (!Desktop.isDesktopSupported()) {
+            return false;
+        }
+
+        try {
+            Desktop desktop = Desktop.getDesktop();
+            desktop.open(file);
+            return true;
+        } catch (IOException e) {
             return false;
         }
     }

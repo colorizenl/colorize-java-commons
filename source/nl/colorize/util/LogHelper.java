@@ -195,8 +195,15 @@ public final class LogHelper {
 
     /**
      * Returns the strack trace for the specified exception as a string.
+     * <p>
+     * When running on TeaVM, the "native" Java stack trace is not available,
+     * and this method will instead return the exception message.
      */
     public static String getStackTrace(Throwable e) {
+        if (Platform.isTeaVM()) {
+            return e.getMessage();
+        }
+
         StringWriter buffer = new StringWriter();
         PrintWriter writer = new PrintWriter(buffer);
         e.printStackTrace(writer);

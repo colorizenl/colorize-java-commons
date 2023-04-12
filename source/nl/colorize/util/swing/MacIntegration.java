@@ -6,6 +6,7 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.Version;
@@ -168,7 +169,10 @@ public final class MacIntegration {
     
     /**
      * Opens the default browser with the specified URL.
-     * @deprecated Use {@link SwingUtils#openBrowser(String)} instead.
+     *
+     * @deprecated Use {@link SwingUtils#openBrowser(String)} instead, which
+     *             provides the same behavior but uses a cross-platform API
+     *             that also supports other operating systems.
      */
     @Deprecated
     public static void openBrowser(String url) {
@@ -176,17 +180,40 @@ public final class MacIntegration {
     }
     
     /**
-     * Opens the default application for the specified file. Returns true if
-     * the file was successfully opened.
+     * Opens the default application for the specified file. Returns true
+     * if the file was successfully opened.
+     *
+     * @deprecated Use {@link SwingUtils#openFile(File)} instead, which
+     *             provides the same behavior but uses a cross-platform
+     *             API that also supports other operating systems.
      */
     @Deprecated
     public static boolean openFile(File file) {
-        try {
-            Desktop.getDesktop().open(file);
-            return true;
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Unable to open file: " + file.getAbsolutePath(), e);
-            return false;
+        return SwingUtils.openFile(file);
+    }
+
+    /**
+     * Reveals the specified file or directory in the Finder. If the provided
+     * file is <em>not</em> a directory, the Finder will be opened for its
+     * parent directory, with the requested file selected.
+     */
+    public static void revealInFinder(File file) {
+        Preconditions.checkArgument(file.exists(), "File does not exist: " + file.getAbsolutePath());
+
+        if (file.isDirectory()) {
+            SwingUtils.openFile(file);
+        } else {
+            try {
+                int exitCode = new ProcessBuilder("open", "-R", file.getAbsolutePath())
+                    .start()
+                    .waitFor();
+
+                if (exitCode != 0) {
+                    throw new IOException("Command returned exit code " + exitCode);
+                }
+            } catch (IOException | InterruptedException e) {
+                LOGGER.log(Level.WARNING, "Failed to open Finder", e);
+            }
         }
     }
 

@@ -7,34 +7,40 @@
 package nl.colorize.util;
 
 /**
- * A timer with millisecond precision. Although timer values are reported in
- * milliseconds, the timer resolution is dependent on the platform and may be
- * more than 1 millisecond.
+ * A timer with millisecond precision. Although the timer <em>granularity</em>
+ * is in milliseconds, the timer <em>resolution</em> is dependent on the
+ * platform and might be more than 1 millisecond.
  * <p>
  * This class is not thread safe, {@code Stopwatch} instances should not be
  * shared between multiple threads.
  */
 public class Stopwatch {
-    
+
+    private boolean useNanoTime;
     private long lastTick;
 
     public Stopwatch() {
+        this.useNanoTime = Platform.isWindows() || Platform.isMac();
         tick();
     }
     
     /**
-     * Returns the current value of the underlying timer. Note that this value
-     * should only be compared against other invocations of this method, the
-     * value returned is not absolute.
+     * Returns the current value of the underlying timer. Although the absolute
+     * value is meaningless, multiple invocations of this method can be
+     * compared against each other to determine the elapsed time.
      */
-    protected long value() {
-        return System.currentTimeMillis();
+    public long value() {
+        if (useNanoTime) {
+            return System.nanoTime() / 1_000_000L;
+        } else {
+            return System.currentTimeMillis();
+        }
     }
     
     /**
      * Marks this point in time. Calling {@link #tock()} will return the time
-     * relative to this point. Returns the interval between the new tick and
-     * the previous tick, in milliseconds.
+     * relative to this point. Returns the interval between now and the
+     * previous tick, in milliseconds.
      */
     public long tick() {
         long thisTick = value();
@@ -44,8 +50,9 @@ public class Stopwatch {
     }
     
     /**
-     * Returns the time since the last {@link #tick()} in milliseconds, but
-     * does not set a new tick.
+     * Returns the time since the last {@link #tick()}, but does not set a
+     * new tick. Returns the interval between now and the previous tick, in
+     * milliseconds.
      */
     public long tock() {
         return value() - lastTick;
