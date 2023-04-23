@@ -24,13 +24,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2023.6</version>
+        <version>2023.7</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2023.6"
+        implementation "nl.colorize:colorize-java-commons:2023.7"
     }
     
 Documentation
@@ -46,20 +46,24 @@ Usage examples
 The `CommandLineArgumentParser` can be used to define and parse arguments for command line
 applications. It uses an approach that is quite different from the annotation-based approach
 used by [Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
-since 2016. Instead, it is quite similar to Python's `argparse` module.
+since 2016.
 
 The following example shows how to define a simple command line interface:
 
-    public static void main(String[] argv) {
-        CommandLineArgumentParser args = new CommandLineArgumentParser(MyApp.class)
-            .addRequired("--input", "Input directory")
-            .addOptional("--output", "Output directory")
-            .addFlag("--overwrite", "Overwrites existing values")
-            .parseArgs(argv);
- 
-        File inputDir = args.get("input").getFile();
-        File outputDir = args.get("input").getFile(new File("/tmp"));
-        boolean overwrite = args.get("overwrite").getBool();
+    public class MyApp {
+        @Arg(name = "--input", usage = "Input directory")
+        public File inputDir
+
+        @Arg(name = "--output", defaultValue = "/tmp", usage = ""Output directory")
+        public File outputDir;
+
+        @Arg
+        public boolean overwrite;
+
+        public static void main(String[] argv) {
+            CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
+            MyApp app = argParser.parse(argv, MyApp.class);
+        }
     }
 
 ### Swing component library

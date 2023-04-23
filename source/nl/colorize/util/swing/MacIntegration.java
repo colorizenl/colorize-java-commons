@@ -10,7 +10,6 @@ import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.Version;
-import nl.colorize.util.cli.CommandRunner;
 
 import javax.swing.JFrame;
 import javax.swing.UIManager;
@@ -160,8 +159,12 @@ public final class MacIntegration {
             String script = String.format("display notification \"%s\" with title \"%s\"",
                 message.replace("\"", "'"), title.replace("\"", "'"));
 
-            CommandRunner commandRunner = new CommandRunner("osascript", "-e", script);
-            commandRunner.execute();
+            Process process = new ProcessBuilder("osascript", "-e", script).start();
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0) {
+                LOGGER.warning("osascript returned exit code " +  exitCode);
+            }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Sending notification failed", e);
         }

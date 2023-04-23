@@ -6,7 +6,6 @@
 
 package nl.colorize.util.cli;
 
-import nl.colorize.util.Platform;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,149 +30,119 @@ class CommandLineArgumentParserTest {
     }
 
     @Test
-    void simpleArgument() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("test", out)
-            .addRequired("--input", "Input directory")
-            .tryParseArgs("--input", "/a/b/c");
+    void simpleCommandLineInterface() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        Example values = argParser.parse(toArgs("--a", "123", "--b", "4", "-c", "--e", "567"),
+            Example.class);
 
-        assertEquals("/a/b/c", args.get("input").getString());
+        assertEquals("123", values.a);
+        assertEquals(4, values.b);
+        assertTrue(values.c);
+        assertEquals("567", values.d);
     }
 
     @Test
-    void normalizeArgumentName() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("test", out)
-            .addRequired("--input", "Input directory")
-            .tryParseArgs("--input", "/a/b/c");
+    void optionalArgumentsUseDefaultValues() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        Example values = argParser.parse(toArgs("--a", "123"), Example.class);
 
-        assertEquals("/a/b/c", args.get("input").getString());
-        assertEquals("/a/b/c", args.get("--input").getString());
+        assertEquals("123", values.a);
+        assertEquals(2, values.b);
+        assertFalse(values.c);
+        assertNull(values.d);
     }
 
     @Test
-    void showUsageInformation() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out);
-        argParser.addRequired("--input", "Input directory");
-        argParser.addOptional("--overwrite", "Overwrites existing values");
-        argParser.printUsage();
+    void missingRequiredArgumentCausesException() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
 
-        String usage = "";
-        usage += "Usage: MyApp\n";
-        usage += "       <--input>      Input directory\n";
-        usage += "       [--overwrite]  Overwrites existing values\n";
-
-        assertEquals(usage, buffer.toString());
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--b", "4"), Example.class);
+        });
     }
 
     @Test
-    void simpleFlag() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addRequired("--input", "Input directory")
-            .addFlag("--overwrite", "Overwrites existing values")
-            .tryParseArgs("--input", "/tmp", "--overwrite");
+    void invalidArgumentTypeCausesException() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
 
-        assertEquals("/tmp", args.get("input").getString());
-        assertTrue(args.get("overwrite").getBool());
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a", "123", "--b", "test"), Example.class);
+        });
     }
 
     @Test
-    void showUsageIfMandatoryArgumentIsMissing() {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser("MyApp", out)
-            .addRequired("--input", "Input directory");
+    void missingValueThrowsException() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
 
-        assertThrows(CommandLineInterfaceException.class, () -> argParser.tryParseArgs());
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a", "123", "--b", "--c"), Example.class);
+        });
     }
 
     @Test
-    void optionalArgumentWithDefaultValue() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--input", "Input directory")
-            .tryParseArgs();
+    void throwExceptionForUnknownArgument() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
 
-        assertNull(args.get("input").getString());
-        assertEquals("/tmp", args.get("input").getStringOr("/tmp"));
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a", "123", "unexpected"), Example.class);
+        });
+
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+                        
+            Unexpected argument 'unexpected'
+            """;
+
+        assertEquals(expected.strip(), buffer.toString().strip());
     }
 
     @Test
-    void relativeFilePath() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addRequired("--input", "Input directory")
-            .tryParseArgs("--input", "~/Documents");
+    void printUsage() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.printUsage(Example.class);
 
-        assertEquals("Documents", args.get("input").getFile().getName());
-        assertEquals(Platform.getUserHomeDir().getAbsolutePath(),
-            args.get("input").getFile().getParentFile().getAbsolutePath());
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+            """;
+
+        assertEquals(expected, buffer.toString());
     }
 
     @Test
-    void multipleFlags() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addFlag("--a", "A")
-            .addFlag("--b", "B")
-            .addFlag("--c", "C")
-            .tryParseArgs("--a", "--c");
+    void printUsageWithDescription() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.addDescription("This is a description message.");
+        argParser.printUsage(Example.class);
 
-        assertTrue(args.get("a").getBool());
-        assertFalse(args.get("b").getBool());
-        assertTrue(args.get("c").getBool());
+        String expected = """
+            This is a description message.
+            
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+            """;
+
+        assertEquals(expected, buffer.toString());
     }
 
-    @Test
-    void allowNullAsDefaultValue() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--a", "test")
-            .addOptional("--b", "test")
-            .tryParseArgs();
-
-        assertNull(args.get("a").getString());
-        assertEquals("B", args.get("b").getStringOr("B"));
+    private String[] toArgs(String... argv) {
+        return argv;
     }
 
-    @Test
-    void allowEmptyAsDefault() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--exclude", "test")
-            .tryParseArgs();
-
-        assertEquals("", args.get("exclude").getStringOr(""));
-    }
-
-    @Test
-    void allowBothSingleAndDoubleLeadingHyphen() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--a", "test")
-            .tryParseArgs("-a", "2");
-
-        assertEquals("2", args.get("a").getString());
-    }
-
-    @Test
-    void allowRetrievalTimeDefaultValue() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--a", "test")
-            .addOptional("--b", "test")
-            .addOptional("--c", "test")
-            .tryParseArgs();
-
-        assertEquals("3", args.get("a").getStringOr("3"));
-        assertNull(args.get("a").getString());
-        assertEquals("3", args.get("c").getStringOr("3"));
-    }
-
-    @Test
-    void optionalArgumentCanProduceNullValue() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--a", "test")
-            .tryParseArgs();
-
-        assertNull(args.get("a").getString());
-    }
-
-    @Test
-    void allowNameEqualsValueNotationForArguments() throws CommandLineInterfaceException {
-        CommandLineArgumentParser args = new CommandLineArgumentParser("MyApp", out)
-            .addOptional("--a", "test")
-            .tryParseArgs("--a=b");
-
-        assertEquals("b", args.get("a").getString());
+    private static class Example {
+        private @Arg String a;
+        private @Arg(defaultValue = "2", usage = "This field has usage information") int b;
+        private @Arg boolean c;
+        private @Arg(name = "e", required = false) String d;
     }
 }

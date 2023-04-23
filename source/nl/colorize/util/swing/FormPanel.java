@@ -161,6 +161,7 @@ public class FormPanel extends JPanel implements LayoutManager {
     /**
      * Adds a row that consists of a text label and a button. Clicking the button 
      * will perform an action that results in the text label being updated.
+     *
      * @param action Callback action invoked when the button is clicked. This
      *        should return the new text to be used for the text label. 
      */
@@ -172,6 +173,7 @@ public class FormPanel extends JPanel implements LayoutManager {
      * Adds a row that consists of a text label, a value label, and a button.
      * Clicking the button will perform an action that results in the value
      * label being updated.
+     *
      * @param action Callback action invoked when the button is clicked. This
      *        should return the new text to be used for the value label. 
      */
@@ -200,6 +202,7 @@ public class FormPanel extends JPanel implements LayoutManager {
     
     /**
      * Adds a row that consists of a single button.
+     *
      * @param fullWidth If true, the button will span the full width of the row.
      *        If false, it will only take its preferred width.
      */
@@ -219,6 +222,20 @@ public class FormPanel extends JPanel implements LayoutManager {
      */
     public void addRow(String labelText) {
         addRow(new JLabel(labelText));
+    }
+
+    /**
+     * Adds a row that consists of a text label in the left column, and two
+     * components in the right column. The latter will be displayed using
+     * their native/preferred width to share the available space within the
+     * column.
+     */
+    public void addRow(String label, JComponent first, JComponent second) {
+        JPanel rightColumn = new JPanel(new BorderLayout(horizontalMargin, 0));
+        rightColumn.add(first, BorderLayout.CENTER);
+        rightColumn.add(second, BorderLayout.EAST);
+
+        addRow(label, rightColumn);
     }
 
     /**

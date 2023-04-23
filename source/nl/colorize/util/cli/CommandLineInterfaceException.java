@@ -11,7 +11,7 @@ package nl.colorize.util.cli;
  * application's command line interface. Used in combination with
  * {@link CommandLineArgumentParser}.
  */
-public class CommandLineInterfaceException extends Exception {
+public class CommandLineInterfaceException extends RuntimeException {
 
     public CommandLineInterfaceException(String message) {
         super(message);

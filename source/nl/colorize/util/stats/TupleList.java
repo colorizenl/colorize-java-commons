@@ -106,6 +106,10 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
         return result;
     }
 
+    public static <L, R> TupleList<L, R> of(List<Tuple<L, R>> entries) {
+        return new TupleList<>(entries);
+    }
+
     public static <L, R> TupleList<L, R> fromStream(Stream<Tuple<L, R>> tuples) {
         return new TupleList<>(tuples.toList());
     }
