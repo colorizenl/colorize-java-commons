@@ -6,24 +6,19 @@
 
 package nl.colorize.util.cli;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import nl.colorize.util.DateParser;
-import nl.colorize.util.FileUtils;
+import nl.colorize.util.PropertyDeserializer;
 
-import java.io.File;
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Define supported arguments for a command line interface, then parse the
@@ -48,7 +43,8 @@ public class CommandLineArgumentParser {
     private PrintWriter out;
     private boolean exitOnFail;
     private List<String> descriptionLines;
-    private Map<Class, TypeMapper> typeMappers;
+    private boolean colors;
+    private PropertyDeserializer propertyDeserializer;
 
     private static final String DEFAULT_VALUE_MARKER = "$$default";
 
@@ -65,37 +61,16 @@ public class CommandLineArgumentParser {
         this.out = out;
         this.exitOnFail = exitOnFail;
         this.descriptionLines = new ArrayList<>();
-        this.typeMappers = new HashMap<>();
-
-        registerStandardTypeMappers();
+        this.colors = true;
+        this.propertyDeserializer = new PropertyDeserializer();
     }
 
     /**
-     * Registers the specified function to convert command line arguments,
-     * which are always strings, to the correct type. By default, type mappers
-     * are available for all primitive types. This method can be used to add
-     * additional type mappers for custom types.
-     *
-     * @throws IllegalArgumentException if a type mapper has already been
-     *         registered for the specified type.
+     * Returns the {@link PropertyDeserializer} that is used to convert command
+     * line arguments, which are always strings, to the correct type.
      */
-    public <T> void registerTypeMapper(Class<T> type, Function<String, T> mapper) {
-        Preconditions.checkArgument(!typeMappers.containsKey(type),
-            "Type mapper already registered for " + type.getName());
-
-        TypeMapper<T> typeMapper = value -> mapper.apply(value);
-        typeMappers.put(type, typeMapper);
-    }
-
-    private void registerStandardTypeMappers() {
-        registerTypeMapper(String.class, value -> value);
-        registerTypeMapper(boolean.class, value -> value.equalsIgnoreCase("true"));
-        registerTypeMapper(int.class, Integer::parseInt);
-        registerTypeMapper(long.class, Long::parseLong);
-        registerTypeMapper(float.class, Float::parseFloat);
-        registerTypeMapper(double.class, Double::parseDouble);
-        registerTypeMapper(File.class, FileUtils::expandUser);
-        registerTypeMapper(Date.class, DateParser::parse);
+    public PropertyDeserializer getPropertyDeserializer() {
+        return propertyDeserializer;
     }
 
     /**
@@ -105,6 +80,14 @@ public class CommandLineArgumentParser {
      */
     public void addDescription(String... lines) {
         descriptionLines.addAll(List.of(lines));
+    }
+
+    /**
+     * By default, command line output uses ANSI color to improve readability.
+     * Calling this method disables colors and reverts to plain text output.
+     */
+    public void disableColor() {
+        this.colors = false;
     }
 
     /**
@@ -122,7 +105,7 @@ public class CommandLineArgumentParser {
             out.println();
         }
 
-        out.println("Usage: " + applicationName);
+        out.println(format("Usage: " + applicationName, AnsiColor.CYAN_BOLD));
 
         for (Field field : findAnnotatedFields(cli)) {
             String name = formatArgName(field);
@@ -136,7 +119,7 @@ public class CommandLineArgumentParser {
     private void printUsage(Class<?> cli, CommandLineInterfaceException cause) {
         printUsage(cli);
         out.println();
-        out.println(cause.getMessage());
+        out.println(format(cause.getMessage(), AnsiColor.RED_BOLD));
         out.println();
         out.flush();
     }
@@ -149,7 +132,15 @@ public class CommandLineArgumentParser {
         if (!isRequired(field)) {
             name = "[" + name + "]";
         }
-        return name;
+        return format(name, AnsiColor.CYAN_BOLD);
+    }
+
+    private String format(String text, AnsiColor color) {
+        if (colors) {
+            return color.format(text);
+        } else {
+            return text;
+        }
     }
 
     /**
@@ -260,16 +251,13 @@ public class CommandLineArgumentParser {
             }
         }
 
-        Preconditions.checkArgument(typeMappers.containsKey(type),
-            "No type mapper registered for " + type.getName());
-
         if (value == null) {
             return null;
         }
 
         try {
-            return typeMappers.get(type).convert(value);
-        } catch (NumberFormatException e) {
+            return propertyDeserializer.parse(value, type);
+        } catch (IllegalArgumentException e) {
             throw new CommandLineInterfaceException("Invalid value for '" + name + "': " + value);
         }
     }
@@ -307,16 +295,5 @@ public class CommandLineArgumentParser {
 
     private String normalizeArgumentName(String name) {
         return name.replace("-", "").toLowerCase();
-    }
-
-    /**
-     * Converts provided argument values, which are always strings, to the
-     * correct type. Throws {@link CommandLineInterfaceException} to indicate
-     * error messages for invalid values.
-     */
-    @FunctionalInterface
-    private static interface TypeMapper<T> {
-
-        public T convert(String value) throws CommandLineInterfaceException;
     }
 }

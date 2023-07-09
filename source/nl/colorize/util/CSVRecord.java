@@ -62,13 +62,12 @@ public class CSVRecord {
      * @throws IllegalStateException if no column name information is available.
      * @throws IllegalArgumentException if no column with that name exists.
      */
-    public Property get(String column) {
+    public String get(String column) {
         Preconditions.checkState(!columns.isEmpty(), "No column name information available");
         Preconditions.checkArgument(columns.contains(column), "No such column: " + column);
 
         int columnIndex = columns.indexOf(column);
-        String value = cells.get(columnIndex);
-        return Property.of(value);
+        return cells.get(columnIndex);
     }
 
     /**
@@ -105,12 +104,7 @@ public class CSVRecord {
      */
     public TupleList<String, String> getColumnValues() {
         Preconditions.checkState(!columns.isEmpty(), "No column name information available");
-
-        TupleList<String, String> tuples = TupleList.create();
-        for (int i = 0; i < columns.size(); i++) {
-            tuples.add(columns.get(i), cells.get(i));
-        }
-        return tuples;
+        return TupleList.combine(columns, cells);
     }
 
     private String toCSV(String delimiter) {

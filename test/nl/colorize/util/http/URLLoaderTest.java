@@ -8,6 +8,7 @@ package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HttpHeaders;
 import nl.colorize.util.swing.Utils2D;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,11 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static nl.colorize.util.http.URLLoader.PROPERTY_SSL_CONTEXT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class URLLoaderTest {
     
@@ -217,12 +214,20 @@ public class URLLoaderTest {
 
     @Test
     void sendPostData() throws IOException {
-        URLLoader request = URLLoader.post("https://httpbin.org/post");
-        request.withJSON("clrz1234");
-        URLResponse response = request.send();
+        URLResponse response = URLLoader.post("https://dashboard.clrz.nl/rest/echo")
+            .withHeader(HttpHeaders.USER_AGENT, "test")
+            .withBody(PostData.create("message", "1234"))
+            .send();
+
+        String expected = """
+            {
+              "userAgent": "test",
+              "platform": "macOS",
+              "message": "1234"
+            }""";
 
         assertEquals(HttpStatus.OK, response.status());
-        assertTrue(response.read(Charsets.UTF_8).contains("\"clrz1234\""), response.read(Charsets.UTF_8));
+        assertEquals(expected, response.getBody());
     }
 
     @Test

@@ -152,4 +152,18 @@ public class VersionTest {
         assertEquals("3.11.09", versions.get(2).toString());
         assertEquals("3.11.10", versions.get(3).toString());
     }
+
+    @Test
+    void ignoreLeadingV() {
+        Version version = Version.parse("v1.2");
+
+        assertEquals("v1.2", version.toString());
+        assertEquals(Version.parse("1.2"), version);
+    }
+
+    @Test
+    void parseUnknownVersion() {
+        assertEquals(Version.UNKNOWN, Version.parse(""));
+        assertEquals(Version.UNKNOWN, Version.parse("UNKNOWN"));
+    }
 }

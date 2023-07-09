@@ -260,7 +260,7 @@ public final class LoadUtils {
      * Serializes a {@code Properties} object to the specified writer. This method
      * differs from the standard {@link java.util.Properties#store(Writer, String)}
      * in that it writes the properties in a deterministic (alphabetical) order.
-     * The writer is closed afterwards.
+     * The writer is closed afterward.
      *
      * @throws IOException if an I/O error occurs while writing. 
      */

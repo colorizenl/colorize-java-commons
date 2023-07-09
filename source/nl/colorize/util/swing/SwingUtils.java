@@ -173,56 +173,6 @@ public final class SwingUtils {
             return new Dimension(0, 0);
         }
     }
-    
-    /**
-     * Returns the "device pixel ratio" for the current display. A return value 
-     * higher than 1.0 indicates a "retina" or "HiDPI" screen.
-     * @deprecated This method relies on Apple-specific AWT properties, which
-     *             remain from the old Apple JDK but will be removed from the
-     *             JDK in Java 9.
-     */
-    @Deprecated
-    public static float getScreenPixelRatio() {
-        //TODO replace with API from Java 9 once that is released
-        if (Platform.isMac()) {
-            Toolkit toolkit = Toolkit.getDefaultToolkit();
-            Object contentScaleFactor = toolkit.getDesktopProperty("apple.awt.contentScaleFactor");
-            if (contentScaleFactor instanceof Number) {
-                return ((Number) contentScaleFactor).floatValue();
-            } else {
-                return 1.0f;
-            }
-        } else {
-            return 1.0f;
-        }
-    }
-    
-    /**
-     * Returns true if the current display is a "retina" display (a display with
-     * a pixel density higher than 1).
-     *
-     * @deprecated This method relies on Apple-specific AWT properties, which 
-     *             remain from the old Apple JDK but will be removed from the
-     *             JDK in Java 9. 
-     */
-    @Deprecated
-    public static boolean isRetinaDisplay() {
-        return getScreenPixelRatio() > 1.0f;
-    }
-    
-    /**
-     * Returns a textual description the platform's current screen size.
-     * See {@link #getScreenSize()} and {@link #isRetinaDisplay()} for fields
-     * that will be included in the description.
-     */
-    public static String getScreenSizeDescription() {
-        Dimension screenSize = getScreenSize();
-        String description = screenSize.width + "x" + screenSize.height;
-        if (isRetinaDisplay()) {
-            description += String.format(" (x%.1f)", getScreenPixelRatio());
-        }
-        return description;
-    }
 
     /**
      * Enables full-screen mode for the specified window.
@@ -981,8 +931,12 @@ public final class SwingUtils {
         return imagePanel;
     }
 
-    static Color getStripedRowColor(int row) {
-        if (row % 2 == 0) {
+    /**
+     * Returns the appropriate row background color for components with a
+     * striped appearance, such as tables, lists, and trees.
+     */
+    public static Color getStripedRowColor(int rowIndex) {
+        if (rowIndex % 2 == 0) {
             return STANDARD_ROW_COLOR;
         } else {
             if (Platform.isMac()) {
@@ -1059,9 +1013,6 @@ public final class SwingUtils {
             setOpaque(false);
 
             renderer = getCellRenderer();
-            ((DefaultTreeCellRenderer) renderer).setOpenIcon(null);
-            ((DefaultTreeCellRenderer) renderer).setClosedIcon(null);
-            ((DefaultTreeCellRenderer) renderer).setLeafIcon(null);
 
             setCellRenderer((tree, value, selected, expanded, leaf, row, focus) -> {
                 Component cell = renderer.getTreeCellRendererComponent(tree, value, selected, expanded,

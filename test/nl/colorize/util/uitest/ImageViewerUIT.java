@@ -8,7 +8,6 @@ package nl.colorize.util.uitest;
 
 import com.google.common.base.Preconditions;
 import nl.colorize.util.FileUtils;
-import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
 import nl.colorize.util.TranslationBundle;
 import nl.colorize.util.stats.Cache;
@@ -33,7 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Simple test application for {@link ImageViewer} that displays all images in
@@ -50,7 +48,6 @@ public class ImageViewerUIT {
     private Table<File> imageList;
 
     private static final int IMAGE_CACHE_SIZE = 1100;
-    private static final Logger LOGGER = LogHelper.getLogger(ImageViewerUIT.class);
 
     public static void main(String[] args) {
         SwingUtils.initializeSwing();

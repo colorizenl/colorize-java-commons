@@ -24,9 +24,9 @@ public final class Version implements Comparable<Version> {
     private String versionString;
     private List<Integer> digits;
 
-    public static final Version UNKNOWN = new Version("0.0.0", ImmutableList.of(0, 0, 0));
+    public static final Version UNKNOWN = new Version("0.0.0", List.of(0, 0, 0));
     
-    private static final Pattern VERSION_STRING_PATTERN = Pattern.compile("(\\d[\\.\\d]*)(.*)");
+    private static final Pattern VERSION_STRING_PATTERN = Pattern.compile("v?(\\d[\\.\\d]*)(.*)");
     private static final Splitter VERSION_SPLITTER = Splitter.on(".").omitEmptyStrings();
     private static final Joiner VERSION_JOINER = Joiner.on(".");
 
@@ -149,12 +149,13 @@ public final class Version implements Comparable<Version> {
      * @throws IllegalArgumentException if the version string cannot be parsed.
      */
     public static Version parse(String versionString) {
-        Preconditions.checkArgument(versionString != null, "Version string is empty");
+        if (versionString.isEmpty() || versionString.equalsIgnoreCase("UNKNOWN")) {
+            return UNKNOWN;
+        }
 
         Matcher matcher = VERSION_STRING_PATTERN.matcher(versionString);
-        if (!matcher.matches()) {
-            throw new IllegalArgumentException("Cannot parse version string: " + versionString);
-        }
+
+        Preconditions.checkArgument(matcher.matches(), "Cannot parse version: " + versionString);
 
         List<Integer> digits = VERSION_SPLITTER.splitToList(matcher.group(1)).stream()
             .map(Integer::parseInt)

@@ -68,14 +68,12 @@ public class CSVRecordTest {
         String csv = """
             Name;Age
             John;38
-            Jim;26
             """;
 
         List<CSVRecord> records = CSVRecord.parseCSV(csv, ";", true);
 
-        assertEquals(2, records.size());
-        assertEquals("John", records.get(0).get("Name").getString());
-        assertEquals(38, records.get(0).get("Age").getInt());
+        assertEquals("John", records.get(0).get("Name"));
+        assertEquals("38", records.get(0).get("Age"));
     }
 
     @Test

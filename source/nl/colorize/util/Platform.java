@@ -64,6 +64,7 @@ public enum Platform {
         .put("11.", "Big Sur")
         .put("12.", "Monterey")
         .put("13.", "Ventura")
+        .put("14.", "Sonoma")
         .build();
 
     private static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
@@ -403,18 +404,6 @@ public enum Platform {
             throw new UnsupportedOperationException("Platform does not support temp files");
         }
         return new File(tempDirectory);
-    }
-    
-    /**
-     * Returns the platform-specific character(s) used for newlines. This is 
-     * "\r\n" on Windows and "\n" on nearly all other platforms.
-     *
-     * @deprecated This method is no longer necessary since
-     *             {@link System#lineSeparator()} was introduced in Java 7.
-     */
-    @Deprecated
-    public static String getLineSeparator() {
-        return System.lineSeparator();
     }
 
     /**

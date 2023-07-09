@@ -6,6 +6,7 @@
 
 package nl.colorize.util.stats;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
 
@@ -120,6 +121,28 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
             .toList();
 
         return new TupleList<>(tuples);
+    }
+
+    /**
+     * Creates a {@code TupleList} by combining two lists. Each tuple in the
+     * result will consist of an element from each list.
+     *
+     * @throws IllegalArgumentException if the two lists do not have the same
+     *         length.
+     */
+    public static <L, R> TupleList<L, R> combine(List<L> leftEntries, List<R> rightEntries) {
+        Preconditions.checkArgument(leftEntries.size() == rightEntries.size(),
+            "Lists have different length: " + leftEntries.size() + " versus" + rightEntries.size());
+
+        TupleList<L, R> tuples = create();
+
+        for (int i = 0; i < leftEntries.size(); i++) {
+            L left = leftEntries.get(i);
+            R right = rightEntries.get(i);
+            tuples.add(left, right);
+        }
+
+        return tuples;
     }
 
     /**

@@ -8,7 +8,6 @@ package nl.colorize.util.stats;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.stats.TupleList;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -89,5 +88,19 @@ class TupleListTest {
         tuples.forEach((left, right) -> counter.add(left + "/" + right));
 
         assertEquals("[a/2, b/3]", counter.toString());
+    }
+
+    @Test
+    void combine() {
+        TupleList<String, String> tuples = TupleList.combine(List.of("a", "b"), List.of("2", "3"));
+
+        assertEquals("[(a, 2), (b, 3)]", tuples.toString());
+    }
+
+    @Test
+    void requireCombinedListsToHaveSameLength() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            TupleList.combine(List.of("a", "b"), List.of("2"));
+        });
     }
 }

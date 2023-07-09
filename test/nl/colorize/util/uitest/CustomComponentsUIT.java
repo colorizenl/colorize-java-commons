@@ -9,6 +9,7 @@ package nl.colorize.util.uitest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
+import nl.colorize.util.cli.AnsiColor;
 import nl.colorize.util.swing.AccordionPanel;
 import nl.colorize.util.swing.CircularLoader;
 import nl.colorize.util.swing.ComboFileDialog;
@@ -53,6 +54,10 @@ public class CustomComponentsUIT {
     private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
+        System.out.println("---------------------");
+        AnsiColor.RED_BOLD.println("Colorize Java Commons");
+        System.out.println("---------------------");
+
         CustomComponentsUIT test = new CustomComponentsUIT();
         test.createWindow();
     }

@@ -63,7 +63,6 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         contentPanel.add(new JLabel("Screen size: " + SwingUtils.getScreenSize().width + "x" +
                 SwingUtils.getScreenSize().height));
-        contentPanel.add(new JLabel("Screen pixel ratio: " + SwingUtils.getScreenPixelRatio()));
         contentPanel.add(createButton("Change dock icon", e -> setDockIcon()));
         contentPanel.add(createButton("Change dock badge", e -> setDockBadge()));
         contentPanel.add(createButton("Bounce dock icon", e -> bounceDockIcon()));

@@ -6,10 +6,18 @@
 
 package nl.colorize.util;
 
+import java.util.List;
+
+import static nl.colorize.util.Platform.MAC;
+import static nl.colorize.util.Platform.TEAVM;
+import static nl.colorize.util.Platform.WINDOWS;
+
 /**
  * A timer with millisecond precision. Although the timer <em>granularity</em>
  * is in milliseconds, the timer <em>resolution</em> is dependent on the
- * platform and might be more than 1 millisecond.
+ * platform and might be more than 1 millisecond. Depending on the platform,
+ * either {@link System#currentTimeMillis()} or {@link System#nanoTime()} will
+ * be used for the underlying timer.
  * <p>
  * This class is not thread safe, {@code Stopwatch} instances should not be
  * shared between multiple threads.
@@ -19,8 +27,10 @@ public class Stopwatch {
     private boolean useNanoTime;
     private long lastTick;
 
+    private static final List<Platform> NANO_TIME_SUPPORT = List.of(WINDOWS, MAC, TEAVM);
+
     public Stopwatch() {
-        this.useNanoTime = Platform.isWindows() || Platform.isMac();
+        this.useNanoTime = NANO_TIME_SUPPORT.contains(Platform.getPlatform());
         tick();
     }
     

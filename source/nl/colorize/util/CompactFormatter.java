@@ -11,7 +11,6 @@ import com.google.common.base.Strings;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Formatter;
-import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 /**
@@ -25,27 +24,22 @@ import java.util.logging.LogRecord;
 public class CompactFormatter extends Formatter {
 
     @Override
-    public synchronized String format(LogRecord record) {
-        Date date = new Date(record.getMillis());
-        return format(record.getMessage(), record.getThrown(), record.getLevel(), date);
-    }
-
-    public String format(String message, Throwable thrown, Level level, Date timestamp) {
+    public String format(LogRecord record) {
         StringBuilder log = new StringBuilder();
-        log.append(format(timestamp));
+        log.append(format(record.getMillis()));
         log.append("  ");
-        log.append(Strings.padEnd(level.toString(), 9, ' '));
-        log.append(message);
-        log.append(Platform.getLineSeparator());
-        if (thrown != null) {
-            log.append(LogHelper.getStackTrace(thrown));
+        log.append(Strings.padEnd(record.getLevel().toString(), 9, ' '));
+        log.append(record.getMessage());
+        log.append(System.lineSeparator());
+        if (record.getThrown() != null) {
+            log.append(LogHelper.getStackTrace(record.getThrown()));
         }
         return log.toString();
     }
 
-    private String format(Date timestamp) {
+    private String format(long timestamp) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         dateFormat.setTimeZone(Platform.getDefaultTimeZone());
-        return dateFormat.format(timestamp);
+        return dateFormat.format(new Date(timestamp));
     }
 }

@@ -82,6 +82,7 @@ class CommandLineArgumentParserTest {
     @Test
     void throwExceptionForUnknownArgument() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
 
         assertThrows(CommandLineInterfaceException.class, () -> {
             argParser.parse(toArgs("--a", "123", "unexpected"), Example.class);
@@ -103,6 +104,7 @@ class CommandLineArgumentParserTest {
     @Test
     void printUsage() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
         argParser.printUsage(Example.class);
 
         String expected = """
@@ -120,6 +122,7 @@ class CommandLineArgumentParserTest {
     void printUsageWithDescription() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
         argParser.addDescription("This is a description message.");
+        argParser.disableColor();
         argParser.printUsage(Example.class);
 
         String expected = """

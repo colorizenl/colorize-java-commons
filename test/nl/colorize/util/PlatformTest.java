@@ -24,11 +24,6 @@ public class PlatformTest {
     }
 
     @Test
-    public void testLineSeparator() {
-        assertEquals("\n", Platform.getLineSeparator());
-    }
-    
-    @Test
     public void testWorkingDirectory() {
         assertTrue(Platform.getUserWorkingDirectory().exists());
         assertTrue(Platform.getUserWorkingDirectory().isDirectory());
