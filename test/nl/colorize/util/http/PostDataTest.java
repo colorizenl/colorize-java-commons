@@ -15,12 +15,13 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PostDataTest {
 
     @Test
     public void testParse() {
-        assertEquals(ImmutableMap.of(), PostData.parse("", Charsets.UTF_8).toMap());
+        assertEquals(Map.of(), PostData.parse("", Charsets.UTF_8).toMap());
         assertEquals(ImmutableMap.of("a", "2"), PostData.parse("a=2", Charsets.UTF_8).toMap());
         assertEquals(ImmutableMap.of("a", "", "b", "4"), PostData.parse("a=&b=4", Charsets.UTF_8).toMap());
         assertEquals(ImmutableMap.of("a", "3>4"), PostData.parse("a=3%3E4", Charsets.UTF_8).toMap());
@@ -108,5 +109,16 @@ public class PostDataTest {
         PostData b = PostData.create("a", "3");
 
         assertThrows(IllegalArgumentException.class, () -> a.merge(b));
+    }
+
+    @Test
+    void keyWithoutValue() {
+        PostData postData = PostData.parse("a=2&b=&c", Charsets.UTF_8);
+
+        assertEquals("2", postData.getOptionalParameter("a", "?"));
+        assertTrue(postData.contains("b"));
+        assertEquals("?", postData.getOptionalParameter("b", "?"));
+        assertTrue(postData.contains("c"));
+        assertEquals("?", postData.getOptionalParameter("c", "?"));
     }
 }

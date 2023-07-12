@@ -10,6 +10,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import nl.colorize.util.stats.Tuple;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -170,12 +171,22 @@ public class PostData {
         Map<String, String> data = new LinkedHashMap<>();
 
         for (String param : POST_DATA_SPLITTER.split(encoded)) {
-            String paramName = param.substring(0, param.indexOf('='));
-            String paramValue = param.substring(param.indexOf('=') + 1);
-            data.put(URLDecoder.decode(paramName, charset), URLDecoder.decode(paramValue, charset));
+            Tuple<String, String> pair = parseParam(param);
+            data.put(URLDecoder.decode(pair.left(), charset),
+                URLDecoder.decode(pair.right(), charset));
         }
 
         return new PostData(data);
+    }
+
+    private static Tuple<String, String> parseParam(String param) {
+        if (param.indexOf('=') == -1) {
+            return Tuple.of(param, "");
+        }
+
+        String name = param.substring(0, param.indexOf('='));
+        String value = param.substring(param.indexOf('=') + 1);
+        return Tuple.of(name, value);
     }
 
     public static PostData empty() {

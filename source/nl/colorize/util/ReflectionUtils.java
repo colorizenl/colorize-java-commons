@@ -14,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +36,7 @@ public final class ReflectionUtils {
     /**
      * Accesses the object's property with the specified name using reflection, 
      * and returns its value.
+     *
      * @throws IllegalArgumentException if the object does not have a property
      *         with that name.
      * @throws SecurityException if the property is private or protected, and 
@@ -113,7 +115,7 @@ public final class ReflectionUtils {
             throw new IllegalArgumentException("Trying to get properties from an object of type Class");
         }
         
-        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> properties = new LinkedHashMap<>();
         for (Field property : getDeclaredProperties(subject.getClass())) {
             properties.put(property.getName(), getPropertyValue(subject, property));
         }
@@ -122,7 +124,8 @@ public final class ReflectionUtils {
     
     /**
      * Accesses the object's property with the specified name using reflection,
-     * and updates its value. 
+     * and updates its value.
+     *
      * @throws IllegalArgumentException if the object does not have a property
      *         with that name, or if the property's type and type of {@code value}
      *         don't match.
@@ -170,6 +173,7 @@ public final class ReflectionUtils {
      * Calls the object's method with the specified name using reflection. The
      * types of the arguments passed to the method ({@code args}) are also used
      * to find the method with the requested parameter types.
+     *
      * @throws RuntimeException if the calling the method results in an exception.
      * @throws IllegalArgumentException if no method with that name exists,
      *         or if the number of parameter or the parameter type don't match.
