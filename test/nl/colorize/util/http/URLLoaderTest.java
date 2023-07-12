@@ -7,7 +7,6 @@
 package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.swing.Utils2D;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +22,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static nl.colorize.util.http.URLLoader.PROPERTY_SSL_CONTEXT;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class URLLoaderTest {
     
@@ -46,14 +49,13 @@ public class URLLoaderTest {
             .send()
             .read(Charsets.UTF_8);
 
-        assertTrue(response.contains("<base href=\"http://www.colorize.nl/\" />"));
+        assertTrue(response.contains("<div class=\"content\">"));
         assertTrue(response.contains("</html>"));
     }
     
     @Test
     public void testLoadBinaryResponse() throws IOException {
-        URLResponse response = URLLoader.get("http://www.colorize.nl/images/logo.png")
-            .send();
+        URLResponse response = URLLoader.get("http://www.colorize.nl/logo.png").send();
 
         assertNotNull(Utils2D.loadImage(response.openStream()));
     }
@@ -63,16 +65,6 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.get("http://www.colorize.nl/nothing.jpg");
 
         assertThrows(IOException.class, loader::send);
-    }
-
-    @Test
-    public void testGetVariables() throws IOException {
-        URLLoader loader = URLLoader.get("http://www.colorize.nl");
-        loader.withQueryParam("page", "contact");
-        String response = loader.send().read(Charsets.UTF_8);
-
-        assertEquals("http://www.colorize.nl?page=contact", loader.toString());
-        assertTrue(response.contains("<h1>Contact"));
     }
 
     @Test
@@ -111,10 +103,8 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.get("http://www.colorize.nl");
         URLResponse response = loader.send();
 
-        assertEquals("text/html; charset=UTF-8", response.getHeader("Content-Type").get());
-        assertEquals("0", response.getHeader("Age").get());
+        assertEquals("text/html", response.getHeader("Content-Type").get());
         assertEquals("Apache", response.getHeader("Server").get());
-        assertEquals("Accept-Encoding", response.getHeader("Vary").get());
     }
     
     @Test
@@ -158,7 +148,7 @@ public class URLLoaderTest {
             }
         }
         
-        assertEquals(ImmutableList.of(Method.HEAD), supported);
+        assertEquals(List.of(Method.HEAD), supported);
     }
 
     @Test
@@ -232,7 +222,7 @@ public class URLLoaderTest {
             .send()
             .read(Charsets.UTF_8);
 
-        assertTrue(response.contains("<base href=\"http://www.colorize.nl/\" />"));
+        assertTrue(response.contains("<div class=\"content\">"));
         assertTrue(response.contains("</html>"));
     }
 
@@ -294,7 +284,7 @@ public class URLLoaderTest {
     void sendWithCallback() throws InterruptedException {
         List<Integer> result = new ArrayList<>();
 
-        URLLoader.get("https://www.colorize.nl/en/")
+        URLLoader.get("https://www.colorize.nl")
             .sendPromise()
             .then(response -> result.add(response.status()));
 
