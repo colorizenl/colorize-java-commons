@@ -100,7 +100,7 @@ public class ImageViewerUIT {
         imageList = new Table<>(bundle.getString("ImageViewer.imageFile"),
             bundle.getString("ImageViewer.imageFileSize"));
         imageList.setColumnWidth(1, 80);
-        imageList.addDoubleClickListener(e -> selectImage(imageList.getSelectedRowKey()));
+        imageList.getDoubleClick().subscribe(t -> selectImage(imageList.getSelectedRowKey()));
         SwingUtils.setPreferredWidth(imageList, 300);
     }
 

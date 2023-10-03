@@ -55,10 +55,23 @@ class CommandLineArgumentParserTest {
     @Test
     void missingRequiredArgumentCausesException() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
 
         assertThrows(CommandLineInterfaceException.class, () -> {
             argParser.parse(toArgs("--b", "4"), Example.class);
         });
+
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+                        
+            Missing required argument 'a'
+            """;
+
+        assertEquals(expected.strip(), buffer.toString().strip());
     }
 
     @Test
@@ -102,6 +115,50 @@ class CommandLineArgumentParserTest {
     }
 
     @Test
+    void throwExceptionForMissingValue() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
+
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a"), Example.class);
+        });
+
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+                        
+            Missing value for argument 'a'
+            """;
+
+        assertEquals(expected.strip(), buffer.toString().strip());
+    }
+
+    @Test
+    void throwExceptionWhenFlagArgumentHasValue() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
+
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a", "test", "--c", "true"), Example.class);
+        });
+
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+                        
+            Unexpected argument 'true'
+            """;
+
+        assertEquals(expected.strip(), buffer.toString().strip());
+    }
+
+    @Test
     void printUsage() {
         CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
         argParser.disableColor();
@@ -136,6 +193,28 @@ class CommandLineArgumentParserTest {
             """;
 
         assertEquals(expected, buffer.toString());
+    }
+
+    @Test
+    void argumentProvidedMultipleTimes() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.disableColor();
+
+        assertThrows(CommandLineInterfaceException.class, () -> {
+            argParser.parse(toArgs("--a", "1", "--a", "2"), Example.class);
+        });
+
+        String expected = """
+            Usage: test
+                --a   \s
+                [--b]  This field has usage information
+                [--c] \s
+                [--e] \s
+                        
+            Argument 'a' appears multiple times
+            """;
+
+        assertEquals(expected.strip(), buffer.toString().strip());
     }
 
     private String[] toArgs(String... argv) {

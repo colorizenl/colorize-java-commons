@@ -181,27 +181,38 @@ public final class Utils2D {
             return converted;
         }
     }
-    
+
     /**
-     * Converts a {@code BufferedImage} to the pixel format and color model preferred
-     * by the graphics environment. If the image already has the correct type this
-     * method does nothing.
+     * Returns the {@link GraphicsConfiguration} used by the default screen.
+     * Note this may not be the screen that is displaying the application.
      */
-    public static BufferedImage makeImageCompatible(BufferedImage original) {
-        GraphicsConfiguration graphicsConfig = GraphicsEnvironment.getLocalGraphicsEnvironment()
+    private static GraphicsConfiguration getDefaultGraphicsConfiguration() {
+        return GraphicsEnvironment.getLocalGraphicsEnvironment()
             .getDefaultScreenDevice()
             .getDefaultConfiguration();
+    }
+
+    /**
+     * Converts a {@code BufferedImage} to the pixel format and color model
+     * preferred by the graphics environment. If the image already has the
+     * correct type this returns the original image.
+     */
+    public static BufferedImage makeImageCompatible(BufferedImage original) {
+        GraphicsConfiguration graphicsConfig = getDefaultGraphicsConfiguration();
+
+        boolean sameColorModel = graphicsConfig.getColorModel().equals(original.getColorModel());
+        boolean sameType = graphicsConfig.getColorModel().getTransparency() == original.getTransparency();
         
-        if (graphicsConfig.getColorModel().equals(original.getColorModel())) {
+        if (sameColorModel && sameType) {
             return original;
-        } else {
-            BufferedImage compatibleImage = graphicsConfig.createCompatibleImage(
-                original.getWidth(), original.getHeight(), original.getTransparency());
-            Graphics2D g2 = compatibleImage.createGraphics();
-            g2.drawImage(original, 0, 0, null);
-            g2.dispose();
-            return compatibleImage;
         }
+
+        BufferedImage compatibleImage = graphicsConfig.createCompatibleImage(
+            original.getWidth(), original.getHeight(), original.getTransparency());
+        Graphics2D g2 = compatibleImage.createGraphics();
+        g2.drawImage(original, 0, 0, null);
+        g2.dispose();
+        return compatibleImage;
     }
     
     /**

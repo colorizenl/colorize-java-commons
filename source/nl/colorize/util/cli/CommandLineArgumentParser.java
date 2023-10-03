@@ -8,6 +8,7 @@ package nl.colorize.util.cli;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import nl.colorize.util.Platform;
 import nl.colorize.util.PropertyDeserializer;
 
 import java.io.PrintWriter;
@@ -16,9 +17,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Define supported arguments for a command line interface, then parse the
@@ -61,7 +65,7 @@ public class CommandLineArgumentParser {
         this.out = out;
         this.exitOnFail = exitOnFail;
         this.descriptionLines = new ArrayList<>();
-        this.colors = true;
+        this.colors = Platform.isMac() || Platform.isLinux();
         this.propertyDeserializer = new PropertyDeserializer();
     }
 
@@ -95,7 +99,9 @@ public class CommandLineArgumentParser {
      * is done automatically if the provides arguments are incomplete.
      */
     public void printUsage(Class<?> cli) {
-        int nameColumnWidth = 2 + findAnnotatedFields(cli).stream()
+        Collection<Field> fields = findAnnotatedFields(cli).values();
+
+        int nameColumnWidth = 2 + fields.stream()
             .mapToInt(field -> formatArgName(field).length())
             .max()
             .orElse(0);
@@ -107,7 +113,7 @@ public class CommandLineArgumentParser {
 
         out.println(format("Usage: " + applicationName, AnsiColor.CYAN_BOLD));
 
-        for (Field field : findAnnotatedFields(cli)) {
+        for (Field field : fields) {
             String name = formatArgName(field);
             String usage = field.getAnnotation(Arg.class).usage();
             out.println("    " + Strings.padEnd(name, nameColumnWidth, ' ') + usage);
@@ -151,25 +157,20 @@ public class CommandLineArgumentParser {
      * exit the application.
      *
      * @throws CommandLineInterfaceException If the provided arguments are
-     *         incomplete or invalid.
-     * @throws IllegalArgumentException if {@code cli} does not define any
-     *         constructor arguments annotated with{@link Arg}.
+     *                                       incomplete or invalid.
+     * @throws IllegalArgumentException      if {@code cli} does not define any
+     *                                       constructor arguments annotated with{@link Arg}.
      */
     public <T> T parse(String[] argv, Class<T> cli) throws CommandLineInterfaceException {
         try {
-            Map<String, String> values = parseArgValues(argv);
-
             Constructor<?> constructor = findDefaultConstructor(cli);
             constructor.setAccessible(true);
             T instance = (T) constructor.newInstance();
 
-            for (Field field : findAnnotatedFields(cli)) {
-                Object value = convertArgValue(field, values);
-                if (value != null) {
-                    field.setAccessible(true);
-                    field.set(instance, value);
-                }
-            }
+            Map<String, Field> fields = findAnnotatedFields(cli);
+            setDefaultValues(instance, fields.values());
+            parseArgValues(argv, instance, fields);
+            checkMissingRequiredArguments(instance, fields.values());
 
             return instance;
         } catch (CommandLineInterfaceException e) {
@@ -195,78 +196,106 @@ public class CommandLineArgumentParser {
         }
     }
 
-    private List<Field> findAnnotatedFields(Class<?> cli) {
-        return Arrays.stream(cli.getDeclaredFields())
-            .filter(field -> field.getAnnotation(Arg.class) != null)
-            .toList();
+    private Map<String, Field> findAnnotatedFields(Class<?> cli) {
+        Map<String, Field> fields = new LinkedHashMap<>();
+
+        for (Field field : cli.getDeclaredFields()) {
+            if (field.getAnnotation(Arg.class) != null) {
+                fields.put(getArgName(field), field);
+            }
+        }
+
+        return fields;
     }
 
-    private Map<String, String> parseArgValues(String[] argv) {
+    private void parseArgValues(String[] argv, Object instance, Map<String, Field> fields) {
         List<String> providedArgs = processProvidedArgs(argv);
-        Map<String, String> values = new HashMap<>();
         int index = 0;
+        Set<Field> fulfilled = new HashSet<>();
 
         while (index < providedArgs.size()) {
             String current = providedArgs.get(index);
+            String argName = normalizeArgumentName(current);
+            Field field = fields.get(argName);
 
-            if (isNamedArgument(providedArgs, index)) {
-                String name = normalizeArgumentName(current);
-                values.put(name, providedArgs.get(index + 1));
-                index += 2;
-            } else if (isFlagArgument(providedArgs, index)) {
-                String name = normalizeArgumentName(current);
-                values.put(name, "true");
-                index += 1;
-            } else {
+            if (field == null) {
                 throw new CommandLineInterfaceException("Unexpected argument '" + current + "'");
+            } else if (fulfilled.contains(field)) {
+                throw new CommandLineInterfaceException("Argument '" + argName + "' appears multiple times");
+            } else if (field.getType() == boolean.class) {
+                setFieldValue(instance, field, "true");
+                fulfilled.add(field);
+                index += 1;
+            } else if (index >= providedArgs.size() - 1) {
+                throw new CommandLineInterfaceException("Missing value for argument '" + argName + "'");
+            } else {
+                setFieldValue(instance, field, providedArgs.get(index + 1));
+                fulfilled.add(field);
+                index += 2;
             }
         }
-
-        return values;
     }
 
-    private boolean isNamedArgument(List<String> providedArgs, int index) {
-        return index <= providedArgs.size() - 2 &&
-            providedArgs.get(index).startsWith("-") &&
-            !providedArgs.get(index + 1).startsWith("-");
-    }
-
-    private boolean isFlagArgument(List<String> providedArgs, int index) {
-        return providedArgs.get(index).startsWith("-");
-    }
-
-    private Object convertArgValue(Field field, Map<String, String> values) {
-        Arg config = field.getAnnotation(Arg.class);
-        Class<?> type = field.getType();
-        String name = getArgName(field, config);
-        String value = values.get(name);
-
-        if (value == null) {
-            if (type == boolean.class) {
-                value = "false";
-            } else if (isRequired(field)) {
-                throw new CommandLineInterfaceException("Missing required argument '" + name + "'");
-            } else if (!config.defaultValue().equals(DEFAULT_VALUE_MARKER)) {
-                value = config.defaultValue();
-            }
-        }
-
-        if (value == null) {
-            return null;
-        }
-
+    private Object convertArgValue(Field field, String value) {
         try {
+            Class<?> type = field.getType();
             return propertyDeserializer.parse(value, type);
         } catch (IllegalArgumentException e) {
-            throw new CommandLineInterfaceException("Invalid value for '" + name + "': " + value);
+            String argName = getArgName(field);
+            throw new CommandLineInterfaceException("Invalid value for '" + argName + "': " + value);
         }
+    }
+
+    private void setFieldValue(Object instance, Field field, String rawValue) {
+        Object parsedValue = convertArgValue(field, rawValue);
+
+        if (parsedValue != null) {
+            try {
+                field.setAccessible(true);
+                field.set(instance, parsedValue);
+            } catch (IllegalAccessException e) {
+                throw new CommandLineInterfaceException("Cannot set field: " + field.getName(), e);
+            }
+        }
+    }
+
+    private Object getFieldValue(Object instance, Field field) {
+        try {
+            field.setAccessible(true);
+            return field.get(instance);
+        } catch (IllegalAccessException e) {
+            throw new CommandLineInterfaceException("Cannot get field: " + field.getName(), e);
+        }
+    }
+
+    private void setDefaultValues(Object instance, Collection<Field> fields) {
+        for (Field field : fields) {
+            Arg config = field.getAnnotation(Arg.class);
+            if (!config.defaultValue().equals(DEFAULT_VALUE_MARKER)) {
+                setFieldValue(instance, field, config.defaultValue());
+            }
+        }
+    }
+
+    private void checkMissingRequiredArguments(Object instance, Collection<Field> fields) {
+        for (Field field : fields) {
+            if (isRequired(field) && getFieldValue(instance, field) == null) {
+                String argName = getArgName(field);
+                throw new CommandLineInterfaceException("Missing required argument '" + argName + "'");
+            }
+        }
+    }
+
+    private boolean isFlag(Field field) {
+        Class<?> type = field.getType();
+        return type.equals(boolean.class) || type.equals(Boolean.class);
     }
 
     private boolean isRequired(Field field) {
         Arg config = field.getAnnotation(Arg.class);
-        boolean defaultValue = !config.defaultValue().equals(DEFAULT_VALUE_MARKER);
+        boolean hasDefaultValue = !config.defaultValue().equals(DEFAULT_VALUE_MARKER);
 
-        return !(field.getType().equals(boolean.class) || !config.required() || defaultValue);
+        return !(isFlag(field) || !config.required() || hasDefaultValue);
     }
 
     /**

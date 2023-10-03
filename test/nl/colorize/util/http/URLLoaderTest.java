@@ -230,13 +230,22 @@ public class URLLoaderTest {
     void classicLoaderPost() throws IOException {
         System.setProperty(URLLoader.FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "true");
 
-        URLLoader request = URLLoader.post("https://httpbin.org/post");
-        request.withJSON("clrz1234");
+        URLLoader request = URLLoader.post("https://dashboard.clrz.nl/rest/echo");
+        request.withBody("message=test", "text/plain");
         URLResponse response = request.send();
 
         assertEquals(HttpStatus.OK, response.status());
-        assertTrue(response.read(Charsets.UTF_8).contains("\"clrz1234\""),
+        assertTrue(response.read(Charsets.UTF_8).contains("\"message\": \"test\""),
             response.read(Charsets.UTF_8));
+    }
+
+    @Test
+    void classicLoaderRedirect() throws IOException {
+        System.setProperty(URLLoader.FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "true");
+
+        URLResponse response = URLLoader.get("http://apple.com").send();
+
+        assertEquals(HttpStatus.OK, response.status());
     }
 
     @Test
@@ -286,10 +295,17 @@ public class URLLoaderTest {
 
         URLLoader.get("https://www.colorize.nl")
             .sendPromise()
-            .then(response -> result.add(response.status()));
+            .getSubject()
+            .subscribe(response -> result.add(response.status()));
 
         Thread.sleep(3000);
 
         assertEquals(List.of(200), result);
+    }
+
+    @Test
+    void parseHttpMethod() {
+        assertEquals(Method.POST, Method.parse("POST"));
+        assertEquals(Method.POST, Method.parse("post"));
     }
 }

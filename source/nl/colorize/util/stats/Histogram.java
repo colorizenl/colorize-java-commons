@@ -39,7 +39,9 @@ public class Histogram<B> {
     }
 
     public void addBin(B bin) {
-        Preconditions.checkState(!bins.contains(bin), "Bin already exists: " + bin);
+        Preconditions.checkState(!bins.contains(bin),
+            "Bin already exists: " + bin);
+
         bins.add(bin);
     }
 
@@ -50,7 +52,9 @@ public class Histogram<B> {
     }
 
     public void addSeries(String name) {
-        Preconditions.checkState(!series.contains(name), "Series already exists: " + name);
+        Preconditions.checkState(!series.contains(name),
+            "Series already exists: " + name);
+
         series.add(name);
         Collections.sort(series);
     }

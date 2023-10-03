@@ -103,4 +103,12 @@ class TupleListTest {
             TupleList.combine(List.of("a", "b"), List.of("2"));
         });
     }
+
+    @Test
+    void map() {
+        TupleList<String, String> original = TupleList.of(Tuple.of("a", "b"), Tuple.of("c", "d"));
+        TupleList<String, String> mapped = original.map(x -> x + "2", y -> y + "3");
+
+        assertEquals("[(a2, b3), (c2, d3)]", mapped.toString());
+    }
 }

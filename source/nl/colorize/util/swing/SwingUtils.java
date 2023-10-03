@@ -36,7 +36,6 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeCellRenderer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -97,8 +96,7 @@ public final class SwingUtils {
         TranslationBundle.fromPropertiesFile(new ResourceFile("custom-swing-components.properties"));
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
-    private static final Color AQUA_ROW_COLOR = new Color(237, 242, 253);
-    private static final Color YOSEMITE_ROW_COLOR = new Color(245, 245, 245);
+    private static final Color ALT_ROW_COLOR = new Color(245, 245, 245);
     private static final Color ROW_BORDER_COLOR = new Color(220, 220, 220);
     private static final int TOOLBAR_ICON_SIZE = 30;
     
@@ -932,27 +930,43 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns the platform's user interface scale factor. On Mac, this always
+     * returns 1.0 because Mac OS applies a consistent scale factor to the
+     * entire desktop. On Windows, desktop resolution/scale factor and UI scale
+     * factor are two independent settings.
+     * <p>
+     * This method returns the UI scale factor for the <em>default</em> screen.
+     * This could be different from the screen that is going to display the
+     * application, but we don't know this yet because this method is called
+     * before the window is even created.
+     */
+    public static float getDesktopScaleFactor() {
+        if (!Platform.isWindows()) {
+            return 1f;
+        }
+
+        return (float) GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .getDefaultScreenDevice()
+            .getDefaultConfiguration()
+            .getDefaultTransform()
+            .getScaleX();
+    }
+
+    /**
      * Returns the appropriate row background color for components with a
      * striped appearance, such as tables, lists, and trees.
      */
     public static Color getStripedRowColor(int rowIndex) {
-        if (rowIndex % 2 == 0) {
-            return STANDARD_ROW_COLOR;
-        } else {
-            if (Platform.isMac()) {
-                return YOSEMITE_ROW_COLOR;
-            } else {
-                return AQUA_ROW_COLOR;
-            }
-        }
+        return rowIndex % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR;
     }
     
-    static Color getStripedRowBorderColor() {
+    protected static Color getStripedRowBorderColor() {
         return ROW_BORDER_COLOR;
     }
     
     private static void paintStripedRows(Graphics2D g2, JComponent component, int rowHeight) {
         int row = 0;
+
         for (int y = 0; y <= component.getHeight(); y += rowHeight) {
             g2.setColor(getStripedRowColor(row));
             g2.fillRect(0, y, component.getWidth(), rowHeight);
@@ -965,7 +979,7 @@ public final class SwingUtils {
      * background colors, if allowed by the platform's UI conventions.
      */
     public static <E> JList<E> createStripedList(List<E> elements) {
-        return new StripedList<E>(elements); 
+        return new StripedList<>(elements);
     }
 
     private static class StripedList<E> extends JList<E> {
@@ -979,8 +993,8 @@ public final class SwingUtils {
             DefaultListCellRenderer delegate = new DefaultListCellRenderer();
 
             setCellRenderer((list, value, index, selected, focus) -> {
-                JComponent cell = (JComponent) delegate.getListCellRendererComponent(list, value,
-                    index, selected, focus);
+                JComponent cell = (JComponent) delegate.getListCellRendererComponent(
+                    list, value, index, selected, focus);
                 if (!selected) {
                     cell.setBackground(getStripedRowColor(index));
                 }
@@ -1006,23 +1020,26 @@ public final class SwingUtils {
     
     private static class StripedTree extends JTree {
         
-        private TreeCellRenderer renderer;
-        
         public StripedTree(DefaultTreeModel treeModel) {
             super(treeModel);
             setOpaque(false);
+            initRenderer();
+        }
 
-            renderer = getCellRenderer();
+        private void initRenderer() {
+            DefaultTreeCellRenderer delegate = (DefaultTreeCellRenderer) getCellRenderer();
 
             setCellRenderer((tree, value, selected, expanded, leaf, row, focus) -> {
-                Component cell = renderer.getTreeCellRendererComponent(tree, value, selected, expanded,
-                    leaf, row, focus);
+                Component cell = delegate.getTreeCellRendererComponent(tree, value, selected,
+                    expanded, leaf, row, focus);
+
                 if (cell instanceof JComponent && !selected) {
                     Color color = getStripedRowColor(row);
                     ((JComponent) cell).setOpaque(false);
                     cell.setBackground(color);
-                    ((DefaultTreeCellRenderer) renderer).setBackgroundNonSelectionColor(color);
+                    delegate.setBackgroundNonSelectionColor(color);
                 }
+
                 return cell;
             });
         }

@@ -2,7 +2,8 @@ Colorize Java Commons
 =====================
 
 Set of Java libraries for web, desktop, and mobile applications. It is used in all Java-based
-applications and libraries developed by [Colorize](http://www.colorize.nl/en/). 
+applications and libraries developed by [Colorize](http://www.colorize.nl), where it has been
+in use since 2007.
 
 The library focuses on portability, and supports a wide variety of platforms and environments.
 It can be used in back-end applications, in cloud environments, in desktop applications on 
@@ -24,13 +25,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2023.12</version>
+        <version>2023.15</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2023.12"
+        implementation "nl.colorize:colorize-java-commons:2023.15"
     }
     
 Documentation

@@ -22,8 +22,6 @@ public class TupleTest {
         assertEquals("second", tuple.right());
         assertEquals("(first, second)", tuple.toString());
         assertEquals("(second, first)", tuple.inverse().toString());
-        assertEquals("(123, second)", tuple.withLeft("123").toString());
-        assertEquals("(first, 2)", tuple.withRight("2").toString());
     }
     
     @Test
@@ -44,5 +42,14 @@ public class TupleTest {
 
         assertNull(tuple.right());
         assertEquals("(first, null)", tuple.toString());
+    }
+
+    @Test
+    void map() {
+        Tuple<String, String> original = Tuple.of("a", "b");
+        Tuple<String, String> mapped = original.map(x -> x + "2", y -> y + "3");
+
+        assertEquals("a2", mapped.left());
+        assertEquals("b3", mapped.right());
     }
 }

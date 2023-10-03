@@ -8,6 +8,7 @@ package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.Subscribable;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -28,7 +29,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -47,17 +47,14 @@ import java.util.stream.Collectors;
  * @param <R> The type of object used as row keys. 
  */
 public class Table<R> extends JPanel implements TableModel {
-    
+
+    private JTable table;
     private List<String> columns;
     private List<Row<R>> rows;
     private Map<R, String> tooltips;
-    
     private List<TableModelListener> modelListeners;
-    private List<ActionListener> doubleClickListeners;
-    
-    private JTable table;
-    private AutoDetectRowSorter sorter;
-    
+    private Subscribable<Table<R>> doubleClick;
+
     /**
      * Creates a new table with the specified columns.
      * @throws IllegalArgumentException when there are no columns.
@@ -65,18 +62,16 @@ public class Table<R> extends JPanel implements TableModel {
     public Table(List<String> columns) {
         super(new BorderLayout());
 
-        if (columns.isEmpty()) {
-            throw new IllegalArgumentException("No columns");
-        }
-        
-        this.columns = ImmutableList.copyOf(columns);
-        rows = new ArrayList<>();
-        tooltips = new HashMap<>();
-        
-        modelListeners = new ArrayList<>();
-        doubleClickListeners = new ArrayList<>();
-        
+        Preconditions.checkArgument(!columns.isEmpty(), "No columns");
+
+        this.columns = List.copyOf(columns);
+        this.rows = new ArrayList<>();
+        this.tooltips = new HashMap<>();
+        this.modelListeners = new ArrayList<>();
+        this.doubleClick = new Subscribable<>();
+
         createTable();
+        initRowSorter();
     }
     
     public Table(String... columns) {
@@ -92,17 +87,40 @@ public class Table<R> extends JPanel implements TableModel {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    notifyDoubleClickListeners();
+                    doubleClick.next(Table.this);
                 }
             }
         });
-        
-        sorter = new AutoDetectRowSorter(this);
-        table.setRowSorter(sorter);
-        
+
         JScrollPane tablePane = new JScrollPane(table);
         tablePane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         add(tablePane, BorderLayout.CENTER);
+    }
+
+    private void initRowSorter() {
+        TableRowSorter<TableModel> rowSorter = new TableRowSorter<>(this);
+        table.setRowSorter(rowSorter);
+
+        for (int i = 0; i < getColumnCount(); i++) {
+            rowSorter.setComparator(i, this::sortRows);
+        }
+    }
+
+    /**
+     * Auto-detects if the data is a string or a number, and sorts the rows
+     * based on that. This will not produce the intended results for every
+     * possible table, but it is still more reasonable default behavior
+     * without having to define a custom comparator for every indiviudal
+     * column.
+     */
+    private int sortRows(Object a, Object b) {
+        try {
+            float numberA = Float.parseFloat(a.toString());
+            float numberB = Float.parseFloat(b.toString());
+            return Float.compare(numberA, numberB);
+        } catch (NumberFormatException e) {
+            return a.toString().compareTo(b.toString());
+        }
     }
 
     @Override
@@ -195,7 +213,8 @@ public class Table<R> extends JPanel implements TableModel {
      * will also remove all rows from the table.
      */
     public void replaceColumns(List<String> newColumns) {
-        Preconditions.checkArgument(newColumns.size() >= 1, "Table must contain at least 1 column");
+        Preconditions.checkArgument(!newColumns.isEmpty(),
+            "Table must contain at least 1 column");
         
         columns = ImmutableList.copyOf(newColumns);
         removeAllRows();
@@ -241,6 +260,7 @@ public class Table<R> extends JPanel implements TableModel {
     /**
      * Returns the index of the row that is currently selected, or -1 when no
      * row is selected.
+     *
      * @deprecated Use {@link #getSelectedRowKey()} instead.
      */
     @Deprecated
@@ -281,7 +301,9 @@ public class Table<R> extends JPanel implements TableModel {
     
     public void setColumnSorter(int columnIndex, Comparator<String> columnSorter) {
         assertColumnIndex(columnIndex);
-        sorter.setComparator(columnIndex, columnSorter);
+
+        TableRowSorter<?> rowSorter = (TableRowSorter<?>) table.getRowSorter();
+        rowSorter.setComparator(columnIndex, columnSorter);
     }
     
     public void setColumnWidth(int columnIndex, int width) {
@@ -312,30 +334,19 @@ public class Table<R> extends JPanel implements TableModel {
         return tooltips.get(row);
     }
     
-    public void addActionListener(final ActionListener al) {
-        final Object source = this;
+    public void addActionListener(ActionListener al) {
+        Object source = this;
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 al.actionPerformed(new ActionEvent(source, ActionEvent.ACTION_PERFORMED, "selectedRow"));
             }
         });
     }
-    
-    public void addDoubleClickListener(ActionListener al) {
-        doubleClickListeners.add(al);
+
+    public Subscribable<Table<R>> getDoubleClick() {
+        return doubleClick;
     }
-    
-    public void removeDoubleClickListener(ActionListener al) {
-        doubleClickListeners.remove(al);
-    }
-    
-    private void notifyDoubleClickListeners() {
-        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "doubleClick");
-        for (ActionListener listener : doubleClickListeners) {
-            listener.actionPerformed(event);
-        }
-    }
-    
+
     /**
      * Extension of {@code javax.swing.JTable} that paints rows in alternating
      * background colors, if allowed by the platform's UI conventions.
@@ -387,7 +398,7 @@ public class Table<R> extends JPanel implements TableModel {
             Component cell = super.prepareRenderer(renderer, row, column);
             if (cell instanceof JComponent && !isRowSelected(row)) {
                 ((JComponent) cell).setOpaque(true);
-                ((JComponent) cell).setBackground(SwingUtils.getStripedRowColor(row));
+                cell.setBackground(SwingUtils.getStripedRowColor(row));
             }
             return cell;
         }
@@ -396,6 +407,7 @@ public class Table<R> extends JPanel implements TableModel {
         @SuppressWarnings({"unchecked", "rawtypes"})
         public String getToolTipText(MouseEvent e) {
             int rowIndex = rowAtPoint(e.getPoint());
+
             if (rowIndex != -1) {
                 rowIndex = convertRowIndexToModel(rowIndex);
                 Table tableModel = (Table) getModel();
@@ -404,6 +416,7 @@ public class Table<R> extends JPanel implements TableModel {
                     return tooltip;
                 }
             }
+
             // Show the default tooltip when none has been specified
             // for the row, or when not hovering over a row.
             return super.getToolTipText(e);
@@ -415,40 +428,6 @@ public class Table<R> extends JPanel implements TableModel {
      * and a number of cells. The cells are matched to the table's columns
      * based on their index.
      */
-    private static class Row<R> {
-    
-        private R key;
-        private List<String> cells;
-        
-        public Row(R key, List<String> cells) {
-            this.key = key;
-            this.cells = ImmutableList.copyOf(cells);
-        }
-    }
-    
-    /**
-     * Auto-detects if the data is a string or a number, and sorts the rows
-     * based on that.
-     */
-    private static class AutoDetectRowSorter extends TableRowSorter<Table<?>>
-            implements Comparator<Object>, Serializable {
-        
-        public AutoDetectRowSorter(Table<?> model) {
-            super(model);
-            for (int i = 0; i < model.getColumnCount(); i++) {
-                setComparator(i, this);
-            }
-        }
-
-        @Override
-        public int compare(Object a, Object b) {
-            try {
-                Float numberA = Float.parseFloat(a.toString());
-                Float numberB = Float.parseFloat(b.toString());
-                return numberA.compareTo(numberB);
-            } catch (NumberFormatException e) {
-                return a.toString().compareTo(b.toString());
-            }
-        }
+    private record Row<R>(R key, List<String> cells) {
     }
 }

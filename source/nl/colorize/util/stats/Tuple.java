@@ -8,6 +8,8 @@ package nl.colorize.util.stats;
 
 import com.google.common.base.Objects;
 
+import java.util.function.Function;
+
 /**
  * Data structure that consists of two ordered values, sometimes also referred
  * to as a pair. Tuples are immutable and may contain {@code null} values. 
@@ -25,24 +27,16 @@ public record Tuple<L, R>(L left, R right) {
     }
     
     /**
-     * Returns a new tuple with the inverse of this tuple's elements.
+     * Returns a new tuple with the inverse of this tuple's elements. For
+     * example, the inverse of the tuple {@code (A, B)} will return the
+     * tuple {@code (B, A)}.
      */
     public Tuple<R, L> inverse() {
         return new Tuple<>(right, left);
     }
-    
-    /**
-     * Returns a new tuple {@code (newLeft, getRight())}.
-     */
-    public Tuple<L, R> withLeft(L newLeft) {
-        return new Tuple<>(newLeft, right);
-    }
-    
-    /**
-     * Returns a new tuple {@code (getLeft(), newRight)}.
-     */
-    public Tuple<L, R> withRight(R newRight) {
-        return new Tuple<>(left, newRight);
+
+    public <L2, R2> Tuple<L2, R2> map(Function<L, L2> leftMapper, Function<R, R2> rightMapper) {
+        return new Tuple<>(leftMapper.apply(left), rightMapper.apply(right));
     }
 
     /**
@@ -54,7 +48,11 @@ public record Tuple<L, R>(L left, R right) {
     public String toString() {
         return String.format("(%s, %s)", left, right);
     }
-    
+
+    /**
+     * Convenience factory method to create a tuple without having to specify
+     * the generic types.
+     */
     public static <L, R> Tuple<L, R> of(L left, R right) {
         return new Tuple<>(left, right);
     }

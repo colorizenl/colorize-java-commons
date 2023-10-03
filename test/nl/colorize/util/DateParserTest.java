@@ -91,4 +91,11 @@ class DateParserTest {
         assertEquals("1 month ago", DateParser.formatRelative(parse("2022-05-27 15:00"), reference));
         assertEquals("1 year ago", DateParser.formatRelative(parse("2021-06-15 15:00"), reference));
     }
+
+    @Test
+    void parseJavaScriptLocalDateTimeFormat() {
+        Date date = parse("2018-06-12T19:30");
+
+        assertEquals("12 Jun 2018 17:30:00 GMT", date.toGMTString());
+    }
 }

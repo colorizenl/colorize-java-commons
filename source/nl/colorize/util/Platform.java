@@ -60,7 +60,6 @@ public enum Platform {
         .put("10.13", "High Sierra")
         .put("10.14", "Mojave")
         .put("10.15", "Catalina")
-        .put("10.16", "Big Sur") // Big Sur is both 10.16 and 11.0
         .put("11.", "Big Sur")
         .put("12.", "Monterey")
         .put("13.", "Ventura")

@@ -7,6 +7,7 @@
 package nl.colorize.util.swing;
 
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.Subscribable;
 import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JButton;
@@ -14,11 +15,9 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -31,8 +30,7 @@ public class PropertyEditor extends JPanel {
 
     private Map<String, String> properties;
     private TranslationBundle bundle;
-    private List<Consumer<Map<String, String>>> listeners;
-
+    private Subscribable<Map<String, String>> changes;
     private Table<String> table;
 
     public PropertyEditor(Map<String, String> initialProperties) {
@@ -40,7 +38,7 @@ public class PropertyEditor extends JPanel {
 
         this.properties = new LinkedHashMap<>();
         this.bundle = SwingUtils.getCustomComponentsBundle();
-        this.listeners = new ArrayList<>();
+        this.changes = new Subscribable<>();
 
         // Initialize the properties. The original map cannot be used
         // because we need to ensure the properties are a LinkedHashMap
@@ -104,7 +102,7 @@ public class PropertyEditor extends JPanel {
         if (selected != null) {
             properties.remove(selected);
             refresh();
-            notifyListeners();
+            changes.next(properties);
         } else {
             Popups.message(null, bundle.getString("PropertyEditor.noPropertySelected"));
         }
@@ -123,7 +121,7 @@ public class PropertyEditor extends JPanel {
                 bundle.getString("PropertyEditor.save"), bundle.getString("PropertyEditor.cancel")) == 0) {
             properties.put(nameField.getText(), valueField.getText());
             refresh();
-            notifyListeners();
+            changes.next(properties);
         }
     }
 
@@ -139,15 +137,7 @@ public class PropertyEditor extends JPanel {
         return properties;
     }
 
-    public void addListener(Consumer<Map<String, String>> callback) {
-        listeners.add(callback);
-    }
-
-    public void removeListener(Consumer<Map<String, String>> callback) {
-        listeners.remove(callback);
-    }
-
-    private void notifyListeners() {
-        listeners.forEach(listener -> listener.accept(properties));
+    public Subscribable<Map<String, String>> getChanges() {
+        return changes;
     }
 }

@@ -191,4 +191,20 @@ public class FileUtilsTest {
         assertEquals("1.2 GB", FileUtils.formatFileSize(1_234_000_000L));
         assertEquals("123.5 GB", FileUtils.formatFileSize(123_456_789_000L));
     }
+
+    @Test
+    void walkFiles(@TempDir File tempDir) throws IOException {
+        FileUtils.write("a", UTF_8, new File(tempDir, "a.txt"));
+        FileUtils.write("b", UTF_8, new File(tempDir, "b.txt"));
+        FileUtils.write("c", UTF_8, new File(tempDir, "c.txt"));
+        File d = FileUtils.mkdir(tempDir, "d");
+        FileUtils.write("d1", UTF_8, new File(tempDir, "d1.txt"));
+
+        List<File> files = FileUtils.walkFiles(tempDir, f -> !f.getName().startsWith("c"));
+
+        assertEquals(3, files.size());
+        assertEquals("a.txt", files.get(0).getName());
+        assertEquals("b.txt", files.get(1).getName());
+        assertEquals("d1.txt", files.get(2).getName());
+    }
 }

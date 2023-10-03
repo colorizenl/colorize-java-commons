@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -73,12 +74,31 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
             .toList();
     }
 
+    public void forEach(BiConsumer<L, R> callback) {
+        for (Tuple<L, R> entry : tuples) {
+            callback.accept(entry.left(), entry.right());
+        }
+    }
+
+    /**
+     * Returns a new {@link TupleList} where every tuple is the inverse of the
+     * tuples in this list. Note the order of the tuples <em>within</em> the
+     * list will not change, this will only affect the tuples themselves.
+     */
     public TupleList<R, L> inverse() {
         List<Tuple<R, L>> inverseTuples = tuples.stream()
             .map(Tuple::inverse)
             .toList();
 
-        return new TupleList<R, L>(inverseTuples);
+        return new TupleList<>(inverseTuples);
+    }
+
+    public <L2, R2> TupleList<L2, R2> map(Function<L, L2> leftMapper, Function<R, R2> rightMapper) {
+        List<Tuple<L2, R2>> mappedTuples = tuples.stream()
+            .map(tuple -> tuple.map(leftMapper, rightMapper))
+            .toList();
+
+        return new TupleList<>(mappedTuples);
     }
 
     /**
@@ -90,16 +110,18 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
         return new TupleList<>(ImmutableList.copyOf(tuples));
     }
 
-    public void forEach(BiConsumer<L, R> callback) {
-        for (Tuple<L, R> entry : tuples) {
-            callback.accept(entry.left(), entry.right());
-        }
-    }
-
+    /**
+     * Factory method that creates a {@link TupleList} that is mutable and
+     * initially empty.
+     */
     public static <L, R> TupleList<L, R> create() {
         return new TupleList<>();
     }
 
+    /**
+     * Factory method that creates a mutable {@link TupleList} from existing
+     * tuples.
+     */
     @SafeVarargs
     public static <L, R> TupleList<L, R> of(Tuple<L, R>... entries) {
         TupleList<L, R> result = TupleList.create();
@@ -107,14 +129,27 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
         return result;
     }
 
+    /**
+     * Factory method that creates a mutable {@link TupleList} from an
+     * existing list of tuples.
+     */
     public static <L, R> TupleList<L, R> of(List<Tuple<L, R>> entries) {
         return new TupleList<>(entries);
     }
 
+    /**
+     * Factory method that creates a mutable {@link TupleList} from an
+     * existing stream of tuples.
+     */
     public static <L, R> TupleList<L, R> fromStream(Stream<Tuple<L, R>> tuples) {
         return new TupleList<>(tuples.toList());
     }
 
+    /**
+     * Factory method that creates a mutable {@link TupleList} from a map.
+     * The map keys will act as the left element in each tuple, with the
+     * corresponding values acting as the right element.
+     */
     public static <L, R> TupleList<L, R> fromMap(Map<L, R> values) {
         List<Tuple<L, R>> tuples = values.entrySet().stream()
             .map(entry -> Tuple.of(entry.getKey(), entry.getValue()))

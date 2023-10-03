@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -242,9 +243,14 @@ public final class FileUtils {
      * with only files matching the filter being returned.
      */
     public static List<File> walkFiles(File dir, Predicate<File> filter) throws IOException {
+        if (!dir.isDirectory() && filter.test(dir)) {
+            return Collections.singletonList(dir);
+        }
+
         return Files.walk(dir.toPath())
             .map(Path::toFile)
             .filter(file -> !file.isDirectory() && filter.test(file))
+            .sorted(Comparator.comparing(File::getAbsolutePath))
             .toList();
     }
 

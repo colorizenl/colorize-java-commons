@@ -38,15 +38,18 @@ import java.util.regex.Pattern;
  */
 public final class DateParser {
 
-    private static final TupleList<Pattern, String> PATTERNS = new TupleList<Pattern, String>()
-        .append(Pattern.compile("\\d{8}"), "yyyyMMdd")
-        .append(Pattern.compile("\\d{4}-\\d{2}-\\d{2}"), "yyyy-MM-dd")
-        .append(Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}"), "yyyy-MM-dd HH:mm")
-        .append(Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"), "yyyy-MM-dd HH:mm:ss")
-        .append(Pattern.compile("\\d{2}-\\d{2}-\\d{4}"), "dd-MM-yyyy")
-        .append(Pattern.compile("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}"), "dd-MM-yyyy HH:mm:ss")
-        .append(Pattern.compile("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}"), "dd-MM-yyyy HH:mm:ss")
-        .append(Pattern.compile("\\d{2}/\\d{2}/\\d{4}"), "MM/dd/yyyy")
+    private static final TupleList<Pattern, String> PATTERNS = new TupleList<String, String>()
+        .append("\\d{8}", "yyyyMMdd")
+        .append("\\d{4}-\\d{2}-\\d{2}", "yyyy-MM-dd")
+        .append("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}", "yyyy-MM-dd HH:mm")
+        .append("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm")
+        .append("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd HH:mm:ss")
+        .append("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm:ss")
+        .append("\\d{2}-\\d{2}-\\d{4}", "dd-MM-yyyy")
+        .append("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss")
+        .append("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss")
+        .append("\\d{2}/\\d{2}/\\d{4}", "MM/dd/yyyy")
+        .map(Pattern::compile, format -> format)
         .immutable();
 
     private static final Map<ChronoUnit, Integer> CALENDAR_FIELD_MAPPING = Map.of(
@@ -147,6 +150,7 @@ public final class DateParser {
      * date that is before the original.
      * <p>
      * This method supports the following time units:
+     *
      * <ul>
      *   <li>{@link ChronoUnit#SECONDS}</li>
      *   <li>{@link ChronoUnit#MINUTES}</li>

@@ -228,30 +228,24 @@ public class Timeline implements Animatable {
     public SortedSet<KeyFrame> getKeyFrames() {
         return keyframes;
     }
-    
-    public int getNumKeyFrames() {
-        return keyframes.size();
-    }
-    
+
     /**
      * Returns the key frame with the lowest position.
+     *
      * @throws IllegalStateException if this timeline does not contain any key frames.
      */
     public KeyFrame getFirstKeyFrame() {
-        if (keyframes.isEmpty()) {
-            throw new IllegalStateException("No key frames");
-        }
+        Preconditions.checkState(!keyframes.isEmpty(), "Timeline does not contain key frames");
         return keyframes.first();
     }
     
     /**
      * Returns the key frame with the highest position.
+     *
      * @throws IllegalStateException if this timeline does not contain any key frames.
      */
     public KeyFrame getLastKeyFrame() {
-        if (keyframes.isEmpty()) {
-            throw new IllegalStateException("No key frames");
-        }
+        Preconditions.checkState(!keyframes.isEmpty(), "Timeline does not contain key frames");
         return keyframes.last();
     }
     
@@ -259,14 +253,14 @@ public class Timeline implements Animatable {
      * Returns the key frame on this timeline that is closest to and less than
      * or equal to {@code position}. If there is only one key frame that will be
      * returned, even if it's position is after {@code position}.
+     *
      * @throws IllegalStateException if this timeline does not contain any key frames.
      */
     protected KeyFrame getClosestKeyFrameBefore(float position) {
-        if (keyframes.isEmpty()) {
-            throw new IllegalStateException("No key frames");
-        }
-        
+        Preconditions.checkState(!keyframes.isEmpty(), "Timeline does not contain key frames");
+
         KeyFrame closest = keyframes.first();
+
         for (KeyFrame keyframe : keyframes) {
             if (keyframe.time() <= position) {
                 closest = keyframe;
@@ -274,6 +268,7 @@ public class Timeline implements Animatable {
                 break;
             }
         }
+
         return closest;
     }
     

@@ -6,7 +6,6 @@
 
 package nl.colorize.util.uitest;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.cli.AnsiColor;
@@ -20,6 +19,7 @@ import nl.colorize.util.swing.PropertyEditor;
 import nl.colorize.util.swing.SwingAnimator;
 import nl.colorize.util.swing.SwingUtils;
 import nl.colorize.util.swing.Table;
+import nl.colorize.util.swing.Utils2D;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -35,10 +35,13 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
+
+import static java.awt.Color.BLUE;
 
 /**
  * Graphical test for a number of custom Swing components. These components are
@@ -94,6 +97,7 @@ public class CustomComponentsUIT {
     private JPanel createCircularLoaderTab() {
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         tab.add(new CircularLoader(40));
+        tab.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
         return tab;
     }
 
@@ -117,17 +121,11 @@ public class CustomComponentsUIT {
     }
 
     private JPanel createMultiLabelTab() {
-        String text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sit " +
-            "amet gravida justo. Nunc nec elit a orci facilisis fermentum. Aliquam placerat " +
-            "rutrum ornare. Donec fermentum pellentesque egestas. Morbi posuere consequat " +
-            "augue ac convallis. In et arcu ante, sed vestibulum nibh.\n\n" +
-            "Phasellus tincidunt arcu at elit fermentum vehicula. Cras a orci est. Aenean " +
-            "pulvinar nunc ut felis ultrices posuere. Integer odio purus, tempor imperdiet " +
-            "semper in, congue adipiscing turpis. Nulla sed ligula urna, vitae sodales " +
-            "justo. Fusce mi nisl, imperdiet in venenatis id, tempor quis turpis. Fusce " +
-            "tempor facilisis tincidunt. Aenean libero dolor, varius id feugiat molestie, " +
-            "blandit sit amet lectus. Cras rhoncus, purus vel posuere malesuada, sapien " +
-            "libero imperdiet quam, quis cursus purus velit non mauris.";
+        String text = """
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sit amet gravida justo. Nunc nec elit a orci facilisis fermentum. Aliquam placerat rutrum ornare. Donec fermentum pellentesque egestas. Morbi posuere consequat augue ac convallis. In et arcu ante, sed vestibulum nibh.
+
+            Phasellus tincidunt arcu at elit fermentum vehicula. Cras a orci est. Aenean pulvinar nunc ut felis ultrices posuere. Integer odio purus, tempor imperdiet semper in, congue adipiscing turpis. Nulla sed ligula urna, vitae sodales justo. Fusce mi nisl, imperdiet in venenatis id, tempor quis turpis. Fusce tempor facilisis tincidunt. Aenean libero dolor, varius id feugiat molestie, blandit sit amet lectus. Cras rhoncus, purus vel posuere malesuada, sapien libero imperdiet quam, quis cursus purus velit non mauris.
+            """;
 
         MultiLabel multiLabel = new MultiLabel(text, 300);
         multiLabel.setBackground(Color.WHITE);
@@ -146,7 +144,7 @@ public class CustomComponentsUIT {
         table.addRow("N", "Nick", "1984");
         table.setRowTooltip("D", "This is a tooltip text for a row which is different from its cells"); 
         table.addActionListener(e -> tableSelectionChanged());
-        table.addDoubleClickListener(e -> tableDoubleClicked());
+        table.getDoubleClick().subscribe(this::tableDoubleClicked);
         return table;
     }
 
@@ -165,18 +163,24 @@ public class CustomComponentsUIT {
     
     private JPanel createAccordionTab() {
         AccordionPanel<Integer> accordion = new AccordionPanel<>(true);
+
         for (int i = 0; i < 4; i++) {
             JLabel title = new JLabel("Title panel " + (i + 1));
-            title.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            title.setBackground(Utils2D.parseHexColor("#e45d61"));
+            title.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+            title.setForeground(Color.WHITE);
+            title.setOpaque(true);
+            title.setFont(title.getFont().deriveFont(Font.BOLD));
             
             JPanel details = new JPanel(new BorderLayout());
-            details.add(new JLabel("Details panel " + (i + 1)), BorderLayout.CENTER);
-            details.setBackground(Color.WHITE);
-            details.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            details.add(new MultiLabel("Details panel " + (i + 1), 400), BorderLayout.CENTER);
+            details.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
             SwingUtils.setPreferredHeight(details, 100);
             
             accordion.addSubPanel(i, title, details);
         }
+
+        accordion.expandSubPanel(0);
         return accordion;
     }
 
@@ -191,7 +195,7 @@ public class CustomComponentsUIT {
 
     private JPanel createStripedListTab() {
         JList<String> list = SwingUtils.createStripedList(
-            ImmutableList.of("First", "Second", "Third", "Fourth", "Fifth"));
+            List.of("First", "Second", "Third", "Fourth", "Fifth"));
         SwingUtils.setPreferredSize(list, 300, 600);
 
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -206,7 +210,7 @@ public class CustomComponentsUIT {
         target.setPreferredSize(new Dimension(200, 200));
         
         JButton animateBackgroundButton = new JButton("Animate background color");
-        animateBackgroundButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
+        animateBackgroundButton.addActionListener(e -> animator.animateBackgroundColor(target, BLUE, 1f));
         
         JButton animateWidthButton = new JButton("Animate width");
         animateWidthButton.addActionListener(e -> animator.animateWidth(target, 300, 1f));
@@ -224,8 +228,8 @@ public class CustomComponentsUIT {
     
     public void showPopup() {
         int button = Popups.message(frame, "Window title", 
-                "This is a message that spans multiple  lines and word wraps across multiple lines.",
-                Arrays.asList("One", "Two"));
+            "This is a message that spans multiple  lines and word wraps across multiple lines.",
+            List.of("One", "Two"));
         LOGGER.info("Selected button: " + button);
 
         Popups.message(frame, "Simple message with default button.");
@@ -244,7 +248,7 @@ public class CustomComponentsUIT {
         LOGGER.info("Selected row: " + table.getSelectedRowKey());
     }
     
-    public void tableDoubleClicked() {
+    public void tableDoubleClicked(Table<?> table) {
         LOGGER.info("Double-clicked on row: " + table.getSelectedRowKey());
     }
 }

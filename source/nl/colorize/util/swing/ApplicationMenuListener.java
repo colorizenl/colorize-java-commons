@@ -30,12 +30,15 @@ public interface ApplicationMenuListener {
      * application menu. If this returns false, the preferences will be
      * hidden, meaning that {@link #onPreferences()} is inaccessible.
      */
-    public boolean hasPreferencesMenu();
+    default boolean hasPreferencesMenu() {
+        return false;
+    }
     
     /**
      * Called when the "Preferences" application menu item (if available) is
-     * clicked. This method is not accessible if {@link #hasPreferencesMenu()}
+     * clicked. This method is never used if {@link #hasPreferencesMenu()}
      * returns false.
      */
-    public void onPreferences();
+    default void onPreferences() {
+    }
 }
