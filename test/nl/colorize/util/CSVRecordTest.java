@@ -142,4 +142,9 @@ public class CSVRecordTest {
         assertEquals(List.of("Name", "Age"), records.get(0).getColumns());
         assertEquals("[(Name, John), (Age, 38)]", records.get(0).getColumnValues().toString());
     }
+
+    @Test
+    void parseEmptyCSV() {
+        assertEquals(0, CSVRecord.parseCSV("", ";", true).size());
+    }
 }

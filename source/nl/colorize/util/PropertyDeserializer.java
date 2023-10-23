@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -172,5 +173,54 @@ public class PropertyDeserializer {
             LOGGER.warning("Cannot deserialize '" + value + "' to " + type.getSimpleName());
             return Optional.empty();
         }
+    }
+
+    // Convenience methods for common data types
+
+    public String parseString(String value, String defaultValue) {
+        return parse(value, String.class, defaultValue);
+    }
+
+    public int parseInt(String value, int defaultValue) {
+        return parse(value, int.class, defaultValue);
+    }
+
+    public long parseLong(String value, long defaultValue) {
+        return parse(value, long.class, defaultValue);
+    }
+
+    public float parseFloat(String value, float defaultValue) {
+        return parse(value, float.class, defaultValue);
+    }
+
+    public double parseDouble(String value, double defaultValue) {
+        return parse(value, double.class, defaultValue);
+    }
+
+    public boolean parseBool(String value, boolean defaultValue) {
+        return parse(value, boolean.class, defaultValue);
+    }
+
+    /**
+     * Returns a {@link PropertyDeserializer} that acts as a live view for
+     * parsing values from the specified {@link Properties} object.
+     */
+    public static PropertyDeserializer fromProperties(Properties properties) {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.registerPreprocessor(properties::getProperty);
+        return propertyDeserializer;
+    }
+
+    /**
+     * Returns a {@link PropertyDeserializer} that acts as a live view for
+     * parsing values from the specified CSV record.
+     */
+    public static PropertyDeserializer fromCSV(CSVRecord record) {
+        Preconditions.checkArgument(record.hasColumnNameInformation(),
+            "CSV is missing column name information");
+
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.registerPreprocessor(record::get);
+        return propertyDeserializer;
     }
 }

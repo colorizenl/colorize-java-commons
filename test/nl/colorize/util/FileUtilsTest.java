@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.util.List;
 
 import static com.google.common.base.Charsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -190,6 +191,7 @@ public class FileUtilsTest {
         assertEquals("123.4 MB", FileUtils.formatFileSize(123_400_000L));
         assertEquals("1.2 GB", FileUtils.formatFileSize(1_234_000_000L));
         assertEquals("123.5 GB", FileUtils.formatFileSize(123_456_789_000L));
+        assertEquals("2.0 TB", FileUtils.formatFileSize(1_999_999_999_999L));
     }
 
     @Test
@@ -206,5 +208,35 @@ public class FileUtilsTest {
         assertEquals("a.txt", files.get(0).getName());
         assertEquals("b.txt", files.get(1).getName());
         assertEquals("d1.txt", files.get(2).getName());
+    }
+
+    @Test
+    void walkFilesOnSingleFile(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "test.txt");
+        FileUtils.write("1234", UTF_8, tempFile);
+
+        assertEquals(1, FileUtils.walkFiles(tempFile, f -> f.getName().contains("test")).size());
+        assertEquals(0, FileUtils.walkFiles(tempFile, f -> f.getName().contains("no")).size());
+    }
+
+    @Test
+    void createTempFile() throws IOException {
+        byte[] contents = {1, 2, 3, 4};
+        File tempFile = FileUtils.createTempFile(contents);
+
+        assertTrue(tempFile.exists());
+        assertArrayEquals(contents, Files.readAllBytes(tempFile.toPath()));
+        assertEquals("4 bytes", FileUtils.formatFileSize(tempFile));
+    }
+
+    @Test
+    void writeBinaryFile(@TempDir File tempDir) throws IOException {
+        File tempFile = new File(tempDir, "test");
+        byte[] contents = {1, 2, 3, 4};
+        FileUtils.write(contents, tempFile);
+
+        assertTrue(tempFile.exists());
+        assertArrayEquals(contents, Files.readAllBytes(tempFile.toPath()));
+        assertEquals("4 bytes", FileUtils.formatFileSize(tempFile));
     }
 }

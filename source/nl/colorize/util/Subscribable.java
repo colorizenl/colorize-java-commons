@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 /**
@@ -62,6 +63,10 @@ public final class Subscribable<T> {
         return new CopyOnWriteArrayList<>();
     }
 
+    /**
+     * Publishes the next event to all event subscribers. If subscriptions
+     * have already been disposed, calling this method does nothing.
+     */
     public void next(T event) {
         if (disposed) {
             return;
@@ -74,6 +79,12 @@ public final class Subscribable<T> {
         history.add(event);
     }
 
+    /**
+     * Publishes the next error to all error subscribers. If no error
+     * subscribers exist, publishing an error will result in the error
+     * being logged. If subscriptions have already been disposed, calling
+     * this method does nothing.
+     */
     public void nextError(Exception error) {
         if (disposed) {
             return;
@@ -95,8 +106,15 @@ public final class Subscribable<T> {
      * subscribers. If the operation completes normally, the return value is
      * published to subscribers. If the operation produces an exception, this
      * exception is published to error subscribers.
+     * <p>
+     * If subscriptions have already been disposed, calling this method does
+     * nothing.
      */
     public void next(Callable<T> operation) {
+        if (disposed) {
+            return;
+        }
+
         try {
             T event = operation.call();
             next(event);
@@ -105,12 +123,27 @@ public final class Subscribable<T> {
         }
     }
 
+    /**
+     * Registers the specified callback functions as event and error subscribers,
+     * respectively. The subscribers will immediately be notified of previously
+     * published events and/or errors.
+     *
+     * @throws IllegalStateException when trying to subscribe when subscriptions
+     *         have alreasdy been disposed.
+     */
     public Subscribable<T> subscribe(Consumer<T> onEvent, Consumer<Exception> onError) {
         subscribe(onEvent);
         subscribeErrors(onError);
         return this;
     }
 
+    /**
+     * Registers the specified callback function as event subscriber. The
+     * subscriber will immediately be notified of previously published events.
+     *
+     * @throws IllegalStateException when trying to subscribe when subscriptions
+     *         have alreasdy been disposed.
+     */
     public Subscribable<T> subscribe(Consumer<T> onEvent) {
         Preconditions.checkState(!disposed, "Subscribable has already been disposed");
         eventSubscribers.add(onEvent);
@@ -118,6 +151,13 @@ public final class Subscribable<T> {
         return this;
     }
 
+    /**
+     * Registers the specified callback function as error subscriber. The
+     * subscriber will immediately be notified of previously published errors.
+     *
+     * @throws IllegalStateException when trying to subscribe when subscriptions
+     *         have alreasdy been disposed.
+     */
     public Subscribable<T> subscribeErrors(Consumer<Exception> onError) {
         Preconditions.checkState(!disposed, "Subscribable has already been disposed");
         errorSubscribers.add(onError);
@@ -138,6 +178,11 @@ public final class Subscribable<T> {
         errorSubscribers.clear();
     }
 
+    /**
+     * Returns a new {@link Subscribable} that will forward events to its own
+     * subscribers, but first uses the specified mapping function on each event.
+     * Errors will be forwarded as-is.
+     */
     public <S> Subscribable<S> map(Function<T, S> mapper) {
         Subscribable<S> mapped = new Subscribable<>();
         subscribe(event -> {
@@ -150,6 +195,22 @@ public final class Subscribable<T> {
         });
         subscribeErrors(mapped::nextError);
         return mapped;
+    }
+
+    /**
+     * Returns a new {@link Subscribable} that will forward events to its own
+     * subscribers, but only if the event matches the specified predicate.
+     * Errors will be forwarded as-is.
+     */
+    public Subscribable<T> filter(Predicate<T> predicate) {
+        Subscribable<T> filtered = new Subscribable<>();
+        subscribe(event -> {
+            if (predicate.test(event)) {
+                filtered.next(event);
+            }
+        });
+        subscribeErrors(filtered::nextError);
+        return filtered;
     }
 
     /**

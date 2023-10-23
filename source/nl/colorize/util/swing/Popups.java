@@ -6,8 +6,8 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import nl.colorize.util.LogHelper;
 import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JComponent;
@@ -19,7 +19,6 @@ import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Utility class for working with pop-up windows. This class can be used instead
@@ -40,7 +39,6 @@ public final class Popups {
     private static final TranslationBundle BUNDLE = SwingUtils.getCustomComponentsBundle();
     private static final String DEFAULT_OK = BUNDLE.getString("Popups.ok");
     private static final String DEFAULT_CANCEL = BUNDLE.getString("Popups.cancel");
-    private static final Logger LOGGER = LogHelper.getLogger(Popups.class);
 
     private Popups() {
     }
@@ -55,7 +53,7 @@ public final class Popups {
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, JComponent panel, List<String> buttons) {
-        checkDialogProperties(title, buttons);
+        Preconditions.checkArgument(!buttons.isEmpty(), "Missing buttons");
         
         // Wrap the panel inside another panel so that it will be displayed
         // at its intended size.
@@ -73,16 +71,6 @@ public final class Popups {
         dialog.dispose();
         
         return getSelectedPopupButton(pane, buttons);
-    }
-
-    private static void checkDialogProperties(String title, List<String> buttons) {
-        if (buttons.isEmpty()) {
-            throw new IllegalArgumentException("Invalid number of buttons: " + buttons.size());
-        }
-        
-        if (title == null || title.isEmpty()) {
-            LOGGER.warning("Pop-up window has no title, which is against UI guidelines");
-        }
     }
 
     private static int getSelectedPopupButton(JOptionPane pane, List<String> buttons) {

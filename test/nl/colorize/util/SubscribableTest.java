@@ -171,4 +171,15 @@ class SubscribableTest {
         assertEquals(0, originalErrors.size());
         assertEquals(2, mappedErrors.size());
     }
+
+    @Test
+    void filter() {
+        List<String> received = new ArrayList<>();
+
+        Subscribable.of("a", "b", "c")
+            .filter(x -> !x.equals("b"))
+            .subscribe(received::add);
+
+        assertEquals("[a, c]", received.toString());
+    }
 }

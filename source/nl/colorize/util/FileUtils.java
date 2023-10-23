@@ -243,8 +243,12 @@ public final class FileUtils {
      * with only files matching the filter being returned.
      */
     public static List<File> walkFiles(File dir, Predicate<File> filter) throws IOException {
-        if (!dir.isDirectory() && filter.test(dir)) {
-            return Collections.singletonList(dir);
+        if (!dir.isDirectory()) {
+            if (filter.test(dir)) {
+                return Collections.singletonList(dir);
+            } else {
+                return Collections.emptyList();
+            }
         }
 
         return Files.walk(dir.toPath())

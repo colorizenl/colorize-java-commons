@@ -112,18 +112,6 @@ public class TextUtilsTest {
         assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("", "test"), 0.01f);
         assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("test", ""), 0.01f);
     }
-    
-    @Test
-    public void testFuzzyMatch() {
-        assertEquals(Arrays.asList("john smith", "john smit"), TextUtils.fuzzyMatch("john smith", 
-                Arrays.asList("john smith", "john smit", "john", "pete"), 0.2f));
-        assertEquals(Arrays.asList(), TextUtils.fuzzyMatch("john smith", Arrays.asList(), 0.1f));
-        assertEquals(Arrays.asList("aaa", "aab"), TextUtils.fuzzyMatch("aaa", 
-                Arrays.asList("aaa", "aab", "abb"), 0.35f));
-        assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", 
-                Arrays.asList("aaa", "aab", "abb"), 0.1f));
-        assertEquals(Arrays.asList("aaa"), TextUtils.fuzzyMatch("aaa", Arrays.asList("aaa"), 0f));
-    }
 
     @Test
     void startsWith() {

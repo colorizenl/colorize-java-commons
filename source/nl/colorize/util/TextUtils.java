@@ -404,33 +404,6 @@ public final class TextUtils {
         relativeDistance = Math.min(relativeDistance, 1f);
         return relativeDistance;
     }
-    
-    /**
-     * Returns all candidates that "fuzzy match" the specified string. Fuzzy matching
-     * is done using the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
-     * Levenshtein distance</a>, relative to the length of the string, against the
-     * provided threshold.
-     *
-     * @throws IllegalArgumentException if the threshold is outside the range between
-     *         0.0 (strings must be equal) and 1.0 (any string is allowed).
-     */
-    public static List<String> fuzzyMatch(String str, Collection<String> candidates, float threshold) {
-        Preconditions.checkArgument(threshold >= 0f && threshold <= 1f, 
-                "Threshold is outside range 0.0 - 1.0: " + threshold);
-        
-        List<String> fuzzyMatches = new ArrayList<>();
-        for (String candidate : candidates) {
-            if (candidate != null && isFuzzyMatch(str, candidate, threshold)) {
-                fuzzyMatches.add(candidate);
-            }
-        }
-        return fuzzyMatches;
-    }
-
-    private static boolean isFuzzyMatch(String str, String candidate, float threshold) {
-        float distance = calculateRelativeLevenshteinDistance(str, candidate);
-        return distance <= threshold;
-    }
 
     private static BufferedReader toBufferedReader(Reader reader) {
         if (reader instanceof BufferedReader) {

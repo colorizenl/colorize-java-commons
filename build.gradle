@@ -8,13 +8,16 @@ apply plugin: "maven-publish"
 apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2023.15"
-sourceCompatibility = "17"
-targetCompatibility = "17"
+version = "2023.16"
 compileJava.options.encoding = "UTF-8"
-sourceSets.main.java.srcDirs = ["source"]
-sourceSets.main.resources.srcDirs = ["resources"]
-sourceSets.test.java.srcDirs = ["test"]
+
+java {
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
+    sourceSets.main.java.srcDirs = ["source"]
+    sourceSets.main.resources.srcDirs = ["resources"]
+    sourceSets.test.java.srcDirs = ["test"]
+}
 
 repositories {
     mavenCentral()
@@ -37,7 +40,7 @@ test {
 jacocoTestReport {
     afterEvaluate {
         classDirectories.from = files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ["**/swing/**"])
+            fileTree(dir: it, exclude: ["**/swing/**", "**/Platform*"])
         })
     }
 }

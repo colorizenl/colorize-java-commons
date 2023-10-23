@@ -70,14 +70,6 @@ public class CSVRecord {
         return cells.get(columnIndex);
     }
 
-    /**
-     * Returns the list of cells in this CSV record. The list will be sorted to
-     * match the order in which the cells appear in the CSV.
-     */
-    public List<String> getCells() {
-        return ImmutableList.copyOf(cells);
-    }
-
     public boolean hasColumnNameInformation() {
         return !columns.isEmpty();
     }

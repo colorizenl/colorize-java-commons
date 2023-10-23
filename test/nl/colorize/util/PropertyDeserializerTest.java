@@ -83,4 +83,52 @@ class PropertyDeserializerTest {
         assertEquals(-1, withoutPreprocessor.parse("a", int.class, -1));
         assertEquals(2, withPreprocessor.parse("a", int.class, -1));
     }
+
+    @Test
+    void fromProperties() {
+        Properties properties = new Properties();
+        properties.setProperty("a", "2");
+        properties.setProperty("b", "wrong");
+
+        PropertyDeserializer propertyDeserializer = PropertyDeserializer.fromProperties(properties);
+
+        assertEquals(2, propertyDeserializer.parse("a", int.class, -1));
+        assertEquals(-1, propertyDeserializer.parse("b", int.class, -1));
+        assertEquals(-1, propertyDeserializer.parse("c", int.class, -1));
+    }
+
+    @Test
+    void shortHandForCommonDataTypes() {
+        Properties properties = new Properties();
+        properties.setProperty("a", "2");
+        properties.setProperty("b", "3.4");
+        properties.setProperty("c", "true");
+        properties.setProperty("d", "1234");
+        properties.setProperty("e", "5.6");
+
+        PropertyDeserializer propertyDeserializer = PropertyDeserializer.fromProperties(properties);
+
+        assertEquals(2, propertyDeserializer.parseInt("a", -1));
+        assertEquals(3.4f, propertyDeserializer.parseFloat("b", -1f), 0.001f);
+        assertTrue(propertyDeserializer.parseBool("c", false));
+        assertEquals(1234L, propertyDeserializer.parseLong("d", -1L));
+        assertEquals(5.6, propertyDeserializer.parseDouble("e", -1f), 0.001);
+        assertEquals("5.6", propertyDeserializer.parseString("e", ""));
+    }
+
+    @Test
+    void fromCSV() {
+        CSVRecord csv = CSVRecord.create(List.of("name", "age"), List.of("John", "38"));
+        PropertyDeserializer parser = PropertyDeserializer.fromCSV(csv);
+
+        assertEquals("John", parser.parseString("name", "?"));
+        assertEquals(38, parser.parseInt("age", -1));
+    }
+
+    @Test
+    void csvMissingColumnNamesCannotBeParsed() {
+        CSVRecord csv = CSVRecord.create("John", "38");
+
+        assertThrows(IllegalArgumentException.class, () -> PropertyDeserializer.fromCSV(csv));
+    }
 }

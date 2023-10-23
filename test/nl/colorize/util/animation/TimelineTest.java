@@ -6,12 +6,11 @@
 
 package nl.colorize.util.animation;
 
+import nl.colorize.util.Stopwatch;
 import nl.colorize.util.swing.AnimatedColor;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
-import java.util.Iterator;
-import java.util.SortedSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,14 +38,21 @@ public class TimelineTest {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
         timeline.addKeyFrame(5f, 0);
         assertEquals(0f, timeline.getPlayhead(), EPSILON);
-        assertEquals(0f, timeline.getDelta(), 0.01f);
+        assertEquals(0f, timeline.getDelta(), EPSILON);
+        assertTrue(timeline.isAtStart());
+
         timeline.setPlayhead(2f);
         assertEquals(2f, timeline.getPlayhead(), EPSILON);
-        assertEquals(0.4f, timeline.getDelta(), 0.01f);
+        assertEquals(0.4f, timeline.getDelta(), EPSILON);
+        assertFalse(timeline.isAtStart());
+
         timeline.reset();
         assertEquals(0f, timeline.getPlayhead(), EPSILON);
+        assertEquals(0f, timeline.getDelta(), EPSILON);
+
         timeline.end();
         assertEquals(5f, timeline.getPlayhead(), EPSILON);
+        assertEquals(1f, timeline.getDelta(), EPSILON);
     }
 
     @Test
@@ -79,8 +85,9 @@ public class TimelineTest {
     @Test
     public void testNoZeroTimeline() {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
+        timeline.setPlayhead(1f);
 
-        assertThrows(IllegalStateException.class, () -> timeline.setPlayhead(1f));
+        assertEquals(0f, timeline.getPlayhead(), EPSILON);
     }
 
     @Test
@@ -91,21 +98,17 @@ public class TimelineTest {
         timeline.addKeyFrame(new KeyFrame(1f, 7.1f));
         timeline.addKeyFrame(new KeyFrame(0.5f, 2f));
 
-        SortedSet<KeyFrame> keyframes = timeline.getKeyFrames();
-        assertEquals(4, keyframes.size());
-        Iterator<KeyFrame> iterator = keyframes.iterator();
-        KeyFrame keyframe = iterator.next();
-        assertEquals(0f, keyframe.time(), EPSILON);
-        assertEquals(7f, keyframe.value(), EPSILON);
-        keyframe = iterator.next();
-        assertEquals(0.5f, keyframe.time(), EPSILON);
-        assertEquals(2f, keyframe.value(), EPSILON);
-        keyframe = iterator.next();
-        assertEquals(1f, keyframe.time(), EPSILON);
-        assertEquals(7.1f, keyframe.value(), 0.01f);
-        keyframe = iterator.next();
-        assertEquals(3f, keyframe.time(), EPSILON);
-        assertEquals(10f, keyframe.value(), 0.01f);
+        timeline.setPlayhead(0f);
+        assertEquals(7f, timeline.getValue(), EPSILON);
+
+        timeline.setPlayhead(0.5f);
+        assertEquals(2f, timeline.getValue(), EPSILON);
+
+        timeline.setPlayhead(1f);
+        assertEquals(7.1f, timeline.getValue(), 0.01f);
+
+        timeline.setPlayhead(3f);
+        assertEquals(10f, timeline.getValue(), 0.01f);
     }
 
     @Test
@@ -119,21 +122,27 @@ public class TimelineTest {
         Timeline timeline = new Timeline(Interpolation.LINEAR, false);
         timeline.addKeyFrame(new KeyFrame(0f, 2f));
         timeline.addKeyFrame(new KeyFrame(1f, 3f));
-        timeline.addKeyFrame(new KeyFrame(5f, 5f));
 
-        assertEquals(Interpolation.LINEAR, timeline.getInterpolationMethod());
+        KeyFrame last = new KeyFrame(5f, 5f);
+        timeline.addKeyFrame(last);
         assertEquals(2f, timeline.getValue(), 0.01f);
+
         timeline.setPlayhead(0.5f);
         assertEquals(2.5f, timeline.getValue(), 0.01f);
+
         timeline.setPlayhead(1f);
         assertEquals(3f, timeline.getValue(), 0.01f);
+
         timeline.setPlayhead(2f);
         assertEquals(3.5f, timeline.getValue(), 0.01f);
+
         timeline.setPlayhead(3f);
         assertEquals(4f, timeline.getValue(), 0.01f);
+
         timeline.setPlayhead(5f);
         assertEquals(5f, timeline.getValue(), 0.01f);
-        timeline.removeKeyFrame(5f);
+
+        timeline.removeKeyFrame(last);
         assertEquals(3f, timeline.getValue(), 0.01f);
     }
 
@@ -142,6 +151,7 @@ public class TimelineTest {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(new KeyFrame(2f, 10f));
         assertEquals(10f, timeline.getValue(), 0.01f);
+
         timeline.addKeyFrame(new KeyFrame(0f, 7f));
         assertEquals(7f, timeline.getValue(), 0.01f);
     }
@@ -162,7 +172,7 @@ public class TimelineTest {
     public void testNoKeyFrames() {
         Timeline timeline = new Timeline();
 
-        assertThrows(IllegalStateException.class, () -> timeline.getValue());
+        assertEquals(0f, timeline.getValue(), EPSILON);
     }
 
     @Test
@@ -170,7 +180,7 @@ public class TimelineTest {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(new KeyFrame(1f, 2f));
 
-        assertThrows(IllegalArgumentException.class, () -> timeline.addKeyFrame(new KeyFrame(1f, 3f)));
+        assertThrows(IllegalStateException.class, () -> timeline.addKeyFrame(new KeyFrame(1f, 3f)));
     }
 
     @Test
@@ -179,25 +189,16 @@ public class TimelineTest {
         timeline.addKeyFrame(0f, 10f);
         timeline.addKeyFrame(1f, 20f);
         timeline.movePlayhead(1f);
+
         assertTrue(timeline.isCompleted());
-        assertEquals(1f, timeline.getLastKeyFrame().time(), EPSILON);
+        assertEquals(20f, timeline.getValue(), EPSILON);
+
         timeline.addKeyFrame(1.5f, 20f);
-        assertEquals(1.5f, timeline.getLastKeyFrame().time(), EPSILON);
         assertFalse(timeline.isCompleted());
+        assertEquals(20f, timeline.getValue(), EPSILON);
+
         timeline.movePlayhead(0.5f);
         assertTrue(timeline.isCompleted());
-    }
-
-    @Test
-    public void testClosestKeyFrame() {
-        Timeline timeline = new Timeline();
-        timeline.addKeyFrame(0f, 0f);
-        assertEquals(0f, timeline.getClosestKeyFrameBefore(10).value(), EPSILON);
-        timeline.addKeyFrame(5f, 5f);
-        assertEquals(5f, timeline.getClosestKeyFrameBefore(10).value(), EPSILON);
-        timeline.addKeyFrame(11f, 11f);
-        assertEquals(5f, timeline.getClosestKeyFrameBefore(10).value(), EPSILON);
-        assertEquals(11f, timeline.getClosestKeyFrameBefore(11).value(), EPSILON);
     }
 
     @Test
@@ -243,24 +244,107 @@ public class TimelineTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void testReplaceKeyFrame() {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(1f, 10f);
-        timeline.addKeyFrame(2f, 20f);
+        KeyFrame middle = new KeyFrame(2f, 20f);
+        timeline.addKeyFrame(middle);
         timeline.setPlayhead(20f);
-
-        assertTrue(timeline.hasKeyFrameAtPosition(2f));
-        assertEquals(20f, timeline.getLastKeyFrame().value(), EPSILON);
-        assertTrue(timeline.isCompleted());
-
-        timeline.removeKeyFrame(2f);
+        timeline.removeKeyFrame(middle);
         timeline.addKeyFrame(3f, 30f);
+        timeline.end();
 
-        assertFalse(timeline.hasKeyFrameAtPosition(2f));
-        assertTrue(timeline.hasKeyFrameAtPosition(3f));
-        assertEquals(30f, timeline.getLastKeyFrame().value(), EPSILON);
-        assertFalse(timeline.isCompleted());
+        String expected = """
+            Timeline
+                1.0: 10.0
+                3.0: 30.0
+            """;
+
+        assertEquals(expected, timeline.toString());
+    }
+
+    @Test
+    void testTimelineWithoutKeyFrameAtZero() {
+        Timeline timeline = new Timeline();
+        timeline.addKeyFrame(new KeyFrame(1f, 10f));
+
+        assertEquals(10f, timeline.getValue(), EPSILON);
+
+        timeline.setPlayhead(0.5f);
+        assertEquals(10f, timeline.getValue(), EPSILON);
+
+        timeline.setPlayhead(1f);
+        assertEquals(10f, timeline.getValue(), EPSILON);
+    }
+
+    @Test
+    void insertKeyFramesInOrder() {
+        Timeline timeline = new Timeline();
+        timeline.addKeyFrame(1.5f, 1f);
+        timeline.addKeyFrame(2f, 2f);
+        timeline.addKeyFrame(2.5f, 3f);
+
+        String expected = """
+            Timeline
+                1.5: 1.0
+                2.0: 2.0
+                2.5: 3.0
+            """;
+
+        assertEquals(expected, timeline.toString());
+    }
+
+    @Test
+    void insertKeyFramesOutOfOrder() {
+        Timeline timeline = new Timeline();
+        timeline.addKeyFrame(4f, 4f);
+        timeline.addKeyFrame(1.5f, 1f);
+        timeline.addKeyFrame(2.5f, 3f);
+        timeline.addKeyFrame(2f, 2f);
+
+        String expected = """
+            Timeline
+                1.5: 1.0
+                2.0: 2.0
+                2.5: 3.0
+                4.0: 4.0
+            """;
+
+        assertEquals(expected, timeline.toString());
+    }
+
+    @Test
+    void cannotInsertSameKeyFrameTwice() {
+        Timeline timeline = new Timeline();
+        timeline.addKeyFrame(1.2f, 1f);
+
+        assertThrows(IllegalStateException.class, () -> timeline.addKeyFrame(1.2f, 2f));
+    }
+
+    @Test
+    void emptyTimelineIsNotConsideredCompleted() {
+        Timeline empty = new Timeline();
+
+        assertEquals(0f, empty.getPlayhead());
+        assertEquals(0f, empty.getDuration());
+        assertFalse(empty.isCompleted());
+    }
+
+    @Test
+    void performanceForHugeTimeline() {
+        Timeline timeline = new Timeline();
+        Stopwatch timer = new Stopwatch();
+
+        for (int i = 0; i < 1_000_000; i++) {
+            timeline.addKeyFrame(i, i);
+        }
+
+        for (int i = 0; i < 1_000_000; i++) {
+            timeline.setPlayhead(i);
+        }
+
+        assertTrue(timer.tock() <= 2000L,
+            "Insufficient timeline performance: " + timer.tock());
     }
 
     private void assertRGBA(Color color, int r, int g, int b, int a) {

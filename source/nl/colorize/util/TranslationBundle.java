@@ -43,7 +43,7 @@ public final class TranslationBundle {
 
     /**
      * Creates a {@link TranslationBundle} based on the specified default
-     * translation. Additional translations can be added afterwards.
+     * translation. Additional translations can be added afterward.
      * <p>
      * In most cases, translation data will be stored in {@code .properties}
      * files. The factory methods {@link #fromProperties(Properties)} and/or
@@ -52,11 +52,23 @@ public final class TranslationBundle {
      * and then using this constructor.
      */
     private TranslationBundle(Map<String, String> defaultTranslation) {
+        //TODO cannot use Map.copyOf() until it's supported by TeaVM.
         this.defaultTranslation = ImmutableMap.copyOf(defaultTranslation);
         this.translations = new HashMap<>();
     }
 
+    /**
+     * Adds a translation for the specified locale. The default translation
+     * will act as a fallback for any keys that are not included in the
+     * translation.
+     *
+     * @throws IllegalArgumentException if this {@link TranslationBundle}
+     *         already includes a translation for the same locale.
+     */
     public void addTranslation(Locale locale, TranslationBundle translation) {
+        Preconditions.checkArgument(!translations.containsKey(locale),
+            "Translation for locale already exists: " + locale);
+
         translations.put(locale, translation);
     }
 
@@ -120,12 +132,14 @@ public final class TranslationBundle {
     }
 
     public Set<String> getKeys() {
+        //TODO cannot use Set.copyOf() until it's supported by TeaVM.
         return ImmutableSet.copyOf(defaultTranslation.keySet());
     }
 
     /**
      * Factory method that creates a {@link TranslationBundle} from a map with
-     * key/value pairs for the default translation.
+     * key/value pairs for the default translation. Additional translations
+     * can be added afterward.
      */
     public static TranslationBundle fromMap(Map<String, String> defaultTranslation) {
         return new TranslationBundle(defaultTranslation);
@@ -133,7 +147,8 @@ public final class TranslationBundle {
 
     /**
      * Factory method that creates a {@link TranslationBundle} from an existing
-     * {@link Properties} instance.
+     * {@link Properties} instance with key/value pairs for the default
+     * translation. Additional translations can be added afterward.
      */
     public static TranslationBundle fromProperties(Properties defaultTranslation) {
         return new TranslationBundle(LoadUtils.toMap(defaultTranslation));

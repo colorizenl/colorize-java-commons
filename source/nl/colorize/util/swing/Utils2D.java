@@ -144,6 +144,7 @@ public final class Utils2D {
      */
     public static void saveJPEG(BufferedImage image, OutputStream output) throws IOException {
         ImageWriter writer = ImageIO.getImageWritersByFormatName("JPEG").next();
+
         try (ImageOutputStream ios = ImageIO.createImageOutputStream(output)) {
             writer.setOutput(ios);
             ImageWriteParam param = writer.getDefaultWriteParam();
@@ -168,6 +169,7 @@ public final class Utils2D {
     /**
      * Converts a {@code BufferedImage} to the specified image format. If the image
      * already has the correct type this method does nothing.
+     *
      * @param type Requested image format, for example {@code BufferedImage.TYPE_INT_ARGB}.
      */
     public static BufferedImage convertImage(BufferedImage image, int type) {
@@ -250,6 +252,7 @@ public final class Utils2D {
      * Scales an image to the specified dimensions. The image's aspect ratio is
      * ignored, meaning the image will appear stretched or squashed if the
      * target width/height have a different aspect ratio.
+     *
      * @param highQuality Improves the quality of the scaled image, at the cost
      *        of performance. 
      */
@@ -265,11 +268,21 @@ public final class Utils2D {
         g2.dispose();
         return rescaled;
     }
+
+    /**
+     * Scales an image to the specified dimensions. The image's aspect ratio is
+     * ignored, meaning the image will appear stretched or squashed if the
+     * target width/height have a different aspect ratio.
+     */
+    public static BufferedImage scaleImage(Image original, int targetWidth, int targetHeight) {
+        return scaleImage(original, targetWidth, targetHeight, false);
+    }
     
     /**
      * Scales an image while maintaining its aspect ratio. This will prevent the 
      * image from looking stretched or squashed if the target width/height have a
-     * different aspect ratio. 
+     * different aspect ratio.
+     *
      * @param highQuality Improves the quality of the scaled image, at the cost
      *        of performance.
      */
@@ -297,6 +310,15 @@ public final class Utils2D {
         g2.dispose();
         
         return scaled;
+    }
+
+    /**
+     * Scales an image while maintaining its aspect ratio. This will prevent the
+     * image from looking stretched or squashed if the target width/height have a
+     * different aspect ratio.
+     */
+    public static BufferedImage scaleImageProportional(Image original, int width, int height) {
+        return scaleImageProportional(original, width, height, false);
     }
 
     /**
