@@ -151,9 +151,9 @@ public class URLLoaderTest {
     }
 
     @Test
-    public void testSingleParameterWithoutName() {
+    public void testSingleParameterWithEmptyValue() {
         URLLoader urlLoader = URLLoader.get("http://www.colorize.nl");
-        urlLoader.withQueryParam("", "123");
+        urlLoader.withQueryParam("123", "");
 
         assertEquals("http://www.colorize.nl?123", urlLoader.toString());
     }
