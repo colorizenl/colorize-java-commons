@@ -11,6 +11,7 @@ import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +92,20 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
             .toList();
 
         return new TupleList<>(inverseTuples);
+    }
+
+    /**
+     * Returns a new {@link TupleList} that will contain all tuples from this
+     * list, followed by all tuples from {@code other}. This method is
+     * different from {@link #addAll(Collection)} in that it does <em>not</em>
+     * modify the current list, and instead always creates and returns a new
+     * {@link TupleList} instance.
+     */
+    public TupleList<L, R> concat(TupleList<L, R> other) {
+        TupleList<L, R> result = new TupleList<>();
+        result.addAll(this);
+        result.addAll(other);
+        return result;
     }
 
     public <L2, R2> TupleList<L2, R2> map(Function<L, L2> leftMapper, Function<R, R2> rightMapper) {

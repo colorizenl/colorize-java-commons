@@ -7,6 +7,7 @@
 package nl.colorize.util.http;
 
 import nl.colorize.util.stats.Tuple;
+import nl.colorize.util.stats.TupleList;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -18,9 +19,10 @@ class HeadersTest {
 
     @Test
     void keepOrder() {
-        Headers headers = new Headers()
-            .append("Content-Type", "application/json")
-            .append("Accept", "application/json");
+        Headers headers = Headers.of(
+            "Content-Type", "application/json",
+            "Accept", "application/json"
+        );
 
         String expected = """
             Content-Type: application/json
@@ -32,10 +34,11 @@ class HeadersTest {
 
     @Test
     void allowSameHeaderMultipleTimes() {
-        Headers headers = new Headers()
-            .append("Content-Type", "application/json")
-            .append("Test", "2")
-            .append("Test", "3");
+        Headers headers = Headers.of(
+            "Content-Type", "application/json",
+            "Test", "2",
+            "Test", "3"
+        );
 
         String expected = """
             Content-Type: application/json
@@ -48,9 +51,10 @@ class HeadersTest {
 
     @Test
     void headerNamesAreCaseInsensitive() {
-        Headers headers = new Headers()
-            .append("Test", "2")
-            .append("test", "3");
+        Headers headers = Headers.of(
+            "Test", "2",
+            "test", "3"
+        );
 
         assertEquals("2", headers.get("Test").orElse(null));
         assertEquals("2", headers.get("test").orElse(null));
@@ -59,62 +63,44 @@ class HeadersTest {
     }
 
     @Test
-    void appendHeaders() {
-        Headers headers = new Headers(Tuple.of("A", "2"), Tuple.of("B", "3"))
-            .append("A", "4")
-            .append("C", "5");
-
-        String expected = """
-            A: 2
-            B: 3
-            A: 4
-            C: 5
-            """;
-
-        assertEquals(expected, headers.toString());
-    }
-
-    @Test
-    void replaceHeaders() {
-        Headers headers = new Headers(Tuple.of("A", "2"), Tuple.of("B", "3"))
-            .replace("A", "4")
-            .replace("C", "5");
-
-        String expected = """
-            B: 3
-            A: 4
-            C: 5
-            """;
-
-        assertEquals(expected, headers.toString());
-    }
-
-    @Test
     void cannotUseInvalidName() {
         assertThrows(IllegalArgumentException.class, () -> {
             Tuple<String, String> header = Tuple.of("Some:Name", "Value");
-            new Headers(header);
+            TupleList<String, String> headers = TupleList.of(header);
+            new Headers(headers);
         });
     }
 
     @Test
     void cannotHaveNewLineInValue() {
-        Headers headers = new Headers()
-            .append("A", "2:3");
-
-        assertThrows(IllegalArgumentException.class, () -> headers.append("A", "2\n3"));
+        assertThrows(IllegalArgumentException.class, () -> Headers.of("A", "2\n3"));
     }
 
     @Test
     void retainHeaderNames() {
-        Headers headers = new Headers()
-            .append("A", "2")
-            .append("B", "3")
-            .append("A", "4")
-            .append("a", "5");
+        Headers headers = Headers.of(
+            "A", "2",
+            "B", "3",
+            "A", "4",
+            "a", "5"
+        );
 
         assertEquals(List.of("A", "B", "A", "a"), headers.getHeaderNames());
         assertEquals(List.of("2", "4", "5"), headers.getAll("A"));
         assertEquals(List.of("2", "4", "5"), headers.getAll("a"));
+    }
+
+    @Test
+    void createFromEntries() {
+        Headers headers = Headers.of("a", "b", "c", "d");
+
+        assertEquals(List.of("a", "c"), headers.getHeaderNames());
+        assertEquals("b", headers.get("a").orElse("?"));
+        assertEquals("d", headers.get("c").orElse("?"));
+    }
+
+    @Test
+    void createFromOddNumberOfEntriesCausesException() {
+        assertThrows(IllegalArgumentException.class, () -> Headers.of("a", "b", "c"));
     }
 }

@@ -7,7 +7,6 @@
 package nl.colorize.util.http;
 
 import com.google.common.base.Preconditions;
-import nl.colorize.util.http.Retry;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -21,7 +20,7 @@ class RetryTest {
 
     @Test
     void doNotRetryIfSuccessful() throws ExecutionException {
-        Retry retry = new Retry(3, true);
+        Retry retry = Retry.create(3);
         List<Integer> invocations = new ArrayList<>();
 
         int result = retry.attempt(() -> {
@@ -35,7 +34,7 @@ class RetryTest {
 
     @Test
     void retryIfNotInitiallySuccessful() throws ExecutionException {
-        Retry retry = new Retry(3, true);
+        Retry retry = Retry.create(3);
         List<Integer> invocations = new ArrayList<>();
 
         int result = retry.attempt(() -> {
@@ -50,7 +49,7 @@ class RetryTest {
 
     @Test
     void throwLastExceptionIfFailed() {
-        Retry retry = new Retry(3, true);
+        Retry retry = Retry.create(3);
         List<Integer> invocations = new ArrayList<>();
 
         assertThrows(ExecutionException.class, () -> {
@@ -65,7 +64,7 @@ class RetryTest {
 
     @Test
     void handleCasesWhereOperationOccasionallyFails() throws ExecutionException {
-        Retry retry = new Retry(3, true);
+        Retry retry = Retry.create(3);
         List<Integer> invocations = new ArrayList<>();
 
         int result = retry.attempt(() -> {
@@ -76,5 +75,20 @@ class RetryTest {
         });
 
         assertEquals(3, result);
+    }
+
+    @Test
+    void delay() throws ExecutionException {
+        Retry retry = Retry.create(3).withDelay(500L);
+        List<Integer> invocations = new ArrayList<>();
+
+        int result = retry.attempt(() -> {
+            int n = invocations.size() + 1;
+            invocations.add(n);
+            Preconditions.checkArgument(n >= 2, "Fail!");
+            return n;
+        });
+
+        assertEquals(2, result);
     }
 }

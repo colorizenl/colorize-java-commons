@@ -8,9 +8,15 @@ package nl.colorize.util;
 
 import org.junit.jupiter.api.Test;
 
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.HOURS;
+import static java.time.temporal.ChronoUnit.MONTHS;
+import static java.time.temporal.ChronoUnit.WEEKS;
+import static java.time.temporal.ChronoUnit.YEARS;
+import static nl.colorize.util.DateParser.add;
+import static nl.colorize.util.DateParser.format;
 import static nl.colorize.util.DateParser.parse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,24 +48,21 @@ class DateParserTest {
         assertEquals("1 Jul 2012 13:00:00 GMT", parse("2012-07-01 15:00").toGMTString());
         assertEquals("1 Jul 2012 13:00:00 GMT", parse("2012-07-01 15:00:00").toGMTString());
         assertEquals("1 Jul 2012 13:00:00 GMT", parse("01-07-2012 15:00:00").toGMTString());
+        assertEquals("6 Nov 2012 23:00:00 GMT", parse("7-11-2012").toGMTString());
+        assertEquals("10 Jul 2012 22:00:00 GMT", parse("11-7-2012").toGMTString());
+        assertEquals("3 Mar 2012 23:00:00 GMT", parse("4-3-2012").toGMTString());
     }
 
     @Test
     void addDate() {
         Date original = parse("2022-07-01 15:00");
 
-        assertEquals("2022-07-01 17:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.HOURS, 2), "yyyy-MM-dd HH:mm"));
-        assertEquals("2022-07-01 13:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.HOURS, -2), "yyyy-MM-dd HH:mm"));
-        assertEquals("2022-07-03 15:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.DAYS, 2), "yyyy-MM-dd HH:mm"));
-        assertEquals("2022-07-15 15:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.WEEKS, 2), "yyyy-MM-dd HH:mm"));
-        assertEquals("2022-08-01 15:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.MONTHS, 1), "yyyy-MM-dd HH:mm"));
-        assertEquals("2023-07-01 15:00",
-            DateParser.format(DateParser.add(original, ChronoUnit.YEARS, 1), "yyyy-MM-dd HH:mm"));
+        assertEquals("2022-07-01 17:00", format(add(original, HOURS, 2), "yyyy-MM-dd HH:mm"));
+        assertEquals("2022-07-01 13:00", format(add(original, HOURS, -2), "yyyy-MM-dd HH:mm"));
+        assertEquals("2022-07-03 15:00", format(add(original, DAYS, 2), "yyyy-MM-dd HH:mm"));
+        assertEquals("2022-07-15 15:00", format(add(original, WEEKS, 2), "yyyy-MM-dd HH:mm"));
+        assertEquals("2022-08-01 15:00", format(add(original, MONTHS, 1), "yyyy-MM-dd HH:mm"));
+        assertEquals("2023-07-01 15:00", format(add(original, YEARS, 1), "yyyy-MM-dd HH:mm"));
     }
 
     @Test
@@ -68,15 +71,15 @@ class DateParserTest {
         Date b = parse("2022-07-12 15:00");
         Date c = parse("2022-08-02 15:00");
 
-        assertEquals(11L * 24L, DateParser.delta(a, b, ChronoUnit.HOURS));
-        assertEquals(11L, DateParser.delta(a, b, ChronoUnit.DAYS));
-        assertEquals(2L, DateParser.delta(a, b, ChronoUnit.WEEKS));
-        assertEquals(0L, DateParser.delta(a, b, ChronoUnit.MONTHS));
+        assertEquals(11L * 24L, DateParser.delta(a, b, HOURS));
+        assertEquals(11L, DateParser.delta(a, b, DAYS));
+        assertEquals(2L, DateParser.delta(a, b, WEEKS));
+        assertEquals(0L, DateParser.delta(a, b, MONTHS));
 
-        assertEquals(32L * 24L, DateParser.delta(a, c, ChronoUnit.HOURS));
-        assertEquals(32L, DateParser.delta(a, c, ChronoUnit.DAYS));
-        assertEquals(5L, DateParser.delta(a, c, ChronoUnit.WEEKS));
-        assertEquals(1L, DateParser.delta(a, c, ChronoUnit.MONTHS));
+        assertEquals(32L * 24L, DateParser.delta(a, c, HOURS));
+        assertEquals(32L, DateParser.delta(a, c, DAYS));
+        assertEquals(5L, DateParser.delta(a, c, WEEKS));
+        assertEquals(1L, DateParser.delta(a, c, MONTHS));
     }
 
     @Test

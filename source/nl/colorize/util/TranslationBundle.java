@@ -7,8 +7,6 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import java.text.MessageFormat;
 import java.util.Collections;
@@ -52,8 +50,7 @@ public final class TranslationBundle {
      * and then using this constructor.
      */
     private TranslationBundle(Map<String, String> defaultTranslation) {
-        //TODO cannot use Map.copyOf() until it's supported by TeaVM.
-        this.defaultTranslation = ImmutableMap.copyOf(defaultTranslation);
+        this.defaultTranslation = Map.copyOf(defaultTranslation);
         this.translations = new HashMap<>();
     }
 
@@ -132,8 +129,7 @@ public final class TranslationBundle {
     }
 
     public Set<String> getKeys() {
-        //TODO cannot use Set.copyOf() until it's supported by TeaVM.
-        return ImmutableSet.copyOf(defaultTranslation.keySet());
+        return Set.copyOf(defaultTranslation.keySet());
     }
 
     /**
@@ -165,6 +161,16 @@ public final class TranslationBundle {
             propertiesFile + " is not a .properties file");
 
         Properties properties = LoadUtils.loadProperties(propertiesFile);
+        return fromProperties(properties);
+    }
+
+    /**
+     * Convenience factory method that loads data from the contents of
+     * a {@code .properties} file, and then uses that data to create a
+     * {@link TranslationBundle} instance.
+     */
+    public static TranslationBundle fromPropertiesFile(String propertiesFileContents) {
+        Properties properties = LoadUtils.loadProperties(propertiesFileContents);
         return fromProperties(properties);
     }
 

@@ -17,6 +17,7 @@ import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Taskbar;
+import java.awt.Window;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -221,15 +222,27 @@ public final class MacIntegration {
     }
 
     /**
-     * Enables fullscreen mode for the specified window. This has the same effect
-     * as the user clicking the green window button.
+     * Enables fullscreen mode for the specified window. This has the same
+     * effect as the user clicking the green window button.
+     * <p>
+     * The approach to enable fullscreen mode depends on the Java runtime.
+     * If the Apple Java extensions are available, this will trigger Mac OS's
+     * "native" fullscreen mode. If the Apple Java extensions are <em>not</em>
+     * available, this behavior will be emulated by changing the window
+     * dimensions. Mac OS native fullscreen mode cannot be triggered with the
+     * standard library, see https://bugs.openjdk.java.net/browse/JDK-8228638
+     * for details.
      */
     public static void goFullScreen(JFrame window) {
-        //TODO this was previously possible via the Apple Java extensions,
-        //     but this no longer works as of Java 17. There is also no
-        //     replacement for "real" Mac fullscreen mode.
-        //     See https://bugs.openjdk.java.net/browse/JDK-8228638
-        window.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        try {
+            Class<?> appleApplicationClass = Class.forName("com.apple.eawt.Application");
+            Object instance = appleApplicationClass.getDeclaredMethod("getApplication").invoke(null);
+            appleApplicationClass.getMethod("requestToggleFullScreen", Window.class)
+                .invoke(instance, window);
+        } catch (Exception e) {
+            window.setUndecorated(true);
+            window.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        }
     }
 
     /**

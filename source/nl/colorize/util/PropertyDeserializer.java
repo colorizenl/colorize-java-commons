@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  *   <li>boolean/Boolean</li>
  *   <li>String</li>
  *   <li>Date (assuming the ISO 8601 date format)</li>
- *   <li>File</li>
+ *   <li>File/Path</li>
  *   <li>UUID</li>
  *   <li>Version</li>
  * </ul>

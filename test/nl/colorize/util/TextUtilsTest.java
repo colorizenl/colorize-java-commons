@@ -78,8 +78,8 @@ public class TextUtilsTest {
 
     @Test
     public void testMatchLines() {
-        assertEquals(Arrays.asList("first", "second"), TextUtils.matchLines("first\nsecond\nthird", 
-                Pattern.compile(".*?s.*")));
+        assertEquals(Arrays.asList("first", "second"),
+            TextUtils.matchLines("first\nsecond\nthird", Pattern.compile(".*?s.*")));
     }
     
     @Test
@@ -154,5 +154,14 @@ public class TextUtilsTest {
         assertEquals(1, TextUtils.countIndent(" a"));
         assertEquals(2, TextUtils.countIndent("  a"));
         assertEquals(4, TextUtils.countIndent("\ta"));
+    }
+
+    @Test
+    void numberFormat() {
+        assertEquals("1.0", TextUtils.numberFormat(1f, 1));
+        assertEquals("1.4", TextUtils.numberFormat(1.4f, 1));
+        assertEquals("1.5", TextUtils.numberFormat(1.5f, 1));
+        assertEquals("999.0", TextUtils.numberFormat(999f, 1));
+        assertEquals("1,001.0", TextUtils.numberFormat(1001f, 1));
     }
 }

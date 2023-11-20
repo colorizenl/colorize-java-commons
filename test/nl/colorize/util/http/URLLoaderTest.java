@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static nl.colorize.util.http.URLLoader.PROPERTY_SSL_CONTEXT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -80,7 +79,7 @@ public class URLLoaderTest {
         URLLoader loader = URLLoader.get("http://www.colorize.nl");
         URLResponse response = loader.send();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response.getStatus());
     }
     
     @Test
@@ -109,10 +108,10 @@ public class URLLoaderTest {
     
     @Test
     public void testHttpToHttpsRedirect() throws Exception {
-        URLResponse response = URLLoader.get(TEST_HTTPS_URL).send();
+        URLResponse response = URLLoader.get("http://clrz.nl").send();
 
-        assertEquals(HttpStatus.OK, response.status());
-        assertTrue(response.headers().getHeaderNames().contains("strict-transport-security"));
+        assertEquals(HttpStatus.OK, response.getStatus());
+        assertNotNull(response.getSslSession());
     }
 
     @Test
@@ -129,13 +128,13 @@ public class URLLoaderTest {
     public void testHeadRequestsOnlyDownloadHeaders() throws IOException {
         URLResponse getResponse = URLLoader.get("http://www.colorize.nl").send();
 
-        assertEquals(HttpStatus.OK, getResponse.status());
+        assertEquals(HttpStatus.OK, getResponse.getStatus());
         assertFalse(getResponse.read(Charsets.UTF_8).isEmpty());
         
         URLResponse headResponse = new URLLoader(Method.HEAD, "http://www.colorize.nl", Charsets.UTF_8)
             .send();
 
-        assertEquals(HttpStatus.OK, headResponse.status());
+        assertEquals(HttpStatus.OK, headResponse.getStatus());
         assertTrue(headResponse.read(Charsets.UTF_8).isEmpty());
     }
 
@@ -163,7 +162,7 @@ public class URLLoaderTest {
     public void testCertificatesForHTTPS() throws IOException {
         URLLoader request = URLLoader.get(TEST_HTTPS_URL);
         URLResponse response = request.send();
-        SSLSession sslSession = (SSLSession) response.getConnectionProperty(PROPERTY_SSL_CONTEXT).get();
+        SSLSession sslSession = response.getSslSession();
         Certificate[] certificates = sslSession.getPeerCertificates();
 
         assertEquals(3, certificates.length);
@@ -174,7 +173,7 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("https://dashboard.clrz.nl/rest/website/check/colorize.nl");
         URLResponse response = request.send();
 
-        assertEquals(HttpStatus.ACCEPTED, response.status());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatus());
         assertEquals("", response.read(Charsets.UTF_8));
     }
 
@@ -183,7 +182,7 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("http://www.colorize.nl");
         Future<URLResponse> future = request.sendAsync();
 
-        assertEquals(HttpStatus.OK, future.get().status());
+        assertEquals(HttpStatus.OK, future.get().getStatus());
     }
 
     @Test
@@ -191,7 +190,7 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("https://clrz.nl/");
         URLResponse response = request.send();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response.getStatus());
     }
 
     @Test
@@ -199,7 +198,7 @@ public class URLLoaderTest {
         URLLoader request = URLLoader.get("http://apple.com/");
         URLResponse response = request.send();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response.getStatus());
     }
 
     @Test
@@ -209,9 +208,9 @@ public class URLLoaderTest {
             .withBody(PostData.create("message", "1234"))
             .send();
 
-        assertEquals(HttpStatus.OK, response.status());
-        assertTrue(response.getBody().contains("\"message\": \"1234\""),
-            "Response was:\n" + response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatus());
+        assertTrue(response.readBody().contains("\"message\": \"1234\""),
+            "Response was:\n" + response.readBody());
     }
 
     @Test
@@ -234,7 +233,7 @@ public class URLLoaderTest {
         request.withBody("message=test", "text/plain");
         URLResponse response = request.send();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response.getStatus());
         assertTrue(response.read(Charsets.UTF_8).contains("\"message\": \"test\""),
             response.read(Charsets.UTF_8));
     }
@@ -245,7 +244,7 @@ public class URLLoaderTest {
 
         URLResponse response = URLLoader.get("http://apple.com").send();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertEquals(HttpStatus.OK, response.getStatus());
     }
 
     @Test
@@ -286,7 +285,7 @@ public class URLLoaderTest {
             .disableCertificateValidation()
             .send();
 
-        assertEquals(200, response.status());
+        assertEquals(200, response.getStatus());
     }
 
     @Test
@@ -296,7 +295,7 @@ public class URLLoaderTest {
         URLLoader.get("https://www.colorize.nl")
             .sendPromise()
             .getSubject()
-            .subscribe(response -> result.add(response.status()));
+            .subscribe(response -> result.add(response.getStatus()));
 
         Thread.sleep(3000);
 

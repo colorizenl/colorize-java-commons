@@ -7,12 +7,11 @@
 package nl.colorize.util.http;
 
 import com.google.common.base.Charsets;
-import nl.colorize.util.stats.Tuple;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -20,18 +19,16 @@ class URLResponseTest {
 
     @Test
     void headersKeepInsertionOrder() {
-        Headers headers = new Headers(Tuple.of("a", "2"), Tuple.of("b", "3"));
-        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0],
-            Charsets.UTF_8, Collections.emptyMap());
+        Headers headers = Headers.of("a", "2", "b", "3");
+        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0]);
 
-        assertEquals(List.of("a", "b"), response.headers().getHeaderNames());
+        assertEquals(List.of("a", "b"), response.getHeaders().getHeaderNames());
     }
 
     @Test
     void headerNameIsNotCaseSensitive() {
-        Headers headers = new Headers(Tuple.of("a", "2"));
-        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0],
-            Charsets.UTF_8, Collections.emptyMap());
+        Headers headers = Headers.of("a", "2");
+        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0]);
 
         assertEquals("2", response.getHeader("a").orElse(""));
         assertEquals("2", response.getHeader("A").orElse(""));
@@ -40,9 +37,8 @@ class URLResponseTest {
 
     @Test
     void sameHeaderCanBeUsedMultipleTimes() {
-        Headers headers = new Headers(Tuple.of("a", "2"), Tuple.of("b", "3"), Tuple.of("a", "4"));
-        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0],
-            Charsets.UTF_8, Collections.emptyMap());
+        Headers headers = Headers.of("a", "2", "b", "3", "a", "4");
+        URLResponse response = new URLResponse(HttpStatus.OK, headers, new byte[0]);
 
         assertEquals(List.of("2", "4"), response.getHeaderValues("a"));
         assertEquals(List.of("3"), response.getHeaderValues("b"));
@@ -50,15 +46,19 @@ class URLResponseTest {
     }
 
     @Test
-    void readBody() {
-        URLResponse response = new URLResponse(HttpStatus.OK, new Headers(),
-            "test\ntest2\n".getBytes(Charsets.UTF_8),
-            Charsets.UTF_8,
-            Collections.emptyMap());
+    void stringForm() {
+        Headers headers = Headers.fromMap(Map.of("Accept", "text/plain"));
+        byte[] body = "test\nanother line\n".getBytes(Charsets.UTF_8);
+        URLResponse response = new URLResponse(HttpStatus.OK, headers, body);
 
-        assertEquals("test\ntest2\n", response.read(Charsets.UTF_8));
-        assertEquals(List.of("test", "test2"), response.readLines(Charsets.UTF_8));
-        assertEquals("[116, 101, 115, 116, 10, 116, 101, 115, 116, 50, 10]",
-            Arrays.toString(response.readBytes()));
+        String expected = """
+            Accept: text/plain
+            
+            
+            test
+            another line
+            """;
+
+        assertEquals(expected, response.toString());
     }
 }

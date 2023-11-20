@@ -111,4 +111,15 @@ class TupleListTest {
 
         assertEquals("[(a2, b3), (c2, d3)]", mapped.toString());
     }
+
+    @Test
+    void concat() {
+        TupleList<String, Integer> first = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
+        TupleList<String, Integer> second = TupleList.of(Tuple.of("d", 4));
+        TupleList<String, Integer> result = first.concat(second);
+
+        assertEquals("[(a, 2), (b, 3)]", first.toString());
+        assertEquals("[(d, 4)]", second.toString());
+        assertEquals("[(a, 2), (b, 3), (d, 4)]", result.toString());
+    }
 }

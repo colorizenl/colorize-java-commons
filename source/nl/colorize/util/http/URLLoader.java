@@ -15,11 +15,11 @@ import nl.colorize.util.Platform;
 import nl.colorize.util.Promise;
 import nl.colorize.util.Subscribable;
 import nl.colorize.util.TextUtils;
+import nl.colorize.util.stats.Tuple;
 import nl.colorize.util.stats.TupleList;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,8 +36,6 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -86,10 +84,9 @@ public class URLLoader {
     private boolean allowErrorStatus;
     private boolean certificateValidation;
 
-    public static final String PROPERTY_SSL_CONTEXT = "sslContext";
-
     private static final List<String> SUPPORTED_PROTOCOLS = List.of("http", "https");
     private static final int DEFAULT_TIMEOUT = 30_000;
+    private static final long RETRY_DELAY = 500L;
     private static final Logger LOGGER = LogHelper.getLogger(URLLoader.class);
 
     /**
@@ -121,7 +118,7 @@ public class URLLoader {
         this.method = method;
         this.encoding = encoding;
         this.parseInitialURL(url);
-        this.headers = new Headers();
+        this.headers = Headers.none();
         this.body = new byte[0];
         this.attempts = 2;
         this.timeout = DEFAULT_TIMEOUT;
@@ -192,14 +189,22 @@ public class URLLoader {
         Preconditions.checkArgument(name != null && !name.isEmpty(), "Empty header name");
         Preconditions.checkArgument(value != null, "Null header value");
 
-        headers = replace ? headers.replace(name, value) : headers.append(name, value);
+        TupleList<String, String> updatedHeaders = new TupleList<>();
 
+        for (Tuple<String, String> header : headers) {
+            if (!header.left().equals(name) || !replace) {
+                updatedHeaders.add(header);
+            }
+        }
+
+        updatedHeaders.add(name, value);
+        headers = new Headers(updatedHeaders);
         return this;
     }
 
     /**
-     * Adds the specified request header. This method is the equivalent of using
-     * {@code withHeader(name, value, false}.
+     * Adds the specified header to the end of the request. Using this method
+     * is the equivalent of using {@code withHeader(name, value, false}.
      */
     public URLLoader withHeader(String name, String value) {
         return withHeader(name, value, false);
@@ -266,11 +271,7 @@ public class URLLoader {
         Preconditions.checkArgument(name != null && value != null,
             "Invalid query parameter: " + name + "=" + value);
 
-        Preconditions.checkState(!queryParameters.contains(name),
-            "Request already contains query parameter: " + name);
-
         queryParameters = queryParameters.merge(PostData.create(name, value));
-
         return this;
     }
 
@@ -285,8 +286,7 @@ public class URLLoader {
     public URLLoader withBasicAuth(String user, String password) {
         String identity = user + ":" + password;
         String base64 = Base64.getEncoder().encodeToString(identity.getBytes(Charsets.UTF_8));
-        headers = headers.replace(HttpHeaders.AUTHORIZATION, "Basic " + base64);
-        return this;
+        return withHeader(HttpHeaders.AUTHORIZATION, "Basic " + base64);
     }
 
     /**
@@ -294,7 +294,7 @@ public class URLLoader {
      * number larger than 1 means automatic retry for failed requests.
      */
     public URLLoader withAttempts(int attempts) {
-        Preconditions.checkArgument(timeout >= 1, "Invalid numer of attempts: " + attempts);
+        Preconditions.checkArgument(attempts >= 1, "Invalid numer of attempts: " + attempts);
         this.attempts = attempts;
         return this;
     }
@@ -351,8 +351,9 @@ public class URLLoader {
      */
     public URLResponse send() throws IOException {
         try {
-            Retry retry = new Retry(attempts);
-            return retry.attempt(this::sendRequest);
+            return Retry.create(attempts)
+                .withDelay(RETRY_DELAY)
+                .attempt(this::sendRequest);
         } catch (ExecutionException e) {
             throw new IOException("Sending HTTP request failed", e);
         }
@@ -499,7 +500,7 @@ public class URLLoader {
             byte[] body = responseStream.readAllBytes();
             int status = readHttpStatus(connection);
             Headers headers = readResponseHeaders(connection);
-            Map<String, Object> connectionProperties = new HashMap<>();
+            URLResponse response = new URLResponse(status, headers, body);
 
             if (connection instanceof HttpsURLConnection https) {
                 // If the response contains a body, the body has already
@@ -508,12 +509,10 @@ public class URLLoader {
                 // the HTTPS certificates.
                 connection.connect();
 
-                https.getSSLSession().ifPresent(sslContext -> {
-                    connectionProperties.put(PROPERTY_SSL_CONTEXT, sslContext);
-                });
+                https.getSSLSession().ifPresent(response::setSslSession);
             }
 
-            return new URLResponse(status, headers, body, encoding, connectionProperties);
+            return response;
         }
     }
 
@@ -523,6 +522,7 @@ public class URLLoader {
         for (Map.Entry<String, List<String>> entry : connection.getHeaderFields().entrySet()) {
             if (entry.getKey() != null && !entry.getKey().isEmpty()) {
                 for (String value : entry.getValue()) {
+                    Headers.validateHeader(entry.getKey(), value);
                     headers.add(entry.getKey(), value);
                 }
             }
@@ -605,27 +605,26 @@ public class URLLoader {
 
     private URLResponse convertResponse(HttpResponse<byte[]> response) {
         int status = response.statusCode();
-        Headers headers = new Headers();
-        Map<String, Object> connectionProperties = populateConnectionProperties(response);
+        Headers headers = convertHeaders(response);
+
+        URLResponse result = new URLResponse(status, headers, response.body());
+        response.sslSession().ifPresent(result::setSslSession);
+        return result;
+    }
+
+    private Headers convertHeaders(HttpResponse<byte[]> response) {
+        TupleList<String, String> headers = new TupleList<>();
 
         for (Map.Entry<String, List<String>> entry : response.headers().map().entrySet()) {
             if (!entry.getKey().equals(":status")) {
                 for (String value : entry.getValue()) {
-                    headers = headers.append(entry.getKey(), value);
+                    Headers.validateHeader(entry.getKey(), value);
+                    headers.add(entry.getKey(), value);
                 }
             }
         }
 
-        return new URLResponse(status, headers, response.body(), encoding, connectionProperties);
-    }
-
-    private Map<String, Object> populateConnectionProperties(HttpResponse<byte[]> response) {
-        if (response.sslSession().isPresent()) {
-            SSLSession sslContext = response.sslSession().get();
-            return Map.of(PROPERTY_SSL_CONTEXT, sslContext);
-        } else {
-            return Collections.emptyMap();
-        }
+        return new Headers(headers);
     }
 
     @Override

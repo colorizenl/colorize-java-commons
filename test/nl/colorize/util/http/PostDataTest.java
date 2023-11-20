@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,7 +29,7 @@ public class PostDataTest {
         assertEquals(ImmutableMap.of(), PostData.parse("?", Charsets.UTF_8).toMap());
         assertEquals(ImmutableMap.of("a", "7"), PostData.parse("?a=7", Charsets.UTF_8).toMap());
         assertEquals(ImmutableMap.of("a", ""), PostData.parse("a=", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of(), PostData.parse("a", Charsets.UTF_8).toMap());
+        assertEquals(ImmutableMap.of("a", ""), PostData.parse("a", Charsets.UTF_8).toMap());
     }
 
     @Test
@@ -36,7 +37,7 @@ public class PostDataTest {
         assertEquals("", PostData.create(ImmutableMap.of()).encode(Charsets.UTF_8));
         assertEquals("a=2", PostData.create(ImmutableMap.of("a", "2")).encode(Charsets.UTF_8));
         assertEquals("a=2&b=3", PostData.create(ImmutableMap.of("a", "2", "b", "3")).encode(Charsets.UTF_8));
-        assertEquals("a=2&b=", PostData.create(ImmutableMap.of("a", "2", "b", "")).encode(Charsets.UTF_8));
+        assertEquals("a=2&b", PostData.create(ImmutableMap.of("a", "2", "b", "")).encode(Charsets.UTF_8));
         assertEquals("a=3%3E4", PostData.create(ImmutableMap.of("a", "3>4")).encode(Charsets.UTF_8));
     }
 
@@ -74,12 +75,8 @@ public class PostDataTest {
     }
 
     @Test
-    public void testEmptyName() {
-        PostData emptyName = PostData.create("", "2");
-        PostData emptyValue = PostData.create("b", "");
-
-        assertEquals("2", emptyName.toString());
-        assertEquals("b=", emptyValue.toString());
+    public void testEmptyValue() {
+        assertEquals("b", PostData.create("b", "").toString());
     }
 
     @Test
@@ -104,11 +101,11 @@ public class PostDataTest {
     }
 
     @Test
-    void cannotMergeIfSameParameter() {
+    void canMergeIfSameParameter() {
         PostData a = PostData.create("a", "2");
         PostData b = PostData.create("a", "3");
 
-        assertThrows(IllegalArgumentException.class, () -> a.merge(b));
+        assertEquals("a=2&a=3", a.merge(b).toString());
     }
 
     @Test
@@ -120,5 +117,31 @@ public class PostDataTest {
         assertEquals("?", postData.getOptionalParameter("b", "?"));
         assertTrue(postData.contains("c"));
         assertEquals("?", postData.getOptionalParameter("c", "?"));
+    }
+
+    @Test
+    void sameParameterMultipleTimes() {
+        PostData postData = PostData.parse("a=2&b=3&a=4&a");
+
+        assertEquals(List.of("2", "4", ""), postData.getParameterValues("a"));
+        assertEquals("2", postData.getRequiredParameter("a"));
+        assertEquals("a=2&b=3&a=4&a", postData.toString());
+    }
+
+    @Test
+    void parseSingleEntry() {
+        PostData postData = PostData.parse("?test");
+
+        assertTrue(postData.contains("test"));
+        assertEquals(List.of(""), postData.getParameterValues("test"));
+        assertEquals("test", postData.toString());
+    }
+
+    @Test
+    void parseSingleEntryWithEquals() {
+        PostData postData = PostData.parse("?test=");
+
+        assertTrue(postData.contains("test"));
+        assertEquals(List.of(""), postData.getParameterValues("test"));
     }
 }

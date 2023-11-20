@@ -7,39 +7,47 @@
 package nl.colorize.util.http;
 
 import com.google.common.net.HttpHeaders;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
 import nl.colorize.util.Resource;
 
+import javax.net.ssl.SSLSession;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * Represents an HTTP response that is returned after sending an HTTP request
- * to a URL. Used in conjunction with {@link URLLoader}, which supports/uses a
- * variety of HTTP clients depending on the platform.
- * <p>
- * <strong>Note:</strong> The {@code connectionProperties} field is populated
- * depending on the HTTP client. Since {@link URLLoader} supports multiple HTTP
- * clients depending on the platform, these properties can have different types
- * depending on the HTTP client, and some properties might not be available for
- * certain HTTP clients.
+ * to a URL. Used in conjunction with {@link URLLoader}, which supports/uses
+ * a variety of HTTP clients depending on the platform.
  */
-public record URLResponse(
-    int status,
-    Headers headers,
-    byte[] body,
-    Charset encoding,
-    Map<String, Object> connectionProperties
-) implements Resource {
+@Getter
+public class URLResponse implements Resource {
+
+    private int status;
+    private Headers headers;
+    private byte[] body;
+    @Setter(AccessLevel.PROTECTED) private SSLSession sslSession;
+
+    public URLResponse(int status, Headers headers, byte[] body) {
+        this.status = status;
+        this.headers = headers;
+        this.body = body;
+    }
+
+    public URLResponse(int status, Headers headers, String body) {
+        this(status, headers, body.getBytes(StandardCharsets.UTF_8));
+    }
 
     /**
-     * Returns the value of the HTTP header with the specified name. Using this
-     * method is equivalent to {@code headers().get(name)}.
+     * Returns the value of the HTTP header with the specified name. Using
+     * this method is equivalent to {@code getHeaders().get(name)}.
      */
     public Optional<String> getHeader(String name) {
         return headers.get(name);
@@ -47,7 +55,7 @@ public record URLResponse(
 
     /**
      * Returns all values for the HTTP header with the specified name. Using
-     * this method is equivalent to {@code headers().getAll(name)}.
+     * this method is equivalent to {@code getHeaders().getAll(name)}.
      */
     public List<String> getHeaderValues(String name) {
         return headers.getAll(name);
@@ -75,15 +83,16 @@ public record URLResponse(
         return new String(body, charset);
     }
 
-    /**
-     * Parses the response body to text, using the same character encoding that
-     * was used to send the request.
-     */
-    public String getBody() {
-        return read(encoding);
+    public String readBody() {
+        return read(StandardCharsets.UTF_8);
     }
 
-    public Optional<Object> getConnectionProperty(String name) {
-        return Optional.ofNullable(connectionProperties.get(name));
+    @Override
+    public String toString() {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(headers);
+        buffer.append("\n\n");
+        buffer.append(readBody());
+        return buffer.toString();
     }
 }

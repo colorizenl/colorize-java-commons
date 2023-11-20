@@ -7,18 +7,17 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import nl.colorize.util.stats.Tuple;
-import nl.colorize.util.stats.TupleList;
+import com.google.common.collect.ImmutableMap;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -38,41 +37,48 @@ import java.util.regex.Pattern;
  */
 public final class DateParser {
 
-    private static final TupleList<Pattern, String> PATTERNS = new TupleList<String, String>()
-        .append("\\d{8}", "yyyyMMdd")
-        .append("\\d{4}-\\d{2}-\\d{2}", "yyyy-MM-dd")
-        .append("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}", "yyyy-MM-dd HH:mm")
-        .append("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm")
-        .append("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd HH:mm:ss")
-        .append("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm:ss")
-        .append("\\d{2}-\\d{2}-\\d{4}", "dd-MM-yyyy")
-        .append("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss")
-        .append("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss")
-        .append("\\d{2}/\\d{2}/\\d{4}", "MM/dd/yyyy")
-        .map(Pattern::compile, format -> format)
-        .immutable();
-
-    private static final Map<ChronoUnit, Integer> CALENDAR_FIELD_MAPPING = Map.of(
-        ChronoUnit.SECONDS, GregorianCalendar.SECOND,
-        ChronoUnit.MINUTES, GregorianCalendar.MINUTE,
-        ChronoUnit.HOURS, GregorianCalendar.HOUR,
-        ChronoUnit.DAYS, GregorianCalendar.DAY_OF_MONTH,
-        ChronoUnit.WEEKS, GregorianCalendar.WEEK_OF_YEAR,
-        ChronoUnit.MONTHS, GregorianCalendar.MONTH,
-        ChronoUnit.YEARS, GregorianCalendar.YEAR
+    private static final List<DatePattern> DATE_PATTERNS = List.of(
+        new DatePattern("\\d{8}",                                    "yyyyMMdd"),
+        new DatePattern("\\d{4}-\\d{2}-\\d{2}",                      "yyyy-MM-dd"),
+        new DatePattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}",        "yyyy-MM-dd HH:mm"),
+        new DatePattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}",        "yyyy-MM-dd'T'HH:mm"),
+        new DatePattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd HH:mm:ss"),
+        new DatePattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm:ss"),
+        new DatePattern("\\d{1,2}-\\d{1,2}-\\d{4}",                      "dd-MM-yyyy"),
+        new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}",        "dd-MM-yyyy HH:mm:ss"),
+        new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss"),
+        new DatePattern("\\d{2}/\\d{2}/\\d{4}",                      "MM/dd/yyyy")
     );
 
-    private static final TupleList<ChronoUnit, String> LABELS = new TupleList<ChronoUnit, String>()
-        .append(ChronoUnit.YEARS, "YEAR")
-        .append(ChronoUnit.MONTHS, "MONTH")
-        .append(ChronoUnit.WEEKS, "WEEK")
-        .append(ChronoUnit.DAYS, "DAY")
-        .append(ChronoUnit.HOURS, "HOUR")
-        .append(ChronoUnit.MINUTES, "MINUTE")
-        .immutable();
+    // Needs to be an ImmutableMap to preserve order.
+    private static final Map<ChronoUnit, Integer> CALENDAR_FIELD_MAPPING = ImmutableMap.of(
+        ChronoUnit.YEARS, GregorianCalendar.YEAR,
+        ChronoUnit.MONTHS, GregorianCalendar.MONTH,
+        ChronoUnit.WEEKS, GregorianCalendar.WEEK_OF_YEAR,
+        ChronoUnit.DAYS, GregorianCalendar.DAY_OF_MONTH,
+        ChronoUnit.HOURS, GregorianCalendar.HOUR,
+        ChronoUnit.MINUTES, GregorianCalendar.MINUTE,
+        ChronoUnit.SECONDS, GregorianCalendar.SECOND
+    );
 
-    private static final TranslationBundle BUNDLE = TranslationBundle.fromPropertiesFile(
-        new ResourceFile("custom-swing-components.properties"));
+    private static TranslationBundle BUNDLE = TranslationBundle.fromPropertiesFile("""
+        future=the future
+        now=just now
+        second=just now
+        seconds=seconds ago
+        minute=1 minute ago
+        minutes={0} minutes ago
+        hour=1 hour ago
+        hours={0} hours ago
+        day=yesterday
+        days={0} days ago
+        week=last week
+        weeks={0} weeks ago
+        month=1 month ago
+        months={0} months ago
+        year=1 year ago
+        years={0} years ago
+    """);
 
     private DateParser() {
     }
@@ -110,14 +116,11 @@ public final class DateParser {
      *         any of the date formats supported by this method.
      */
     public static Date parse(String input) {
-        for (Tuple<Pattern, String> entry : PATTERNS) {
-            Matcher matcher = entry.left().matcher(input);
-            if (matcher.matches()) {
-                return parse(input, entry.right());
-            }
-        }
-
-        throw new IllegalArgumentException("Unable to detect date format: " + input);
+        return DATE_PATTERNS.stream()
+            .filter(datePattern -> datePattern.pattern.matcher(input).matches())
+            .map(datePattern -> parse(input, datePattern.dateFormat))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unable to detect date format: " + input));
     }
 
     /**
@@ -192,23 +195,25 @@ public final class DateParser {
      */
     public static String formatRelative(Date date, Date reference) {
         if (date.getTime() > reference.getTime()) {
-            return BUNDLE.getString("FUTURE");
+            return BUNDLE.getString("future");
         }
 
         long deltaInSeconds = Math.abs(date.getTime() - reference.getTime()) / 1000L;
 
-        for (Tuple<ChronoUnit, String> entry : LABELS) {
-            long secondsInUnit = entry.left().getDuration().getSeconds();
+        for (ChronoUnit chronoUnit : CALENDAR_FIELD_MAPPING.keySet()) {
+            long secondsInUnit = chronoUnit.getDuration().getSeconds();
             long deltaInUnit = deltaInSeconds / secondsInUnit;
 
             if (deltaInSeconds >= 2L * secondsInUnit) {
-                return BUNDLE.getString(entry.right() + "S", deltaInUnit);
+                String plural = chronoUnit.toString().toLowerCase();
+                return BUNDLE.getString(plural, deltaInUnit);
             } else if (deltaInSeconds >= secondsInUnit) {
-                return BUNDLE.getString(entry.right(), deltaInUnit);
+                String singular = TextUtils.removeTrailing(chronoUnit.toString().toLowerCase(), "s");
+                return BUNDLE.getString(singular, deltaInUnit);
             }
         }
 
-        return BUNDLE.getString("NOW");
+        return BUNDLE.getString("now");
     }
 
     /**
@@ -218,5 +223,25 @@ public final class DateParser {
      */
     public static String formatRelative(Date date) {
         return formatRelative(date, new Date());
+    }
+
+    /**
+     * Returns the translations that are used by this class for display names.
+     * By default, only English is supported, but this can be extended by
+     * adding additional translations.
+     */
+    public static TranslationBundle getTranslationBundle() {
+        return BUNDLE;
+    }
+
+    /**
+     * Internal representation for mapping between a date/time regular
+     * expression and the corresponding date format.
+     */
+    private record DatePattern(Pattern pattern, String dateFormat) {
+
+        public DatePattern(String pattern, String dateFormat) {
+            this(Pattern.compile(pattern), dateFormat);
+        }
     }
 }

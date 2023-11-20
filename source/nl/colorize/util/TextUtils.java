@@ -18,10 +18,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.math.RoundingMode;
 import java.nio.charset.Charset;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -49,7 +52,7 @@ public final class TextUtils {
      * Both whitespace characters and underscores are considered word separators.
      */
     public static String toTitleCase(String str) {
-        if (str.trim().length() == 0) {
+        if (str.trim().isEmpty()) {
             return str;
         }
 
@@ -154,10 +157,11 @@ public final class TextUtils {
     
     /**
      * Returns all matches for a regular expression.
+     *
      * @param group Adds the specified capture group to the list of results.
      */
     public static List<String> matchAll(String input, Pattern regex, int group) {
-        List<String> matches = new ArrayList<String>();
+        List<String> matches = new ArrayList<>();
         Matcher matcher = regex.matcher(input);
         while (matcher.find()) {
             matches.add(matcher.group(group));
@@ -174,6 +178,7 @@ public final class TextUtils {
     
     /**
      * Returns the first match of a regular expression.
+     *
      * @param group Adds the specified capture group to the list of results.
      */
     public static Optional<String> matchFirst(String input, Pattern regex, int group) {
@@ -194,7 +199,7 @@ public final class TextUtils {
     
     /**
      * Reads all lines, and returns only the lines that match a regular expression.
-     * The reader is closed afterwards.
+     * The reader is closed afterward.
      *
      * @param group Adds the specified capture group to the list of results.
      * @throws IOException if an I/O error occurs while reading.
@@ -227,6 +232,7 @@ public final class TextUtils {
     /**
      * Reads all lines from a file, and returns only the lines that match a 
      * regular expression.
+     *
      * @param group Adds the specified capture group to the list of results.
      * @throws IOException if an I/O error occurs while reading.
      */
@@ -237,7 +243,8 @@ public final class TextUtils {
     
     /**
      * Reads all lines from a file, and returns only the lines that match a 
-     * regular expression. 
+     * regular expression.
+     *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static List<String> matchLines(File input, Charset charset, Pattern regex) throws IOException {
@@ -246,7 +253,8 @@ public final class TextUtils {
     
     /**
      * Reads all lines in a string, and returns only the lines that match a regular
-     * expression. 
+     * expression.
+     *
      * @param group Adds the specified capture group to the list of results.
      */
     public static List<String> matchLines(String input, Pattern regex, int group) {
@@ -411,5 +419,22 @@ public final class TextUtils {
         } else {
             return new BufferedReader(reader);
         }
+    }
+
+    /**
+     * Formats a floating point number with the specified number of decimals.
+     * This method is a convenience version for {@link NumberFormat}. It uses
+     * the {@code en_US} locale, meaning that it will use the format "1,000.5".
+     */
+    public static String numberFormat(float n, int decimals) {
+        Preconditions.checkArgument(decimals >= 0,
+            "Invalid number of decimals: " + decimals);
+
+        NumberFormat format = NumberFormat.getInstance(Locale.US);
+        format.setMinimumFractionDigits(decimals);
+        format.setMaximumFractionDigits(decimals);
+        format.setGroupingUsed(true);
+        format.setRoundingMode(RoundingMode.HALF_UP);
+        return format.format(n);
     }
 }

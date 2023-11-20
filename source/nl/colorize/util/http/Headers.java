@@ -11,59 +11,53 @@ import com.google.common.base.Preconditions;
 import nl.colorize.util.stats.Tuple;
 import nl.colorize.util.stats.TupleList;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
 /**
- * Immutable representation of the HTTP headers sent as part of HTTP request
- * and response messages. Used in conjunction with {@link URLLoader}, which
- * supports/uses a variety of HTTP clients depending on the platform.
+ * Immutable representation of the request/response headers sent as part of an
+ * HTTP request. Used in conjunction with {@link URLLoader}, which supports a
+ * variety of HTTP clients depending on the platform.
  * <p>
  * HTTP headers are sometimes represented using a {@code Map<String, String>},
  * but this does not allow for the following:
+ *
  * <ul>
  *   <li>Headers have an explicitly defined order.</li>
  *   <li>The same header can occur multiple times.</li>
  *   <li>Header names are case-insensitive.</li>
  * </ul>
- * <p>
- * <em>Implementation note:</em> The headers are stored using an (immutable)
- * list of tuples. This allows the class to respect the header properties
- * listed above. In practice the performance impact is neglectable, as nearly
- * all requests and responses only contain a small number of headers.
  */
-public class Headers {
+public class Headers implements Iterable<Tuple<String, String>> {
 
     private TupleList<String, String> entries;
 
-    private static CharMatcher NAME_MATCHER = CharMatcher.javaLetterOrDigit().or(CharMatcher.anyOf("-"));
-    private static CharMatcher VALUE_MATCHER = CharMatcher.anyOf("\r\n").negate();
+    private static final CharMatcher NAME_MATCHER = CharMatcher.javaLetterOrDigit()
+        .or(CharMatcher.anyOf("-_."));
 
+    private static final CharMatcher VALUE_MATCHER = CharMatcher
+        .anyOf("\r\n")
+        .negate();
+
+    /**
+     * Creates a new {@link Headers} instance from the specified list of
+     * HTTP header names/values. This class also defines a number of static
+     * factory methods for creating a {@link Headers} instance from other
+     * sources.
+     *
+     * @throws IllegalArgumentException if any of the header names and/or
+     *         values are invalid. {@link #validateHeader(String, String)}
+     *         is used to perform this validation.
+     */
     public Headers(TupleList<String, String> entries) {
         for (Tuple<String, String> entry : entries) {
-            Preconditions.checkArgument(NAME_MATCHER.matchesAllOf(entry.left()),
-                "Invalid HTTP header name: " + entry.left());
-
-            Preconditions.checkArgument(VALUE_MATCHER.matchesAllOf(entry.right()),
-                "Invalid HTTP header value: " + entry.right());
+            validateHeader(entry.left(), entry.right());
         }
 
         this.entries = entries.immutable();
-    }
-
-    @SafeVarargs
-    public Headers(Tuple<String, String>... entries) {
-        this(TupleList.of(entries).immutable());
-    }
-
-    public Headers(Map<String, String> entries) {
-        this(TupleList.fromMap(entries));
-    }
-
-    public Headers() {
-        this(TupleList.empty());
     }
 
     /**
@@ -98,6 +92,11 @@ public class Headers {
             .toList();
     }
 
+    @Override
+    public Iterator<Tuple<String, String>> iterator() {
+        return entries.iterator();
+    }
+
     public void forEach(BiConsumer<String, String> callback) {
         entries.forEach(callback);
     }
@@ -106,57 +105,67 @@ public class Headers {
         return header.left().equalsIgnoreCase(name);
     }
 
-    /**
-     * Returns a new {@link Headers} instance consisting of all existing headers
-     * plus the specified new one.
-     *
-     * @deprecated Use {@link #concat(String, String)} instead. This method has
-     *             been renamed to {@code concat} to make it more explicit that
-     *             the original instance is not modified.
-     */
-    @Deprecated
-    public Headers append(String name, String value) {
-        return concat(name, value);
-    }
-
-    /**
-     * Returns a new {@link Headers} instance that consists of this list of
-     * headers plus the specified additional header concatenated to the end of
-     * the list.
-     */
-    public Headers concat(String name, String value) {
-        TupleList<String, String> result = TupleList.create();
-        result.addAll(entries);
-        result.add(name, value);
-        return new Headers(result);
-    }
-
-    /**
-     * Returns a new {@link Headers} instance that replaces all occurrences of
-     * the header with the specified name.
-     */
-    public Headers replace(String name, String value) {
-        List<Tuple<String, String>> filtered = entries.stream()
-            .filter(header -> !match(header, name))
-            .toList();
-
-        TupleList<String, String> result = TupleList.create();
-        result.addAll(filtered);
-        result.add(name, value);
-        return new Headers(result);
-    }
-
     @Override
     public String toString() {
         StringBuilder buffer = new StringBuilder();
-
-        entries.forEach((name, value) -> {
-            buffer.append(name);
+        for (Tuple<String, String> header : entries) {
+            buffer.append(header.left());
             buffer.append(": ");
-            buffer.append(value);
+            buffer.append(header.right());
             buffer.append("\n");
-        });
-
+        }
         return buffer.toString();
+    }
+
+    /**
+     * Creates a {@link Headers} instance from the specified HTTP header
+     * names and values. The {@code rest} parameter expects values in the
+     * order {@code name1, value1, name2, value2, ...}.
+     *
+     * @throws IllegalArgumentException When an odd number of arguments
+     *         is passed to the method.
+     */
+    public static Headers of(String name, String value, String... rest) {
+        Preconditions.checkArgument(rest.length % 2 == 0,
+            "Cannot create HTTP headers from incomplete name/value pairs");
+
+        TupleList<String, String> headers = new TupleList<>();
+        headers.add(name, value);
+        for (int i = 0; i < rest.length; i += 2) {
+            headers.add(rest[i], rest[i + 1]);
+        }
+        return new Headers(headers);
+    }
+
+    /**
+     * Creates a {@link Headers} instance from a map containing the name/value
+     * pairs of the HTTP headers. The order of the headers is based on the
+     * map's iteration order.
+     */
+    public static Headers fromMap(Map<String, String> entries) {
+        return new Headers(TupleList.fromMap(entries));
+    }
+
+    /**
+     * Returns an empty {@link Headers} instance that indicates the HTTP
+     * request or response does not contain any headers.
+     */
+    public static Headers none() {
+        return new Headers(TupleList.empty());
+    }
+
+    /**
+     * Helper method that validates if the specified name and value should
+     * be allowed as a HTTP headers.
+     *
+     * @throws IllegalArgumentException if the validation fails for the
+     *         header name and/or value.
+     */
+    public static void validateHeader(String name, String value) {
+        Preconditions.checkArgument(NAME_MATCHER.matchesAllOf(name),
+            "Invalid HTTP header name: " + name);
+
+        Preconditions.checkArgument(VALUE_MATCHER.matchesAllOf(value),
+            "Invalid HTTP header value: " + value);
     }
 }

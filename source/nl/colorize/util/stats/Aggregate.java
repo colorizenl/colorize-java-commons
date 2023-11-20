@@ -6,8 +6,6 @@
 
 package nl.colorize.util.stats;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -84,8 +82,7 @@ public interface Aggregate {
      * precision. Returns zero if the data set is empty.
      */
     default float calc(Number... values) {
-        //TODO use List.copyOf once TeaVM supports it.
-        return calc(ImmutableList.copyOf(values));
+        return calc(List.of(values));
     }
 
     /**

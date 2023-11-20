@@ -13,21 +13,21 @@ package nl.colorize.util.cli;
  * and white-on-black terminals are widely used, so this avoids formatting
  * that would make the text unreadable.
  */
-public enum AnsiColor {
+public class AnsiColor {
 
-    RED("\u001B[31m", false),
-    GREEN("\u001B[32m", false),
-    YELLOW("\u001B[33m", false),
-    BLUE("\u001B[34m", false),
-    MAGENTA("\u001B[35m", false),
-    CYAN("\u001B[36m", false),
+    public static final AnsiColor RED = new AnsiColor("\u001B[31m");
+    public static final AnsiColor GREEN = new AnsiColor("\u001B[32m");
+    public static final AnsiColor YELLOW = new AnsiColor("\u001B[33m");
+    public static final AnsiColor BLUE = new AnsiColor("\u001B[34m");
+    public static final AnsiColor MAGENTA = new AnsiColor("\u001B[35m");
+    public static final AnsiColor CYAN = new AnsiColor("\u001B[36m");
 
-    RED_BOLD(RED, true),
-    GREEN_BOLD(GREEN, true),
-    YELLOW_BOLD(YELLOW, true),
-    BLUE_BOLD(BLUE, true),
-    MAGENTA_BOLD(MAGENTA, true),
-    CYAN_BOLD(CYAN, true);
+    public static final AnsiColor RED_BOLD = RED.bold();
+    public static final AnsiColor GREEN_BOLD = GREEN.bold();
+    public static final AnsiColor YELLOW_BOLD = YELLOW.bold();
+    public static final AnsiColor BLUE_BOLD = BLUE.bold();
+    public static final AnsiColor MAGENTA_BOLD = MAGENTA.bold();
+    public static final AnsiColor CYAN_BOLD = CYAN.bold();
 
     private String colorCode;
     private boolean bold;
@@ -35,13 +35,15 @@ public enum AnsiColor {
     private static final String ANSI_BOLD = "\u001B[1m";
     private static final String ANSI_RESET = "\u001B[0m";
 
-    private AnsiColor(String colorCode, boolean bold) {
+    private AnsiColor(String colorCode) {
         this.colorCode = colorCode;
-        this.bold = bold;
+        this.bold = false;
     }
 
-    private AnsiColor(AnsiColor original, boolean bold) {
-        this(original.colorCode, bold);
+    private AnsiColor bold() {
+        AnsiColor result = new AnsiColor(colorCode);
+        result.bold = true;
+        return result;
     }
 
     /**

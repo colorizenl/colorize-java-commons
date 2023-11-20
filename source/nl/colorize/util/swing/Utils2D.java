@@ -11,8 +11,8 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.io.Files;
-import nl.colorize.util.ResourceFile;
 import nl.colorize.util.ResourceException;
+import nl.colorize.util.ResourceFile;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -30,6 +30,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.Transparency;
 import java.awt.font.FontRenderContext;
 import java.awt.font.LineBreakMeasurer;
 import java.awt.font.TextAttribute;
@@ -202,15 +203,8 @@ public final class Utils2D {
     public static BufferedImage makeImageCompatible(BufferedImage original) {
         GraphicsConfiguration graphicsConfig = getDefaultGraphicsConfiguration();
 
-        boolean sameColorModel = graphicsConfig.getColorModel().equals(original.getColorModel());
-        boolean sameType = graphicsConfig.getColorModel().getTransparency() == original.getTransparency();
-        
-        if (sameColorModel && sameType) {
-            return original;
-        }
-
         BufferedImage compatibleImage = graphicsConfig.createCompatibleImage(
-            original.getWidth(), original.getHeight(), original.getTransparency());
+            original.getWidth(), original.getHeight(), Transparency.TRANSLUCENT);
         Graphics2D g2 = compatibleImage.createGraphics();
         g2.drawImage(original, 0, 0, null);
         g2.dispose();

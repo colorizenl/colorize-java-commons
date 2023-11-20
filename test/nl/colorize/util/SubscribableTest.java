@@ -182,4 +182,31 @@ class SubscribableTest {
 
         assertEquals("[a, c]", received.toString());
     }
+
+    @Test
+    void failImmediately() {
+        List<String> received = new ArrayList<>();
+        List<Exception> errors = new ArrayList<>();
+
+        Subscribable<String> subject = Subscribable.fail(new UnsupportedOperationException());
+        subject.subscribe(received::add);
+        subject.subscribeErrors(errors::add);
+
+        assertEquals(0, received.size());
+        assertEquals(1, errors.size());
+    }
+
+    @Test
+    void subscribeOther() {
+        List<String> received = new ArrayList<>();
+
+        Subscribable<String> first = Subscribable.of("a", "b");
+        first.subscribe(received::add);
+
+        Subscribable<String> second = new Subscribable<>();
+        second.subscribe(event -> received.add(event + "2"));
+        first.subscribe(second);
+
+        assertEquals("[a, b, a2, b2]", received.toString());
+    }
 }
