@@ -343,6 +343,12 @@ public class Table<R> extends JPanel implements TableModel {
         });
     }
 
+    public Subscribable<R> subscribeSelected() {
+        Subscribable<R> subject = new Subscribable<>();
+        addActionListener(e -> subject.next(getSelectedRowKey()));
+        return subject;
+    }
+
     public Subscribable<Table<R>> getDoubleClick() {
         return doubleClick;
     }

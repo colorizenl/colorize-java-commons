@@ -11,6 +11,9 @@ import nl.colorize.util.stats.DateRange;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -130,5 +133,25 @@ class PropertyDeserializerTest {
         CSVRecord csv = CSVRecord.create("John", "38");
 
         assertThrows(IllegalArgumentException.class, () -> PropertyDeserializer.fromCSV(csv));
+    }
+
+    @Test
+    void convertFilePaths() {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        Path absolute = propertyDeserializer.parse("/tmp/a.txt", Path.class);
+        Path user = propertyDeserializer.parse("~/Desktop/a.txt", Path.class);
+
+        assertEquals("/tmp/a.txt", absolute.toFile().getAbsolutePath());
+        assertTrue(user.toFile().getAbsolutePath().endsWith("/Desktop/a.txt"));
+    }
+
+    @Test
+    void convertDateAndTime() {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        LocalDate date = propertyDeserializer.parse("2018-03-18", LocalDate.class);
+        LocalDateTime datetime = propertyDeserializer.parse("2018-03-18 15:30", LocalDateTime.class);
+
+        assertEquals(LocalDate.of(2018, 3, 18), date);
+        assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30), datetime);
     }
 }

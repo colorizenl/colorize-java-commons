@@ -68,7 +68,6 @@ public enum Platform {
 
     private static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
     private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
-    private static final Version MIN_REQUIRED_JAVA_VERSION = Version.parse("17.0.0");
 
     private Platform(String displayName, String osName) {
         this.displayName = displayName;
@@ -144,6 +143,15 @@ public enum Platform {
             .orElse(osVersion);
     }
 
+    /**
+     * Convenience method that can be used to check the current platform.
+     * For example, using {@code Platform.is(Platform.MAC)} is a shorthand
+     * for {@code Platform.getPlatform().equals(Platform.MAC)}.
+     */
+    public static boolean is(Platform platformFamily) {
+        return getPlatform().equals(platformFamily);
+    }
+
     public static boolean isWindows() {
         return getPlatform() == WINDOWS;
     }
@@ -165,7 +173,8 @@ public enum Platform {
     }
 
     /**
-     * Returns true if the application was downloaded from the Mac App Store.
+     * Returns true if the current platform is running on a Mac and if the
+     * Java Virtual Machine is running from within the Mac App Store sandbox.
      */
     public static boolean isMacAppStore() {
         String sandboxContainer = System.getenv("APP_SANDBOX_CONTAINER_ID");
@@ -173,16 +182,16 @@ public enum Platform {
     }
 
     /**
-     * Returns the system's processor architecture as described by the "os.arch"
-     * system property.
+     * Returns the system's processor architecture, as described by the
+     * {@code os.arch} system property.
      */
     public static String getSystemArchitecture() {
         return System.getProperty("os.arch");
     }
     
     /**
-     * Returns the amount of heap memory that is currently being used by the JVM,
-     * in bytes.
+     * Returns the amount of heap memory that is currently being used by the
+     * Java Virtual Machine, in bytes.
      */
     public static long getUsedHeapMemory() {
         Runtime runtime = Runtime.getRuntime();
@@ -190,18 +199,19 @@ public enum Platform {
     }
     
     /**
-     * Returns the version of the Java Virtual Machine. An example is "1.7.0_55".
-     * On some platforms it might not be possible to detect the JVM version, in
-     * these cases this returns the minimum Java version supported by this class. 
+     * Returns the version of the Java Virtual Machine. Examples of returned
+     * version numbers are "1.7.0_55" and "21.0.1". Detection is based on the
+     * value of the {@code java.version} system property. Returns
+     * {@link Version#UNKNOWN} if the current platform does not provide Java
+     * version information.
      */
     public static Version getJavaVersion() {
         String javaVersion = System.getProperty("java.version");
         // The system property is "" on Google App Engine and "0" on Android.
-        if (javaVersion != null && javaVersion.length() >= 2 && Version.canParse(javaVersion)) {
-            return Version.parse(javaVersion);
-        } else {
-            return MIN_REQUIRED_JAVA_VERSION;
+        if (javaVersion == null || javaVersion.length() < 2 || !Version.canParse(javaVersion)) {
+            return Version.UNKNOWN;
         }
+        return Version.parse(javaVersion);
     }
 
     /**
@@ -212,7 +222,7 @@ public enum Platform {
      */
     public static File getUserWorkingDirectory() {
         String workingDirectory = System.getProperty("user.dir");
-        if (workingDirectory == null || workingDirectory.length() == 0) {
+        if (workingDirectory == null || workingDirectory.isEmpty()) {
             throw new UnsupportedOperationException("Platform does not support working directory");
         }
         return new File(workingDirectory);
@@ -234,6 +244,7 @@ public enum Platform {
     
     /**
      * Returns a {@code File} that points to the current user's home directory.
+     *
      * @throws UnsupportedOperationException on platforms that do not support
      *         user accounts. Examples are Android and Google App Engine.
      */
@@ -376,21 +387,7 @@ public enum Platform {
         File dir = getUserDataDirectory();
         return new File(dir.getAbsolutePath() + "/" + path);
     }
-    
-    /**
-     * Returns the home directory of the Java runtime environment used to run
-     * the application. In some environments this location is not available
-     * due to security considerations, in these cases this method will return
-     * {@code null}.
-     */
-    public static File getJavaHome() {
-        String javaHome = System.getProperty("java.home");
-        if (javaHome == null || javaHome.isEmpty() || !new File(javaHome).exists()) {
-            return null;
-        }
-        return new File(javaHome);
-    }
-    
+
     /**
      * Returns the platform's directory for temporary files.
      *

@@ -347,6 +347,25 @@ public class TimelineTest {
             "Insufficient timeline performance: " + timer.tock());
     }
 
+    @Test
+    void reverseTimeline() {
+        Timeline timeline = new Timeline()
+            .addKeyFrame(0f, 1f)
+            .addKeyFrame(1f, 2f)
+            .addKeyFrame(2f, 4f)
+            .addKeyFrame(3f, 8f);
+
+        String expected = """
+            Timeline
+                0.0: 8.0
+                1.0: 4.0
+                2.0: 2.0
+                3.0: 1.0
+            """;
+
+        assertEquals(expected.trim(), timeline.reverse().toString().trim());
+    }
+
     private void assertRGBA(Color color, int r, int g, int b, int a) {
         assertEquals(r, color.getRed());
         assertEquals(g, color.getGreen());

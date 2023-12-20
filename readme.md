@@ -25,13 +25,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2023.18</version>
+        <version>2024.1</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2023.18"
+        implementation "nl.colorize:colorize-java-commons:2024.1"
     }
     
 Documentation
@@ -97,7 +97,7 @@ Build instructions
 
 Building the library requires the following:
 
-- [Java JDK](http://java.oracle.com) 17+
+- [Java JDK](http://java.oracle.com) 21+
 - [Gradle](http://gradle.org)
 
 The following Gradle build tasks are available:
@@ -108,11 +108,8 @@ The following Gradle build tasks are available:
 - `gradle coverage` runs all unit tests and reports on test coverage
 - `gradle javadoc` generates the JavaDoc API documentation
 - `gradle dependencyUpdates` checks for and reports on library updates
-- `gradle publish` publishes to Maven central
-
-Note: Publishing the library to Maven Central requires the Gradle properties `ossrhUser` and 
-`ossrhPassword`. If you want to use the library locally, simply provide dummy values for these
-properties in `~/.gradle/gradle.properties`.
+- `gradle publish` publishes the library to Maven central
+  (requires the Gradle properties `mavenCentralUser` and `mavenCentralPassword`)
 
 License
 -------

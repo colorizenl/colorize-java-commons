@@ -6,8 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Preconditions;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,61 +17,56 @@ import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 /**
- * Proxy for accessing multiple messages/values/events that are produced
- * by a (possibly asynchronous) operation, allowing for publish/subscribe
- * workflows. It is possible to subscribe to events, to errors, or to both.
+ * Proxy for accessing multiple events that are produced by a (possibly
+ * asynchronous) operation, allowing for publish/subscribe workflows.
+ * Subscribers can be notified for events, for errors, or for both.
  * <p>
  * Such workflows can also be created in other ways, most commonly using
- * {@code java.util.concurrent}. The main benefit of this class is that
- * it can be used on all platforms supported by this library, including
- * platforms that do not support the {@code java.util.concurrent} API,
- * such as TeaVM.
+ * {@code java.util.concurrent} and its Flow API. However, the Flow API is
+ * not yet supported on all platforms that are supported by this library,
+ * making this class a more portable alternative.
  * <p>
- * On platforms that <em>do</em> support concurrency, {@link Subscribable}
- * instances are thread-safe and can be accessed from multiple threads.
+ * On platforms that do support concurrency, {@link Subscribable} instances
+ * are thread-safe and can be accessed from multiple threads.
  *
  * @param <T> The type of event that can be subscribed to.
  */
 public final class Subscribable<T> {
 
-    private List<Consumer<T>> eventSubscribers;
-    private List<Consumer<Exception>> errorSubscribers;
-
-    private List<T> history;
-    private List<Exception> errorHistory;
-
-    private boolean disposed;
+    private List<Subscriber<T>> subscribers;
+    private List<Object> history;
+    private boolean completed;
 
     private static final Logger LOGGER = LogHelper.getLogger(Subscribable.class);
 
     public Subscribable() {
-        this.eventSubscribers = prepareList();
-        this.errorSubscribers = prepareList();
-
+        this.subscribers = prepareList();
         this.history = prepareList();
-        this.errorHistory = prepareList();
-
-        this.disposed = false;
+        this.completed = false;
     }
 
     private <S> List<S> prepareList() {
         if (Platform.isTeaVM()) {
             return new ArrayList<>();
+        } else {
+            return new CopyOnWriteArrayList<>();
         }
-        return new CopyOnWriteArrayList<>();
     }
 
     /**
-     * Publishes the next event to all event subscribers. If subscriptions
-     * have already been disposed, calling this method does nothing.
+     * Publishes the next event to all event subscribers. This method does
+     * nothing if this {@link Subscribable} has already been marked as
+     * completed.
      */
     public void next(T event) {
-        if (disposed) {
+        if (completed) {
             return;
         }
 
-        for (Consumer<T> subscriber : eventSubscribers) {
-            subscriber.accept(event);
+        for (Subscriber<T> subscriber : subscribers) {
+            if (subscriber.onEvent != null) {
+                subscriber.onEvent.accept(event);
+            }
         }
 
         history.add(event);
@@ -81,37 +74,42 @@ public final class Subscribable<T> {
 
     /**
      * Publishes the next error to all error subscribers. If no error
-     * subscribers exist, publishing an error will result in the error
-     * being logged. If subscriptions have already been disposed, calling
-     * this method does nothing.
+     * subscribers have been registered, this will invoke the default error
+     * handler that will print a log messsage describing the unhandled error.
+     * This method does nothing if this {@link Subscribable} has already been
+     * marked as completed.
      */
     public void nextError(Exception error) {
-        if (disposed) {
+        if (completed) {
             return;
         }
 
-        for (Consumer<Exception> subscriber : errorSubscribers) {
-            subscriber.accept(error);
+        boolean handled = false;
+
+        for (Subscriber<T> subscriber : subscribers) {
+            if (subscriber.onError != null) {
+                subscriber.onError.accept(error);
+                handled = true;
+            }
         }
 
-        if (errorSubscribers.isEmpty()) {
+        if (!handled) {
             LOGGER.warning("Unhandled error: " + error.getMessage());
         }
 
-        errorHistory.add(error);
+        history.add(error);
     }
 
     /**
      * Performs the specified operation and publishes the resulting event to
      * subscribers. If the operation completes normally, the return value is
-     * published to subscribers. If the operation produces an exception, this
-     * exception is published to error subscribers.
-     * <p>
-     * If subscriptions have already been disposed, calling this method does
-     * nothing.
+     * published to subscribers as an event. If an exception occurs during
+     * the operation, this exception is published to error subscribers.
+     * Does nothing if this {@link Subscribable} has already been marked as
+     * completed.
      */
     public void next(Callable<T> operation) {
-        if (disposed) {
+        if (completed) {
             return;
         }
 
@@ -124,67 +122,87 @@ public final class Subscribable<T> {
     }
 
     /**
-     * Registers the specified callback functions as event and error subscribers,
-     * respectively. The subscribers will immediately be notified of previously
+     * Registers the specified callback functions as event and error
+     * subscribers. The subscribers will immediately be notified of previously
+     * published events and/or errors. The {@code id} parameter can be used to
+     * identify the subscriber.
+     *
+     * @return This {@link Subscribable}, for method chaining.
+     */
+    public Subscribable<T> subscribe(UUID id, Consumer<T> onEvent, Consumer<Exception> onError) {
+        Subscriber<T> subscriber = new Subscriber<>(id, onEvent, onError);
+        subscribers.add(subscriber);
+
+        for (Object historicEvent : history) {
+            if (onError != null && historicEvent instanceof Exception error) {
+                onError.accept(error);
+            } else if (onEvent != null) {
+                onEvent.accept((T) historicEvent);
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Registers the specified callback functions as event and error
+     * subscribers. The subscribers will immediately be notified of previously
      * published events and/or errors.
      *
-     * @throws IllegalStateException when trying to subscribe when subscriptions
-     *         have alreasdy been disposed.
+     * @return This {@link Subscribable}, for method chaining.
      */
     public Subscribable<T> subscribe(Consumer<T> onEvent, Consumer<Exception> onError) {
-        subscribe(onEvent);
-        subscribeErrors(onError);
-        return this;
+        return subscribe(UUID.randomUUID(), onEvent, onError);
     }
 
     /**
-     * Registers the specified callback function as event subscriber. The
+     * Registers the specified callback function as an event subscriber. The
      * subscriber will immediately be notified of previously published events.
      *
-     * @throws IllegalStateException when trying to subscribe when subscriptions
-     *         have alreasdy been disposed.
+     * @return This {@link Subscribable}, for method chaining.
      */
     public Subscribable<T> subscribe(Consumer<T> onEvent) {
-        Preconditions.checkState(!disposed, "Subscribable has already been disposed");
-        eventSubscribers.add(onEvent);
-        history.forEach(onEvent);
-        return this;
+        return subscribe(onEvent, null);
     }
 
     /**
-     * Registers the specified callback function as error subscriber. The
+     * Registers the specified callback function as an error subscriber. The
      * subscriber will immediately be notified of previously published errors.
      *
-     * @throws IllegalStateException when trying to subscribe when subscriptions
-     *         have alreasdy been disposed.
+     * @return This {@link Subscribable}, for method chaining.
      */
     public Subscribable<T> subscribeErrors(Consumer<Exception> onError) {
-        Preconditions.checkState(!disposed, "Subscribable has already been disposed");
-        errorSubscribers.add(onError);
-        errorHistory.forEach(onError);
-        return this;
+        return subscribe(null, onError);
     }
 
     /**
      * Subscribes the specified other {@link Subscribable} to listen for both
-     * events and errors generated by this {@link Subscribable}.
+     * events and errors generated by this {@link Subscribable}. This
+     * effectively means that events published by this instance will be
+     * forwarded to {@code subscriber}'s subscribers.
+     *
+     * @return This {@link Subscribable}, for method chaining.
      */
     public Subscribable<T> subscribe(Subscribable<T> subscriber) {
-        subscribe(subscriber::next, subscriber::nextError);
-        return this;
+        return subscribe(subscriber::next, subscriber::nextError);
     }
 
-    //TODO unsubscribe
+    /**
+     * Removes a previously registered subscriber, identifying the subscriber
+     * by its ID. This method does nothing if none of the current subscribers
+     * match the ID.
+     */
+    public void unsubscribe(UUID id) {
+        subscribers.removeIf(subscriber -> subscriber.id.equals(id));
+    }
 
     /**
-     * Cancels all existing subscriptions, and blocks new subscribers from
-     * being added.
+     * Marks this {@link Subscribable} as completed, meaning that no new events
+     * or errors will be published to subscribers. However, <em>old</em> events
+     * might still be published when additional subscribers are registered.
      */
-    public void dispose() {
-        Preconditions.checkState(!disposed, "Subscribable has already been disposed");
-        disposed = true;
-        eventSubscribers.clear();
-        errorSubscribers.clear();
+    public void complete() {
+        completed = true;
     }
 
     /**
@@ -194,15 +212,18 @@ public final class Subscribable<T> {
      */
     public <S> Subscribable<S> map(Function<T, S> mapper) {
         Subscribable<S> mapped = new Subscribable<>();
-        subscribe(event -> {
+
+        Consumer<T> onEvent = event -> {
             try {
                 S mappedEvent = mapper.apply(event);
                 mapped.next(mappedEvent);
             } catch (Exception e) {
                 mapped.nextError(e);
             }
-        });
-        subscribeErrors(mapped::nextError);
+        };
+
+        subscribe(onEvent, mapped::nextError);
+
         return mapped;
     }
 
@@ -213,22 +234,16 @@ public final class Subscribable<T> {
      */
     public Subscribable<T> filter(Predicate<T> predicate) {
         Subscribable<T> filtered = new Subscribable<>();
-        subscribe(event -> {
+
+        Consumer<T> onEvent = event -> {
             if (predicate.test(event)) {
                 filtered.next(event);
             }
-        });
-        subscribeErrors(filtered::nextError);
-        return filtered;
-    }
+        };
 
-    /**
-     * Returns a {@link Promise} that is based on the first event or the first
-     * error produced by this {@link Subscribable}. If <em>multiple</em> events
-     * are produced, only the first is represented by the returned promise.
-     */
-    public Promise<T> toPromise() {
-        return Promise.from(this);
+        subscribe(onEvent, filtered::nextError);
+
+        return filtered;
     }
 
     /**
@@ -271,7 +286,7 @@ public final class Subscribable<T> {
      * returns a {@link Subscribable} that can be used to subscribe to
      * the background operation.
      */
-    public static <T> Subscribable<T> runAsync(Callable<T> operation) {
+    public static <T> Subscribable<T> runBackground(Callable<T> operation) {
         Subscribable<T> subscribable = new Subscribable<>();
 
         Thread backgroundThread = new Thread(() -> subscribable.next(operation),
@@ -282,11 +297,10 @@ public final class Subscribable<T> {
     }
 
     /**
-     * Returns a {@link Subscribable} that will publish the specified error.
+     * Internal data structure that creates a subscriber objects from callback
+     * methods. Callback methods can be {@code null} if the subscriber is not
+     * interested in certain events.
      */
-    public static <T> Subscribable<T> fail(Exception error) {
-        Subscribable<T> subscribable = new Subscribable<>();
-        subscribable.nextError(error);
-        return subscribable;
+    private record Subscriber<T>(UUID id, Consumer<T> onEvent, Consumer<Exception> onError) {
     }
 }

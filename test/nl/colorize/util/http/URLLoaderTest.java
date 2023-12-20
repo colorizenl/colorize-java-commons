@@ -293,8 +293,7 @@ public class URLLoaderTest {
         List<Integer> result = new ArrayList<>();
 
         URLLoader.get("https://www.colorize.nl")
-            .sendPromise()
-            .getSubject()
+            .sendBackground()
             .subscribe(response -> result.add(response.getStatus()));
 
         Thread.sleep(3000);

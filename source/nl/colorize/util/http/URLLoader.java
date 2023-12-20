@@ -12,7 +12,6 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.Promise;
 import nl.colorize.util.Subscribable;
 import nl.colorize.util.TextUtils;
 import nl.colorize.util.stats.Tuple;
@@ -392,25 +391,12 @@ public class URLLoader {
     }
 
     /**
-     * Sends an asynchronous URL request from a background thread and returns
-     * a {@link Subscribable} that can be used to subscribe to the request.
+     * Starts a background thread that will send this request. Returns a
+     * {@link Subscribable} that can be used to subscribe to the response
+     * and/or errors.
      */
-    public Subscribable<URLResponse> subscribe() {
-        Subscribable<URLResponse> subscribable = new Subscribable<>();
-        Runnable task = () -> subscribable.next(() -> send());
-
-        Thread backgroundThread = new Thread(task, "Colorize-URLLoader");
-        backgroundThread.start();
-
-        return subscribable;
-    }
-
-    /**
-     * Sends an asynchronous URL request from a background thread and returns
-     * a {@link Promise} that can be used to access the response.
-     */
-    public Promise<URLResponse> sendPromise() {
-        return Promise.from(subscribe());
+    public Subscribable<URLResponse> sendBackground() {
+        return Subscribable.runBackground(this::send);
     }
 
     private HttpURLConnection openConnection(URI target) throws IOException {

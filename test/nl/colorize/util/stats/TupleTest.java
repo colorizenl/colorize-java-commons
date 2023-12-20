@@ -9,8 +9,10 @@ package nl.colorize.util.stats;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TupleTest {
 
@@ -51,5 +53,14 @@ public class TupleTest {
 
         assertEquals("a2", mapped.left());
         assertEquals("b3", mapped.right());
+    }
+
+    @Test
+    void contains() {
+        Tuple<String, String> tuple = Tuple.of("a", "b");
+
+        assertTrue(tuple.contains("a"));
+        assertTrue(tuple.contains("b"));
+        assertFalse(tuple.contains("c"));
     }
 }

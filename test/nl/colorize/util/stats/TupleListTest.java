@@ -122,4 +122,24 @@ class TupleListTest {
         assertEquals("[(d, 4)]", second.toString());
         assertEquals("[(a, 2), (b, 3), (d, 4)]", result.toString());
     }
+
+    @Test
+    void append() {
+        TupleList<String, Integer> list = TupleList.of();
+        list.append("a", 2);
+
+        assertEquals("[(a, 2)]", list.toString());
+    }
+
+    @Test
+    void fromExistingList() {
+        List<Tuple<String, Integer>> existing = new ArrayList<>();
+        existing.add(Tuple.of("a", 2));
+        existing.add(Tuple.of("b", 3));
+
+        TupleList<String, Integer> result = TupleList.of(existing);
+        result.add("c", 4);
+
+        assertEquals("[(a, 2), (b, 3), (c, 4)]", result.toString());
+    }
 }

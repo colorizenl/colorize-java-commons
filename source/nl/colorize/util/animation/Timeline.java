@@ -291,6 +291,21 @@ public class Timeline implements Animatable {
         return interpolationMethod.interpolate(prev.value(), next.value(), relativeDelta);
     }
 
+    /**
+     * Returns a new timeline that contains the same key frames as this
+     * timeline, but in the reverse order. This means the first key frame in
+     * the result will have the value of the last key frame in this timeline,
+     * and vice versa.
+     */
+    public Timeline reverse() {
+        Timeline reversed = new Timeline(interpolationMethod, loop);
+        for (int i = 0; i < keyFrames.size(); i++) {
+            float value = keyFrames.get(keyFrames.size() - i - 1).value();
+            reversed.addKeyFrame(keyFrames.get(i).time(), value);
+        }
+        return reversed;
+    }
+
     @Override
     public String toString() {
         StringBuilder buffer = new StringBuilder();

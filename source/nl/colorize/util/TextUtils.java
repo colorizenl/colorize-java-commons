@@ -10,6 +10,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
@@ -31,7 +32,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Miscellaneous utility and convenience versions for working with text.
+ * Miscellaneous utility and convenience versions for working with text,
+ * including regular expressions.
  */
 public final class TextUtils {
 
@@ -40,8 +42,8 @@ public final class TextUtils {
     private static final Pattern WORD_SEPARATOR = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR).omitEmptyStrings();
     
-    private static final CharMatcher TEXT_MATCHER =
-        CharMatcher.forPredicate(Character::isLetterOrDigit).or(CharMatcher.whitespace());
+    private static final CharMatcher TEXT_MATCHER = CharMatcher.forPredicate(Character::isLetterOrDigit)
+        .or(CharMatcher.whitespace());
 
     private TextUtils() {
     }
@@ -347,10 +349,10 @@ public final class TextUtils {
     public static List<String> calculateLongestCommonPrefix(List<String> a, List<String> b) {
         for (int i = 0; i < Math.min(a.size(), b.size()); i++) {
             if (!a.get(i).equals(b.get(i))) {
-                return ImmutableList.copyOf(a.subList(0, i));
+                return List.copyOf(a.subList(0, i));
             }
         }
-        return ImmutableList.copyOf(a);
+        return List.copyOf(a);
     }
     
     /**
@@ -436,5 +438,77 @@ public final class TextUtils {
         format.setGroupingUsed(true);
         format.setRoundingMode(RoundingMode.HALF_UP);
         return format.format(n);
+    }
+
+    /**
+     * Formats elapsed time, represented by the number of seconds. The
+     * granularity of the returned value depends on how much time has elapsed.
+     * For example, 3 seconds will produce “0:03”, while an hour will produce
+     * “1:00:00”. If the value of {@code includeMilliseconds} is set to true,
+     * the number of milliseconds will be appended to the result.
+     */
+    public static String timeFormat(float seconds, boolean includeMilliseconds) {
+        return timeFormat(Math.round(seconds * 1000f), includeMilliseconds);
+    }
+
+    /**
+     * Formats elapsed time, represented by the number of milliseconds. The
+     * granularity of the returned value depends on how much time has elapsed.
+     * For example, 3 seconds will produce “0:03”, while an hour will produce
+     * “1:00:00”. If the value of {@code includeMilliseconds} is set to true,
+     * the number of milliseconds will be appended to the result.
+     */
+    public static String timeFormat(long milliseconds, boolean includeMilliseconds) {
+        Preconditions.checkArgument(milliseconds >= 0L,
+            "Cannot format negative elapsed time: " + milliseconds);
+
+        if (milliseconds == 0L) {
+            return "----";
+        }
+
+        long hours = milliseconds / 3_600_000L;
+        long minutes = (milliseconds % 3_600_000L) / 60_000L;
+        long seconds = (milliseconds % 60_000L) / 1000L;
+        long remaining = milliseconds % 1000L;
+
+        if (includeMilliseconds) {
+            return timeFormat(hours, minutes, seconds, remaining);
+        } else {
+            return timeFormat(hours, minutes, seconds);
+        }
+    }
+
+    private static String timeFormat(long hours, long minutes, long seconds) {
+        StringBuilder buffer = new StringBuilder();
+        if (hours > 0L) {
+            buffer.append(hours);
+            buffer.append(":");
+            buffer.append(Strings.padStart(String.valueOf(minutes), 2, '0'));
+        } else {
+            buffer.append(minutes);
+        }
+        buffer.append(":");
+        buffer.append(Strings.padStart(String.valueOf(seconds), 2, '0'));
+        return buffer.toString();
+    }
+
+    private static String timeFormat(long hours, long minutes, long seconds, long milliseconds) {
+        StringBuilder buffer = new StringBuilder();
+        if (hours > 0L) {
+            buffer.append(hours);
+            buffer.append(":");
+            buffer.append(Strings.padStart(String.valueOf(minutes), 2, '0'));
+            buffer.append(":");
+            buffer.append(Strings.padStart(String.valueOf(seconds), 2, '0'));
+        } else if (minutes > 0L) {
+            buffer.append(minutes);
+            buffer.append(":");
+            buffer.append(Strings.padStart(String.valueOf(seconds), 2, '0'));
+        } else {
+            buffer.append(seconds);
+        }
+        buffer.append(".");
+        buffer.append(Strings.padStart(String.valueOf(milliseconds), 3, '0'));
+        return buffer.toString();
     }
 }

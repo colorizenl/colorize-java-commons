@@ -9,6 +9,8 @@ package nl.colorize.util.http;
 import com.google.common.base.Charsets;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,5 +62,23 @@ class URLResponseTest {
             """;
 
         assertEquals(expected, response.toString());
+    }
+
+    @Test
+    void openReader() throws IOException {
+        URLResponse response = new URLResponse(HttpStatus.OK, Headers.none(), "This is a test");
+        StringBuilder buffer = new StringBuilder();
+
+        try (Reader reader = response.openReader(Charsets.UTF_8)) {
+            while (true) {
+                int next = reader.read();
+                if (next == -1) {
+                    break;
+                }
+                buffer.append((char) next);
+            }
+        }
+
+        assertEquals("This is a test", buffer.toString());
     }
 }

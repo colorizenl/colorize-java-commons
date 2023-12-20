@@ -147,8 +147,21 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     /**
      * Factory method that creates a mutable {@link TupleList} from an
      * existing list of tuples.
+     *
+     * @deprecated Renamed to {@link #copyOf(List)}, both because the new
+     *             name is more descriptive and to be consistent with other
+     *             collection classes.
      */
+    @Deprecated
     public static <L, R> TupleList<L, R> of(List<Tuple<L, R>> entries) {
+        return copyOf(entries);
+    }
+
+    /**
+     * Factory method that creates a mutable {@link TupleList} from an
+     * existing list of tuples.
+     */
+    public static <L, R> TupleList<L, R> copyOf(List<Tuple<L, R>> entries) {
         return new TupleList<>(entries);
     }
 

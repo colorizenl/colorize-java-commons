@@ -11,6 +11,9 @@ import com.google.common.collect.ImmutableMap;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -223,6 +226,26 @@ public final class DateParser {
      */
     public static String formatRelative(Date date) {
         return formatRelative(date, new Date());
+    }
+
+    /**
+     * Converts the specified {@link Date} instance to a {@link LocalDate}.
+     * This method will use timezone information as explained in the class
+     * documentation.
+     */
+    public static LocalDate convertDate(Date date) {
+        ZoneId timezone = Platform.getDefaultTimeZone().toZoneId();
+        return date.toInstant().atZone(timezone).toLocalDate();
+    }
+
+    /**
+     * Converts the specified {@link Date} instance to a {@link LocalDateTime}.
+     * This method will use timezone information as explained in the class
+     * documentation.
+     */
+    public static LocalDateTime convertDateTime(Date date) {
+        ZoneId timezone = Platform.getDefaultTimeZone().toZoneId();
+        return date.toInstant().atZone(timezone).toLocalDateTime();
     }
 
     /**

@@ -7,192 +7,253 @@
 package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import nl.colorize.util.CSVRecord;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.Multiset;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
- * Categorizes the frequency of data points within different bins. The histogram
- * has two ways to categorize values: the <em>bins</em> are typically depicted on
- * the x-axis, and used to categorize values. The <em>series</em> are typically
- * depicted using different colors, and are used to differentiate categories
- * within the same bin.
+ * Data structure to describe histograms, which can be used to describe
+ * the distribution of a numerical data set. The histogram consists of
+ * <em>bins</em> and <em>series</em>.
+ * <p>
+ * Bins act as intervals or “buckets” for categorizing values. Bins can
+ * be of any type, but must implement the {@link Comparable} interface,
+ * which is used to determine the order of the bins within the histogram.
+ * It is possible to add bins with a frequency of zero, for cases where
+ * the histogram needs to depict the entire range of bins.
+ * <p>
+ * Series can be used to provide more information on different categories
+ * of data that contribute towards the overall frequency within each bin.
+ * Series are purely descriptive text label, and are therefore always of
+ * type string. Also unlike bins, series do not have an explicit order,
+ * with series being sorted based on their overall frequency within the
+ * data set.
+ * <p>
+ * The following example shows a histogram with multiple bins and multiple
+ * series, presented in glorious ASCII art:
+ * <p>
+ * <pre>
+ *   [2]
+ *   [1]     [2]
+ *   [1]     [1]      [1]
+ *   -------------------------------
+ *   0-10    11-20    21-30    31-40
+ * </pre>
+ * <p>
+ * This class is not thread-safe, {@link Histogram} instances should therefore
+ * not be used concurrently from multiple threads.
  *
  * @param <B> Type of the bins within the histogram.
  */
-public class Histogram<B> {
+public class Histogram<B extends Comparable<B>> {
 
-    private List<B> bins;
-    private List<String> series;
-    private Map<Tuple<String, B>, Integer> values;
+    private SortedSet<B> bins;
+    private Map<B, Multiset<String>> frequency;
+    private Map<String, Integer> seriesTotals;
 
+    private static final Multiset<String> EMPTY = ImmutableMultiset.of();
+
+    /**
+     * Creates a new histogram that is initially empty. Bins will be added
+     * on-the-fly as data is added to the histogram.
+     */
     public Histogram() {
-        this.bins = new ArrayList<>();
-        this.series = new ArrayList<>();
-        this.values = new HashMap<>();
-    }
-
-    public void addBin(B bin) {
-        Preconditions.checkState(!bins.contains(bin),
-            "Bin already exists: " + bin);
-
-        bins.add(bin);
-    }
-
-    public void addBins(Iterable<B> bins) {
-        for (B bin : bins) {
-            addBin(bin);
-        }
-    }
-
-    public void addSeries(String name) {
-        Preconditions.checkState(!series.contains(name),
-            "Series already exists: " + name);
-
-        series.add(name);
-        Collections.sort(series);
-    }
-
-    public void addSeries(Iterable<String> names) {
-        for (String name : names) {
-            addSeries(name);
-        }
-    }
-
-    public void count(String seriesName, B bin) {
-        count(seriesName, bin, 1);
-    }
-
-    public void count(String seriesName, B bin, int amount) {
-        Preconditions.checkArgument(amount >= 0, "Invalid amount: " + amount);
-
-        if (!series.contains(seriesName)) {
-            addSeries(seriesName);
-        }
-
-        if (!bins.contains(bin)) {
-            addBin(bin);
-        }
-
-        Tuple<String, B> key = Tuple.of(seriesName, bin);
-        values.put(key, values.getOrDefault(key, 0) + amount);
+        this.bins = new TreeSet<>();
+        this.frequency = new HashMap<>();
+        this.seriesTotals = new HashMap<>();
     }
 
     /**
-     * Returns all bins in this histogram, sorted in their natural order.
+     * Creates a new histogram that consists of the specified bins. This can
+     * be used in situations where all bins are known up front, or when it
+     * is needed to always depict all possible bins in the histogram.
+     */
+    public Histogram(List<B> initialBins) {
+        this();
+        for (B bin : initialBins) {
+            prepareBin(bin);
+        }
+    }
+
+    private void prepareBin(B bin) {
+        if (!bins.contains(bin)) {
+            bins.add(bin);
+            frequency.put(bin, HashMultiset.create());
+        }
+    }
+
+    /**
+     * Adds the specified frequency to this histogram. The requested bin
+     * and/or series are added to this histogram if they do not yet exist.
+     */
+    public void count(B bin, String series) {
+        count(bin, series, 1);
+    }
+
+    /**
+     * Adds the specified frequency to this histogram. The requested bin
+     * and/or series are added to this histogram if they do not yet exist.
+     *
+     * @throws IllegalArgumentException when trying to add a negative
+     *         frequency. Note that adding zero is in fact allowed, this
+     *         will add the bin if it does not exist yet without adding
+     *         a frequency to the bin.
+     */
+    public void count(B bin, String series, int value) {
+        Preconditions.checkArgument(value >= 0, "Invalid frequency: " + value);
+        Preconditions.checkArgument(!series.trim().isEmpty(), "Empty series name");
+
+        prepareBin(bin);
+
+        if (value > 0) {
+            frequency.get(bin).add(series, value);
+            seriesTotals.put(series, seriesTotals.getOrDefault(series, 0) + value);
+        }
+    }
+
+    /**
+     * Returns a list of all bins in this histogram. The bins are sorted based
+     * on their natural order, i.e. based on the {@link Comparable} interface.
      */
     public List<B> getBins() {
-        return ImmutableList.copyOf(bins);
+        return List.copyOf(bins);
     }
 
     /**
-     * Returns all series in this histogram, sorted alphabetically.
+     * Returns a list of all series in this histogram. The series are ordered
+     * based on overall frequency, with the largest series becoming the first
+     * element in the list.
      */
-    public List<String> getSeriesByName() {
-        return ImmutableList.copyOf(series);
+    public List<String> getSeries() {
+        return List.copyOf(sortFrequencyMap(seriesTotals).keySet());
     }
 
     /**
-     * Returns all series in this histogram, sorted by total frequency so that
-     * the highest-scoring series is first in the list.
+     * Returns the frequency count for the specified bin and series. Returns
+     * zero if the bin and/or series do not exist in this histogram.
      */
-    public List<String> getSeriesByTotalValue() {
-        return series.stream()
-            .sorted((a, b) -> getTotalSeriesValue(b) - getTotalSeriesValue(a))
-            .toList();
+    public int getFrequency(B bin, String series) {
+        return frequency.getOrDefault(bin, EMPTY).count(series);
     }
 
-    public int getValue(String seriesName, B bin) {
-        Tuple<String, B> key = Tuple.of(seriesName, bin);
-        return values.getOrDefault(key, 0);
+    /**
+     * Returns a map containing all series and corresponding frequency that
+     * exist in the specified bin. The iteration order of the map is based
+     * on series frequency, with the most common series first. Returns an
+     * empty map if no such bin exists.
+     */
+    public Map<String, Integer> getBinFrequency(B bin) {
+        Map<String, Integer> binFrequency = new HashMap<>();
+        for (String series : frequency.getOrDefault(bin, EMPTY)) {
+            binFrequency.put(series, binFrequency.getOrDefault(series, 0) + 1);
+        }
+        return sortFrequencyMap(binFrequency);
     }
 
-    public int getTotalSeriesValue(String seriesName) {
-        Preconditions.checkArgument(series.contains(seriesName),
-            "Unknown series: " + seriesName);
-
-        return values.entrySet().stream()
-            .filter(entry -> entry.getKey().left().equals(seriesName))
-            .mapToInt(Map.Entry::getValue)
-            .sum();
-    }
-
-    public int getTotalBinValue(B bin) {
-        return values.entrySet().stream()
-            .filter(entry -> entry.getKey().right().equals(bin))
-            .mapToInt(Map.Entry::getValue)
-            .sum();
-    }
-
-    public TupleList<B, Integer> getSeriesValues(String seriesName) {
-        Preconditions.checkArgument(series.contains(seriesName),
-            "Unknown series: " + seriesName);
-
-        TupleList<B, Integer> tuples = TupleList.create();
+    /**
+     * Returns a list of tuples for all bins in this histogram, with each
+     * tuple consisting of the bin and the corresponding frequency for the
+     * specified series. The frequency will be zero if no such series exists.
+     */
+    public TupleList<B, Integer> getSeriesFrequency(String series) {
+        TupleList<B, Integer> seriesFrequency = new TupleList<>();
         for (B bin : bins) {
-            tuples.add(Tuple.of(bin, getValue(seriesName, bin)));
+            int binFrequency = frequency.getOrDefault(bin, EMPTY).count(series);
+            seriesFrequency.add(bin, binFrequency);
         }
-        return tuples;
-    }
-
-    public Map<String, Integer> getBinValues(B bin) {
-        Map<String, Integer> binValues = new LinkedHashMap<>();
-        for (String seriesName : series) {
-            binValues.put(seriesName, getValue(seriesName, bin));
-        }
-        return binValues;
+        return seriesFrequency;
     }
 
     /**
-     * Returns the contents of this histogram as CSV records. The histogram's
-     * bins will act as columns in the CSV, though they will be prefixed with
-     * a column named "series" which will be used to store the series name. If
-     * the histogram uses non-string bins, {@code toString()} will be called
-     * on the bin objects to obtain the column names. The series in the
-     * histogram will be used as rows, with the name of each series acting as
-     * the first cell.
+     * Returns the total frequency for the specified bin, combining the
+     * frequencies of all series that are included in that bin. Returns zero
+     * if no such bin exists in this histogram.
      */
-    public List<CSVRecord> toCSV() {
-        List<String> columns = new ArrayList<>();
-        columns.add("series");
-        bins.forEach(bin -> columns.add(bin.toString()));
+    public int getBinTotal(B bin) {
+        return frequency.getOrDefault(bin, EMPTY).size();
+    }
 
-        List<CSVRecord> records = new ArrayList<>();
+    /**
+     * Returns the total frequency for the specified series, combining all
+     * bins in which the series might exist. Returns zero if no such series
+     * exists in this histogram.
+     */
+    public int getSeriesTotal(String series) {
+        return bins.stream()
+            .mapToInt(bin -> frequency.getOrDefault(bin, EMPTY).count(series))
+            .sum();
+    }
 
-        for (String seriesName : series) {
-            List<String> cells = new ArrayList<>();
-            cells.add(seriesName);
-            bins.forEach(bin -> cells.add(String.valueOf(getValue(seriesName, bin))));
-            records.add(CSVRecord.create(columns, cells));
+    /**
+     * Returns map containing the total frequency for all series in this
+     * histogram. The iteration order of the map will match
+     * {@link #getSeries()}.
+     */
+    public Map<String, Integer> getSeriesTotals() {
+        return sortFrequencyMap(seriesTotals);
+    }
+
+    /**
+     * Returns a map containing the total frequency for all series in this
+     * histogram, but normalized to percentages instead of the absolute
+     * numbers. The iteration order of the map will match
+     * {@link #getSeries()}. Use {@link #getSeriesTotals()} if you need the
+     * absolute numbers.
+     */
+    public Map<String, Float> getSeriesPercentages() {
+        return normalizeFrequencyMap(sortFrequencyMap(seriesTotals));
+    }
+
+    /**
+     * Returns the combined total frequency of all data in this histogram.
+     * This number will match both the sum of all bins and the sum of all
+     * series.
+     */
+    public int getTotal() {
+        return bins.stream()
+            .mapToInt(bin -> frequency.getOrDefault(bin, EMPTY).size())
+            .sum();
+    }
+
+    /**
+     * Returns a new frequency map that contains the same entries as the
+     * original, but sorted by value so that the most common entry comes
+     * first in the map's iteration order.
+     */
+    private Map<String, Integer> sortFrequencyMap(Map<String, Integer> original) {
+        List<String> sortedKeys = original.keySet().stream()
+            .sorted((a, b) -> original.get(b) - original.get(a))
+            .toList();
+
+        Map<String, Integer> sortedMap = new LinkedHashMap<>();
+        for (String key : sortedKeys) {
+            sortedMap.put(key, original.get(key));
         }
-
-        return records;
+        return sortedMap;
     }
 
     /**
-     * Factory method to create a histogram with the specified bins and series.
-     * All bins will be initially set to zero.
+     * Returns a new frequency map that contains the same entries in the same
+     * order as the original, but expressed as percentages instead of absolute
+     * numbers.
      */
-    public static <B> Histogram<B> withBins(Iterable<B> bins, Iterable<String> series) {
-        Histogram<B> hist = new Histogram<>();
-        hist.addBins(bins);
-        hist.addSeries(series);
-        return hist;
-    }
+    private Map<String, Float> normalizeFrequencyMap(Map<String, Integer> original) {
+        int total = original.values().stream()
+            .mapToInt(value -> value)
+            .sum();
 
-    /**
-     * Factory method to create a histogram with the specified bins. All bins
-     * will be initially set to zero.
-     */
-    public static <B> Histogram<B> withBins(Iterable<B> bins) {
-        Histogram<B> hist = new Histogram<>();
-        hist.addBins(bins);
-        return hist;
+        Map<String, Float> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : original.entrySet()) {
+            float percentage = Statistics.percentage(entry.getValue(), total);
+            normalized.put(entry.getKey(), percentage);
+        }
+        return normalized;
     }
 }

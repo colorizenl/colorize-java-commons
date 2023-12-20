@@ -164,4 +164,34 @@ public class TextUtilsTest {
         assertEquals("999.0", TextUtils.numberFormat(999f, 1));
         assertEquals("1,001.0", TextUtils.numberFormat(1001f, 1));
     }
+
+    @Test
+    void timeFormatWithSecondPrecision() {
+        assertEquals("----", TextUtils.timeFormat(0L, false));
+        assertEquals("0:00", TextUtils.timeFormat(1L, false));
+        assertEquals("0:00", TextUtils.timeFormat(500L, false));
+        assertEquals("0:00", TextUtils.timeFormat(999L, false));
+        assertEquals("0:01", TextUtils.timeFormat(1000L, false));
+        assertEquals("0:30", TextUtils.timeFormat(30_000L, false));
+        assertEquals("0:59", TextUtils.timeFormat(59_000L, false));
+        assertEquals("1:00", TextUtils.timeFormat(60_000L, false));
+        assertEquals("1:02", TextUtils.timeFormat(62_000L, false));
+        assertEquals("1:15", TextUtils.timeFormat(75_000L, false));
+        assertEquals("1:00:00", TextUtils.timeFormat(3600_000L, false));
+        assertEquals("1:00:05", TextUtils.timeFormat(3605_000L, false));
+        assertEquals("1:01:00", TextUtils.timeFormat(3660_000L, false));
+    }
+
+    @Test
+    void timeFormatWithMillisecondPrecision() {
+        assertEquals("0.001", TextUtils.timeFormat(1L, true));
+        assertEquals("0.500", TextUtils.timeFormat(500L, true));
+        assertEquals("0.999", TextUtils.timeFormat(999L, true));
+        assertEquals("1.000", TextUtils.timeFormat(1000L, true));
+        assertEquals("30.000", TextUtils.timeFormat(30_000L, true));
+        assertEquals("59.000", TextUtils.timeFormat(59_000L, true));
+        assertEquals("1:00.000", TextUtils.timeFormat(60_000L, true));
+        assertEquals("1:02.000", TextUtils.timeFormat(62_000L, true));
+        assertEquals("1:00:00.000", TextUtils.timeFormat(3600_000L, true));
+    }
 }

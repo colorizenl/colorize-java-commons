@@ -103,6 +103,19 @@ public class Cache<K, V> {
         return capacity;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(String.format("Cache [%d]", contents.size()));
+        for (K key : keyOrder) {
+            buffer.append("\n    ");
+            buffer.append(key);
+            buffer.append("=");
+            buffer.append(contents.get(key));
+        }
+        return buffer.toString();
+    }
+
     /**
      * Creates a lookup table based on the specified function. The lookup table
      * will have unlimited capacity, cached values will never be removed.

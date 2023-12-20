@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SubscribableTest {
 
@@ -37,7 +37,7 @@ class SubscribableTest {
 
         subject.subscribe(subscriber);
         subject.next("a");
-        subject.dispose();
+        subject.complete();
         subject.next("b");
 
         assertEquals(List.of("a"), received);
@@ -51,7 +51,7 @@ class SubscribableTest {
         subject.subscribe(event -> {
             received.add(event);
             if (event.equals("b")) {
-                subject.dispose();
+                subject.complete();
             }
         });
 
@@ -111,17 +111,6 @@ class SubscribableTest {
     }
 
     @Test
-    void exceptionWhenTryingToSubscribeAfterDispose() {
-        Subscribable<String> subject = Subscribable.of("1", "2", "3");
-        subject.subscribe(value -> System.out.println("a"));
-        subject.dispose();
-
-        assertThrows(IllegalStateException.class, () -> {
-            subject.subscribe(value -> System.out.println("b"));
-        });
-    }
-
-    @Test
     void fromOperation() {
         List<String> received = new CopyOnWriteArrayList<>();
         Subscribable<String> subject = Subscribable.run(() -> "1");
@@ -133,7 +122,7 @@ class SubscribableTest {
     @Test
     void inBackgroundThread() throws InterruptedException {
         List<String> received = new CopyOnWriteArrayList<>();
-        Subscribable<String> subject = Subscribable.runAsync(() -> {
+        Subscribable<String> subject = Subscribable.runBackground(() -> {
             Thread.sleep(500);
             return "1";
         });
@@ -184,19 +173,6 @@ class SubscribableTest {
     }
 
     @Test
-    void failImmediately() {
-        List<String> received = new ArrayList<>();
-        List<Exception> errors = new ArrayList<>();
-
-        Subscribable<String> subject = Subscribable.fail(new UnsupportedOperationException());
-        subject.subscribe(received::add);
-        subject.subscribeErrors(errors::add);
-
-        assertEquals(0, received.size());
-        assertEquals(1, errors.size());
-    }
-
-    @Test
     void subscribeOther() {
         List<String> received = new ArrayList<>();
 
@@ -208,5 +184,22 @@ class SubscribableTest {
         first.subscribe(second);
 
         assertEquals("[a, b, a2, b2]", received.toString());
+    }
+
+    @Test
+    void unsubscribe() {
+        UUID idA = UUID.randomUUID();
+        UUID idB = UUID.randomUUID();
+        List<String> received = new ArrayList<>();
+
+        Subscribable<String> subject = new Subscribable<>();
+        subject.subscribe(idA, event -> received.add("a" + event), null);
+        subject.subscribe(idB, event -> received.add("b" + event), null);
+        subject.next("1");
+        subject.next("2");
+        subject.unsubscribe(idA);
+        subject.next("3");
+
+        assertEquals("[a1, b1, a2, b2, b3]", received.toString());
     }
 }

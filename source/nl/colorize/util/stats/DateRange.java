@@ -10,77 +10,94 @@ import com.google.common.base.Preconditions;
 import nl.colorize.util.DateParser;
 import nl.colorize.util.Platform;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.Predicate;
 
 import static nl.colorize.util.DateParser.format;
 
 /**
  * Defines a range between two {@link Date}s, with the start date being inclusive
- * and the end date being exclusive. The date range can be split into a number of
- * intervals, such as weeks or months. An interval of {@link ChronoUnit#FOREVER}
- * is used to indicate a date range with a custom interval.
+ * and the end date being exclusive. Although the name of this class implies a
+ * <em>date</em> range, this is technically a <em>date/time</em> range since
+ * {@link Date} instances always include a time.
  * <p>
  * If dates do not specify an explicit time zone, the default time zone will be
  * used. See {@link Platform#getDefaultTimeZone()} for how to configure the
  * default time zone.
  */
-public record DateRange(Date start, Date end, ChronoUnit interval) implements Comparable<DateRange> {
+public record DateRange(Date start, Date end) implements Predicate<Date>, Comparable<DateRange> {
 
     public DateRange {
         Preconditions.checkArgument(start.getTime() < end.getTime(),
-            "Invalid date range");
+            "Invalid date range: " + format(start, "yyyy-MM-dd") + " - " + format(end, "yyyy-MM-dd"));
     }
 
-    public DateRange(Date start, Date end) {
-        this(start, end, ChronoUnit.FOREVER);
-    }
-
+    /**
+     * Secondary constructor that uses {@link DateParser#parse(String)} to
+     * parse dates from strings.
+     */
     public DateRange(String start, String end) {
-        this(DateParser.parse(start), DateParser.parse(end), ChronoUnit.FOREVER);
+        this(DateParser.parse(start), DateParser.parse(end));
     }
 
+    /**
+     * Returns true if this date range contains the specified date. Note the
+     * start date is considered inclusive but the end date is considered
+     * exclusive, so this method will return false if the argument matches
+     * the end date exactly.
+     */
     public boolean contains(Date date) {
         return date.getTime() >= start.getTime() && date.getTime() < end.getTime();
     }
 
     /**
-     * Splits this date range into a number of intervals. Note that the intervals
-     * might not exactly match the start and end date of the original date range.
-     * For example, splitting the date range between 2018-10-15 and 2019-12-15
-     * by month will yield October, November, and December 2018.
-     * <p>
-     * This method supports the following time units:
-     * <ul>
-     *   <li>{@link ChronoUnit#FOREVER}</li>
-     *   <li>{@link ChronoUnit#DAYS}</li>
-     *   <li>{@link ChronoUnit#WEEKS}</li>
-     *   <li>{@link ChronoUnit#MONTHS}</li>
-     *   <li>{@link ChronoUnit#YEARS}</li>
-     * </ul>
-     *
-     * @throws IllegalArgumentException if the requested time unit is not
-     *         supported by this method.
+     * Returns true if this date range includes the specified date, using the
+     * same logic describes in {@link #contains(Date)}.
      */
-    public List<DateRange> split(ChronoUnit interval) {
-        return switch (interval) {
-            case FOREVER -> List.of(this);
-            case DAYS -> toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 1);
-            case WEEKS -> toIntervals(interval, GregorianCalendar.DAY_OF_MONTH, 7);
-            case MONTHS -> toIntervals(interval, GregorianCalendar.MONTH, 1);
-            case YEARS -> toIntervals(interval, GregorianCalendar.YEAR, 1);
-            default -> throw new IllegalArgumentException("Unit not supported: " + interval);
-        };
+    @Override
+    public boolean test(Date date) {
+        return contains(date);
     }
 
-    private List<DateRange> toIntervals(ChronoUnit interval, int field, int increment) {
+    /**
+     * Splits this date range into daily intervals. This might include partial
+     * days, depending on the start and end date of this date range.
+     */
+    public List<DateRange> splitDays() {
+        return toIntervals(GregorianCalendar.DAY_OF_MONTH, 1, false);
+    }
+
+    /**
+     * Splits this date range into weekly intervals. This might include partial
+     * weeks, depending on the start and end date of this date range.
+     */
+    public List<DateRange> splitWeeks() {
+        return toIntervals(GregorianCalendar.DAY_OF_MONTH, 7, true);
+    }
+
+    /**
+     * Splits this date range into monthly intervals. This might include
+     * partial months, depending on the start and end date of this date range.
+     */
+    public List<DateRange> splitMonths() {
+        return toIntervals(GregorianCalendar.MONTH, 1, false);
+    }
+
+    /**
+     * Splits this date range into yearly intervals. This might include
+     * partial years, depending on the start and end date of this date range.
+     */
+    public List<DateRange> splitYearly() {
+        return toIntervals(GregorianCalendar.YEAR, 1, false);
+    }
+
+    private List<DateRange> toIntervals(int field, int increment, boolean resetWeek) {
         GregorianCalendar calendar = new GregorianCalendar(Platform.getDefaultTimeZone());
         calendar.setTime(start);
-        if (interval == ChronoUnit.WEEKS) {
+        if (resetWeek) {
             calendar.setFirstDayOfWeek(GregorianCalendar.MONDAY);
             calendar.set(GregorianCalendar.DAY_OF_WEEK, GregorianCalendar.MONDAY);
         } else {
@@ -89,37 +106,31 @@ public record DateRange(Date start, Date end, ChronoUnit interval) implements Co
 
         List<DateRange> intervals = new ArrayList<>();
 
-        while (calendar.getTime().getTime() <= end.getTime()) {
+        while (true) {
             Date intervalStart = calendar.getTime();
-            Date intervalEnd = getIntervalEnd(intervalStart, field, increment);
-            intervals.add(new DateRange(intervalStart, intervalEnd, interval));
+            long intervalEndTime = getIntervalEnd(intervalStart, field, increment);
+            Date intervalEnd = new Date(Math.min(intervalEndTime, end.getTime()));
+            intervals.add(new DateRange(intervalStart, intervalEnd));
             calendar.add(field, increment);
+
+            if (intervalEndTime >= end.getTime()) {
+                break;
+            }
         }
 
         return intervals;
     }
 
-    private Date getIntervalEnd(Date intervalStart, int field, int increment) {
+    private long getIntervalEnd(Date intervalStart, int field, int increment) {
         GregorianCalendar calendar = new GregorianCalendar(Platform.getDefaultTimeZone());
         calendar.setTime(intervalStart);
         calendar.add(field, increment);
-        return new Date(calendar.getTime().getTime() - 1L);
+        return calendar.getTime().getTime();
     }
 
     /**
-     * Splits this date range into intervals, then returns the first interval
-     * that contains the specified date. See the documentation for
-     * {@link #split(ChronoUnit)} for a description on how the date range is
-     * split into intervals.
-     */
-    public Optional<DateRange> matchInterval(ChronoUnit interval, Date date) {
-        return split(interval).stream()
-            .filter(subRange -> subRange.contains(date))
-            .findFirst();
-    }
-
-    /**
-     * Creates a new date range that spans both this and {@code other}.
+     * Creates a new date range that represents the smallest possible period
+     * that includes both this date range and the specified other date range.
      */
     public DateRange span(DateRange other) {
         long spanStart = Math.min(start.getTime(), other.start.getTime());
@@ -134,11 +145,6 @@ public record DateRange(Date start, Date end, ChronoUnit interval) implements Co
 
     @Override
     public String toString() {
-        return switch (interval) {
-            case DAYS, WEEKS -> format(start, "yyyy-MM-dd");
-            case MONTHS -> format(start, "M/yyyy");
-            case YEARS -> format(start, "yyyy");
-            default -> format(start, "yyyy-MM-dd") + " - " + format(end, "yyyy-MM-dd");
-        };
+        return format(start, "yyyy-MM-dd") + " - " + format(end, "yyyy-MM-dd");
     }
 }

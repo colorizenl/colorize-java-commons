@@ -6,80 +6,131 @@
 
 package nl.colorize.util.stats;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import nl.colorize.util.CSVRecord;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class HistogramTest {
 
+    private static final DateRange JANUARY = new DateRange("2023-01-01", "2023-02-01");
+    private static final DateRange FEBRUARY = new DateRange("2023-02-01", "2023-03-01");
+    private static final DateRange MARCH = new DateRange("2023-03-01", "2023-04-01");
+    private static final DateRange APRIL = new DateRange("2023-04-01", "2023-05-01");
+
     @Test
-    void countValues() {
-        Histogram<String> hist = new Histogram<>();
-        hist.count("a", "x");
-        hist.count("a", "x", 3);
-        hist.count("a", "y", 2);
-        hist.count("b", "y", 7);
+    void addBinsOnTheFly() {
+        Histogram<String> histogram = new Histogram<>();
+        histogram.count("a", "1");
+        histogram.count("a", "1");
+        histogram.count("b", "1");
 
-        assertEquals(4, hist.getValue("a", "x"));
-        assertEquals(0, hist.getValue("b", "x"));
-        assertEquals(2, hist.getValue("a", "y"));
-        assertEquals(7, hist.getValue("b", "y"));
-
-        assertEquals(6, hist.getTotalSeriesValue("a"));
-        assertEquals(7, hist.getTotalSeriesValue("b"));
-
-        assertEquals(4, hist.getTotalBinValue("x"));
-        assertEquals(9, hist.getTotalBinValue("y"));
-        assertEquals(0, hist.getTotalBinValue("z"));
-
-        assertEquals("[(x, 4), (y, 2)]", hist.getSeriesValues("a").toString());
-        assertEquals("[(x, 0), (y, 7)]", hist.getSeriesValues("b").toString());
-
-        assertEquals(ImmutableMap.of("a", 4, "b", 0), hist.getBinValues("x"));
-        assertEquals(ImmutableMap.of("a", 2, "b", 7), hist.getBinValues("y"));
+        assertEquals(List.of("a", "b"), histogram.getBins());
     }
 
     @Test
-    void autoSortSeries() {
-        Histogram<String> hist = new Histogram<>();
-        hist.addBin("b");
-        hist.addBin("a");
-        hist.addSeries("b");
-        hist.addSeries("a");
+    void addBinsUpFront() {
+        Histogram<String> histogram = new Histogram<>(List.of("a", "b"));
 
-        assertEquals(ImmutableList.of("b", "a"), hist.getBins());
-        assertEquals(ImmutableList.of("a", "b"), hist.getSeriesByName());
+        assertEquals(List.of("a", "b"), histogram.getBins());
     }
 
     @Test
-    void sortSeriesByTotalValue() {
-        Histogram<String> hist = new Histogram<>();
-        hist.count("a", "x", 10);
-        hist.count("a", "y", 7);
-        hist.count("b", "x", 6);
-        hist.count("b", "y", 12);
+    void autoSortBins() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(MARCH, "1");
+        histogram.count(JANUARY, "1");
 
-        assertEquals(ImmutableList.of("b", "a"), hist.getSeriesByTotalValue());
+        assertEquals(List.of(JANUARY, MARCH), histogram.getBins());
     }
 
     @Test
-    void toCSV() {
-        Histogram<String> hist = Histogram.withBins(List.of("with", "without"));
-        hist.count("men", "with", 1);
-        hist.count("men", "without", 2);
-        hist.count("women", "with", 3);
+    void sortSeriesByFrequency() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(MARCH, "1");
+        histogram.count(APRIL, "2");
+        histogram.count(APRIL, "2");
 
-        String expected = """
-            series;with;without
-            men;1;2
-            women;3;0
-            """;
+        assertEquals(List.of("2", "1"), histogram.getSeries());
+    }
 
-        assertEquals(expected.trim(), CSVRecord.toCSV(hist.toCSV(), ";", true));
+    @Test
+    void calculateTotals() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2");
+        histogram.count(JANUARY, "2", 10);
+        histogram.count(MARCH, "1");
+        histogram.count(APRIL, "2");
+
+        assertEquals(1, histogram.getFrequency(JANUARY, "1"));
+        assertEquals(11, histogram.getFrequency(JANUARY, "2"));
+
+        assertEquals(12, histogram.getBinTotal(JANUARY));
+        assertEquals(0, histogram.getBinTotal(FEBRUARY));
+        assertEquals(1, histogram.getBinTotal(MARCH));
+        assertEquals(1, histogram.getBinTotal(APRIL));
+
+        assertEquals(2, histogram.getSeriesTotal("1"));
+        assertEquals(12, histogram.getSeriesTotal("2"));
+        assertEquals(0, histogram.getSeriesTotal("3"));
+
+        assertEquals(14, histogram.getTotal());
+    }
+
+    @Test
+    void getSeriesTotals() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2");
+        histogram.count(FEBRUARY, "2");
+
+        Map<String, Integer> totals = histogram.getSeriesTotals();
+
+        assertEquals(2, totals.size());
+        assertEquals("[2, 1]", totals.keySet().toString());
+        assertEquals(2, totals.get("2"));
+        assertEquals(1, totals.get("1"));
+    }
+
+    @Test
+    void getSeriesPercentages() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2", 2);
+        histogram.count(FEBRUARY, "2");
+
+        Map<String, Float> percentages = histogram.getSeriesPercentages();
+
+        assertEquals("{2=75.0, 1=25.0}", percentages.toString());
+    }
+
+    @Test
+    void getSeriesTuples() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2");
+        histogram.count(FEBRUARY, "2");
+        histogram.count(FEBRUARY, "2");
+
+        assertEquals("[(2023-01-01 - 2023-02-01, 1), (2023-02-01 - 2023-03-01, 0)]",
+            histogram.getSeriesFrequency("1").toString());
+
+        assertEquals("[(2023-01-01 - 2023-02-01, 1), (2023-02-01 - 2023-03-01, 2)]",
+            histogram.getSeriesFrequency("2").toString());
+    }
+
+    @Test
+    void getBinMap() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2");
+        histogram.count(JANUARY, "2", 3);
+        histogram.count(FEBRUARY, "2");
+
+        assertEquals("{2=4, 1=1}", histogram.getBinFrequency(JANUARY).toString());
+        assertEquals("{2=1}", histogram.getBinFrequency(FEBRUARY).toString());
     }
 }

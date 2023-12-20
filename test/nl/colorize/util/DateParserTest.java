@@ -8,6 +8,8 @@ package nl.colorize.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -100,5 +102,13 @@ class DateParserTest {
         Date date = parse("2018-06-12T19:30");
 
         assertEquals("12 Jun 2018 17:30:00 GMT", date.toGMTString());
+    }
+
+    @Test
+    void convert() {
+        Date reference = parse("2018-03-18 15:30");
+
+        assertEquals(LocalDate.of(2018, 3, 18), DateParser.convertDate(reference));
+        assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30), DateParser.convertDateTime(reference));
     }
 }

@@ -9,6 +9,9 @@ package nl.colorize.util;
 import com.google.common.base.Preconditions;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -40,7 +43,10 @@ import java.util.logging.Logger;
  *   <li>boolean/Boolean</li>
  *   <li>String</li>
  *   <li>Date (assuming the ISO 8601 date format)</li>
- *   <li>File/Path</li>
+ *   <li>LocalDate (not supported on TeaVM, assuming the ISO 8601 date format)</li>
+ *   <li>LocalDateTime (not supported on TeaVM, assuming the ISO 8601 date format)</li>
+ *   <li>File</li>
+ *   <li>Path (not supported on TeaVM)</li>
  *   <li>UUID</li>
  *   <li>Version</li>
  * </ul>
@@ -84,6 +90,12 @@ public class PropertyDeserializer {
         register(File.class, FileUtils::expandUser);
         register(UUID.class, UUID::fromString);
         register(Version.class, Version::parse);
+
+        if (!Platform.isTeaVM()) {
+            register(LocalDate.class, value -> DateParser.convertDate(DateParser.parse(value)));
+            register(LocalDateTime.class, value -> DateParser.convertDateTime(DateParser.parse(value)));
+            register(Path.class, value -> FileUtils.expandUser(value).toPath());
+        }
     }
 
     /**
