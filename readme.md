@@ -1,6 +1,9 @@
 Colorize Java Commons
 =====================
 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/nl.colorize/colorize-java-commons/badge.svg)]
+(https://central.sonatype.com/artifact/nl.colorize/colorize-java-commons)
+
 Set of Java libraries for web, desktop, and mobile applications. It is used in all Java-based
 applications and libraries developed by [Colorize](http://www.colorize.nl), where it has been
 in use since 2007.
