@@ -1,10 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
+
+import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -119,6 +122,58 @@ public final class Subscribable<T> {
         } catch (Exception e) {
             nextError(e);
         }
+    }
+
+    /**
+     * Attempts to perform an operation for the specified number of attempts,
+     * automatically retrying the operation if the initial attempt(s) failed.
+     * Note {@code attempts} includes the original attempt, so the number of
+     * retries is basically {@code attempts - 1}.
+     * <p>
+     * If the operation is not successful, an error is sent to subscribers
+     * based on the last failed attempt.
+     */
+    public void retry(Callable<T> operation, int attempts) {
+        retry(operation, attempts, 0L);
+    }
+
+    /**
+     * Attempts to perform an operation for the specified number of attempts,
+     * automatically retrying the operation if the initial attempt(s) failed.
+     * The specified time delay (in milliseconds) is applied in between
+     * attempts. Note {@code attempts} includes the original attempt, so the
+     * number of retries is basically {@code attempts - 1}.
+     * <p>
+     * If the operation is not successful, an error is sent to subscribers
+     * based on the last failed attempt.
+     */
+    public void retry(Callable<T> operation, int attempts, long delay) {
+        Preconditions.checkArgument(attempts >= 1, "Invalid number of attempts: " + attempts);
+        Preconditions.checkArgument(delay >= 0L, "Invalid delay: " + delay);
+
+        Exception thrown = null;
+
+        for (int i = 0; i < attempts; i++) {
+            try {
+                T event = operation.call();
+                next(event);
+                return;
+            } catch (Exception e) {
+                thrown = e;
+                LOGGER.log(Level.WARNING, "Operation failed, retrying");
+            }
+
+            if (delay > 0L) {
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
+                    LOGGER.warning("Retry delay interrupted");
+                }
+            }
+        }
+
+        LOGGER.warning("Operation failed after " + attempts + " attempts");
+        nextError(thrown);
     }
 
     /**

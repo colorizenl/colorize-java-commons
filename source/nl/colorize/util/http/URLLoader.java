@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -37,7 +37,6 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
@@ -59,10 +58,6 @@ import java.util.logging.Logger;
  * possible to override the auto-detect mechanism on a per-request basis, since
  * this would be akin to just using the preferred HTTP client directly.
  * <p>
- * This class will automatically retry failed requests. The retry mechanism is
- * provided by {@link Retry}. The retry behavior can be disabled or changed
- * using {@link #withAttempts(int)}.
- * <p>
  * This class only supports URL requests for the HTTP and HTTPS protocols. Other
  * protocols, such as {@code file://} URLs, are not supported.
  * <p>
@@ -78,14 +73,12 @@ public class URLLoader {
     private Headers headers;
     private byte[] body;
     private Charset encoding;
-    private int attempts;
     private int timeout;
     private boolean allowErrorStatus;
     private boolean certificateValidation;
 
     private static final List<String> SUPPORTED_PROTOCOLS = List.of("http", "https");
     private static final int DEFAULT_TIMEOUT = 30_000;
-    private static final long RETRY_DELAY = 500L;
     private static final Logger LOGGER = LogHelper.getLogger(URLLoader.class);
 
     /**
@@ -119,7 +112,6 @@ public class URLLoader {
         this.parseInitialURL(url);
         this.headers = Headers.none();
         this.body = new byte[0];
-        this.attempts = 2;
         this.timeout = DEFAULT_TIMEOUT;
         this.allowErrorStatus = false;
         this.certificateValidation = true;
@@ -288,16 +280,6 @@ public class URLLoader {
         return withHeader(HttpHeaders.AUTHORIZATION, "Basic " + base64);
     }
 
-    /**
-     * Changes the number of attempts this {@code URLLoader} will perform. A
-     * number larger than 1 means automatic retry for failed requests.
-     */
-    public URLLoader withAttempts(int attempts) {
-        Preconditions.checkArgument(attempts >= 1, "Invalid numer of attempts: " + attempts);
-        this.attempts = attempts;
-        return this;
-    }
-
     public URLLoader withTimeout(int timeout) {
         Preconditions.checkArgument(timeout > 0, "Invalid timeout: " + timeout);
         this.timeout = timeout;
@@ -349,20 +331,6 @@ public class URLLoader {
      *         will be thrown.
      */
     public URLResponse send() throws IOException {
-        try {
-            return Retry.create(attempts)
-                .withDelay(RETRY_DELAY)
-                .attempt(this::sendRequest);
-        } catch (ExecutionException e) {
-            throw new IOException("Sending HTTP request failed", e);
-        }
-    }
-
-    /**
-     * Internal version of {@link #send()} that is used by the retry mechanism
-     * when attempting to perform the request.
-     */
-    private URLResponse sendRequest() throws IOException {
         boolean force = System.getProperty(FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "").equals("true");
         boolean classicHttpClient = Platform.isTeaVM() || force;
 

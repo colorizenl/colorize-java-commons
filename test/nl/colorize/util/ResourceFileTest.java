@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -111,5 +112,30 @@ public class ResourceFileTest {
         ResourceFile file = new ResourceFile(tempFile);
 
         assertEquals(ImmutableList.of("Test", "test"), file.readLines(Charsets.UTF_8));
+    }
+
+    @Test
+    void uriForLocalFiles() {
+        ResourceFile file = new ResourceFile("build.gradle");
+        URI uri = file.toURI();
+
+        assertTrue(uri.toString().startsWith("file:"));
+        assertTrue(uri.toString().endsWith("build.gradle"));
+    }
+
+    @Test
+    void uriForClassPathResourcesInJAR() {
+        ResourceFile file = new ResourceFile("com/google/common/collect/Multimap.class");
+        URI uri = file.toURI();
+
+        assertTrue(uri.toString().startsWith("jar"));
+        assertTrue(uri.toString().endsWith("Multimap.class"));
+    }
+
+    @Test
+    void exceptionIfNoURI() {
+        ResourceFile file = new ResourceFile("nonexistent.txt");
+
+        assertThrows(ResourceException.class, () -> file.toURI());
     }
 }

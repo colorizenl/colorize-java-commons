@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -23,12 +23,27 @@ import java.util.logging.LogRecord;
  */
 public class CompactFormatter extends Formatter {
 
+    private boolean includeClassName;
+
+    public CompactFormatter(boolean includeClassName) {
+        this.includeClassName = includeClassName;
+    }
+
+    public CompactFormatter() {
+        this(false);
+    }
+
     @Override
     public String format(LogRecord record) {
         StringBuilder log = new StringBuilder();
         log.append(format(record.getMillis()));
         log.append("  ");
         log.append(Strings.padEnd(record.getLevel().toString(), 9, ' '));
+        if (includeClassName) {
+            log.append(record.getSourceClassName());
+            log.append(System.lineSeparator());
+            log.append(Strings.repeat(" ", 30));
+        }
         log.append(record.getMessage());
         log.append(System.lineSeparator());
         if (record.getThrown() != null) {

@@ -1,12 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.uitest;
 
 import nl.colorize.util.http.URLLoader;
+import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.FormPanel;
 import nl.colorize.util.swing.SwingUtils;
 import nl.colorize.util.swing.Utils2D;
@@ -25,23 +26,26 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Graphical test for all image manipulation functions.
+ * Swing application that showcases the graphical effects for Java2D.
  */
 public class ImageManipulationUIT extends JPanel {
 
-    private BufferedImage photo;
+    private BufferedImage image;
     private int scale;
     private int blur;
     private Color tintColor;
     private int tintIntensity;
-    private int dropShadowSize;
-    private int dropShadowBlur;
-    
-    private static final int PADDING = 40;
+    private int shadowSize;
+    private int shadowBlur;
+    private int shadowAlpha;
+
+    private static final String TEST_IMAGE_URL = "https://www.colorize.nl/logo.png";
+    private static final int PADDING = 50;
     
     public static void main(String[] args) throws IOException {
         ImageManipulationUIT test = new ImageManipulationUIT();
@@ -53,15 +57,16 @@ public class ImageManipulationUIT extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
     }
     
-    public JFrame createWindow() {
+    private void createWindow() {
         loadPhoto();
 
         scale = 100;
         blur = 0;
         tintColor = Color.WHITE;
         tintIntensity = 0;
-        dropShadowSize = 0;
-        dropShadowBlur = 0;
+        shadowSize = 0;
+        shadowBlur = 0;
+        shadowAlpha = 255;
         
         add(createEditPanel(), BorderLayout.SOUTH);
         add(createToggleImagePanel(), BorderLayout.NORTH);
@@ -74,39 +79,23 @@ public class ImageManipulationUIT extends JPanel {
         window.setLayout(new BorderLayout());
         window.add(this, BorderLayout.CENTER);
         window.setVisible(true);
-        return window;
     }
     
     private void loadPhoto() {
-        // This currently loads a photo from the website, so if
-        // the website changes this test will break.
-        URLLoader loader = URLLoader.get("http://www.colorize.nl/images/about_studio.png");
+        URLLoader loader = URLLoader.get(TEST_IMAGE_URL);
 
         try (InputStream stream = loader.send().openStream()) {
-            photo = Utils2D.loadImage(stream);
-            photo = Utils2D.makeImageCompatible(photo);
-            photo = Utils2D.addPadding(photo, PADDING);
+            image = Utils2D.loadImage(stream);
+            image = Utils2D.makeImageCompatible(image);
+            image = Utils2D.addPadding(image, PADDING);
         } catch (IOException e) {
             throw new AssertionError(e);
         }
     }
-    
-    private void loadImageWithAlpha() {
-        BufferedImage image = new BufferedImage(220, 220, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = Utils2D.createGraphics(image, true, true);
-        g2.setColor(Color.RED);
-        g2.fillOval(10, 10, 200, 200);
-        g2.setColor(Color.WHITE);
-        g2.setFont(g2.getFont().deriveFont(1, 60f));
-        Utils2D.drawStringCentered(g2, "Test!", image.getWidth() / 2, 140);
-        g2.dispose();
-        
-        photo = image;
-    }
-    
+
     private JPanel createToggleImagePanel() {
         JButton toggleImage = new JButton("Change image");
-        toggleImage.addActionListener(e -> toggleImage());
+        toggleImage.addActionListener(e -> changeImage());
         
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         panel.setOpaque(false);
@@ -114,13 +103,20 @@ public class ImageManipulationUIT extends JPanel {
         return panel;
     }
     
-    private void toggleImage() {
-        if (photo.getWidth() > 300) {
-            loadImageWithAlpha();
-        } else {
-            loadPhoto();
+    private void changeImage() {
+        try {
+            ComboFileDialog fileDialog = new ComboFileDialog();
+            fileDialog.setFilter("Image files", ".png", ".jpg");
+            File file = fileDialog.showOpenDialog(null);
+            if (file != null) {
+                image = Utils2D.loadImage(file);
+                image = Utils2D.makeImageCompatible(image);
+                image = Utils2D.addPadding(image, PADDING);
+                repaint();
+            }
+        } catch (IOException e) {
+            throw new AssertionError(e);
         }
-        repaint();
     }
     
     private JPanel createEditPanel() {
@@ -169,27 +165,22 @@ public class ImageManipulationUIT extends JPanel {
     }
     
     private FormPanel createTintPanel() {
-        final JSlider redSlider = new JSlider(0, 255, 255);
-        final JSlider greenSlider = new JSlider(0, 255, 255);
-        final JSlider blueSlider = new JSlider(0, 255, 255);
+        JSlider redSlider = new JSlider(0, 255, 255);
+        JSlider greenSlider = new JSlider(0, 255, 255);
+        JSlider blueSlider = new JSlider(0, 255, 255);
         
-        ChangeListener tintListener = new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                tintColor = new Color(redSlider.getValue(), greenSlider.getValue(), 
-                        blueSlider.getValue());
-                repaint();
-            }
+        ChangeListener tintListener = e -> {
+            tintColor = new Color(redSlider.getValue(), greenSlider.getValue(), blueSlider.getValue());
+            repaint();
         };
         redSlider.addChangeListener(tintListener);
         greenSlider.addChangeListener(tintListener);
         blueSlider.addChangeListener(tintListener);
         
-        final JSlider intensitySlider = new JSlider(0, 100, 0);
-        intensitySlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                tintIntensity = intensitySlider.getValue();
-                repaint();
-            }
+        JSlider intensitySlider = new JSlider(0, 100, 0);
+        intensitySlider.addChangeListener(e -> {
+            tintIntensity = intensitySlider.getValue();
+            repaint();
         });
         
         FormPanel panel = new FormPanel();
@@ -203,24 +194,26 @@ public class ImageManipulationUIT extends JPanel {
     }
     
     private FormPanel createDropShadowPanel() {
-        final JSlider shadowSizeSlider = new JSlider(0, 50, 0);
-        final JSlider shadowBlurSlider = new JSlider(0, 20, 5);
+        JSlider shadowSizeSlider = new JSlider(0, 50, 0);
+        JSlider shadowBlurSlider = new JSlider(0, 20, 5);
+        JSlider shadowAlphaSlider = new JSlider(0, 255, 255);
         
-        ChangeListener shadowListener = new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                dropShadowSize = shadowSizeSlider.getValue();
-                dropShadowBlur = shadowBlurSlider.getValue();
-                repaint();
-            }
+        ChangeListener shadowListener = e -> {
+            shadowSize = shadowSizeSlider.getValue();
+            shadowBlur = shadowBlurSlider.getValue();
+            shadowAlpha = shadowAlphaSlider.getValue();
+            repaint();
         };
         shadowSizeSlider.addChangeListener(shadowListener);
         shadowBlurSlider.addChangeListener(shadowListener);
+        shadowAlphaSlider.addChangeListener(shadowListener);
         
         FormPanel panel = new FormPanel();
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         panel.addRow("Shadow size:", shadowSizeSlider, true);
         panel.addRow("Shadow blur:", shadowBlurSlider, true);
+        panel.addRow("Shadow alpha:", shadowAlphaSlider, true);
         return panel;
     }
     
@@ -228,8 +221,8 @@ public class ImageManipulationUIT extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         
-        int targetWidth = Math.round((scale / 100f) * photo.getWidth());
-        int targetHeight = Math.round((scale / 100f) * photo.getHeight());
+        int targetWidth = Math.round((scale / 100f) * image.getWidth());
+        int targetHeight = Math.round((scale / 100f) * image.getHeight());
         int x = getWidth() / 2 - targetWidth / 2;
         int y = 20;
         
@@ -238,13 +231,15 @@ public class ImageManipulationUIT extends JPanel {
     }
 
     private BufferedImage getPhotoToDraw(int targetWidth, int targetHeight) {
-        BufferedImage scaledPhoto = Utils2D.scaleImage(photo, targetWidth, targetHeight, true);
+        BufferedImage scaledPhoto = Utils2D.scaleImage(image, targetWidth, targetHeight, true);
+
         if (blur > 0) {
             return Utils2D.applyGaussianBlur(scaledPhoto, blur);
         } else if (tintIntensity > 0) {
             return Utils2D.applyTint(scaledPhoto, tintColor);
-        } else if (dropShadowSize > 0) {
-            return Utils2D.applyDropShadow(scaledPhoto, dropShadowSize, dropShadowBlur);
+        } else if (shadowSize > 0) {
+            Color shadowColor = new Color(0, 0, 0, shadowAlpha);
+            return Utils2D.applyDropShadow(scaledPhoto, shadowColor, shadowSize, shadowBlur);
         } else {
             return scaledPhoto;
         }

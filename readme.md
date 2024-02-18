@@ -32,13 +32,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2024.1</version>
+        <version>2024.2</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2024.1"
+        implementation "nl.colorize:colorize-java-commons:2024.2"
     }
     
 Documentation
@@ -121,7 +121,7 @@ The following Gradle build tasks are available:
 License
 -------
 
-Copyright 2007-2023 Colorize
+Copyright 2007-2024 Colorize
 
 > Licensed under the Apache License, Version 2.0 (the "License");
 > you may not use this file except in compliance with the License.

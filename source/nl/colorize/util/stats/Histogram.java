@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -115,6 +115,19 @@ public class Histogram<B extends Comparable<B>> {
         if (value > 0) {
             frequency.get(bin).add(series, value);
             seriesTotals.put(series, seriesTotals.getOrDefault(series, 0) + value);
+        }
+    }
+
+    /**
+     * Adds all data from the specified other histogram to this histogram.
+     * This includes any bins and/or series that are not yet present in this
+     * histogram.
+     */
+    public void merge(Histogram<B> other) {
+        for (B bin : other.bins) {
+            for (String series : other.frequency.get(bin)) {
+                count(bin, series);
+            }
         }
     }
 

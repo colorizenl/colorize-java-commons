@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -28,10 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * Simple test application for {@link ImageViewer} that displays all images in
@@ -40,9 +38,8 @@ import java.util.Set;
 public class ImageViewerUIT {
 
     private List<File> imageFiles;
-    private Set<File> seen;
-    private File selectedFile;
     private Cache<File, BufferedImage> imageCache;
+    private List<File> history;
 
     private ImageViewer imageViewer;
     private Table<File> imageList;
@@ -58,10 +55,10 @@ public class ImageViewerUIT {
 
     public ImageViewerUIT() {
         this.imageFiles = new ArrayList<>();
-        this.seen = new HashSet<>();
         this.imageCache = Cache.from(this::loadImage, IMAGE_CACHE_SIZE);
+        this.history = new ArrayList<>();
 
-        createImageViewer();
+        imageViewer = new ImageViewer(true);
         createImageList();
         createKeyboardListener();
 
@@ -79,20 +76,21 @@ public class ImageViewerUIT {
 
     private void createKeyboardListener() {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
-            if (e.getID() == KeyEvent.KEY_RELEASED && e.getKeyCode() == KeyEvent.VK_SPACE) {
-                selectRandomImage();
-                return true;
-            } else if (e.getID() == KeyEvent.KEY_RELEASED && e.getKeyCode() == KeyEvent.VK_O) {
-                openSelectedFile();
-                return true;
-            } else {
-                return false;
+            if (e.getID() == KeyEvent.KEY_RELEASED) {
+                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    selectRandomImage();
+                    return true;
+                } else if (e.getKeyCode() == KeyEvent.VK_O) {
+                    openSelectedFile();
+                    return true;
+                } else if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+                    previous();
+                    return true;
+                }
             }
-        });
-    }
 
-    private void createImageViewer() {
-        imageViewer = new ImageViewer(true);
+            return false;
+        });
     }
 
     private void createImageList() {
@@ -120,7 +118,6 @@ public class ImageViewerUIT {
         if (selected != null) {
             File dir = selected.getParentFile();
             imageFiles = locateImageFiles(dir);
-            seen.clear();
             imageCache.forgetAll();
             refreshImageList();
             selectRandomImage();
@@ -146,38 +143,44 @@ public class ImageViewerUIT {
 
     private void selectRandomImage() {
         if (imageFiles.isEmpty()) {
-            selectedFile = null;
+            history.clear();
             return;
         }
 
-        if (seen.size() == imageFiles.size()) {
-            seen.clear();
+        if (history.size() == imageFiles.size()) {
+            history.clear();
         }
 
         List<File> remaining = imageFiles.stream()
-            .filter(file -> !seen.contains(file))
+            .filter(file -> !history.contains(file))
             .toList();
 
         int index = new Random().nextInt(remaining.size());
-        selectedFile = remaining.get(index);
-        BufferedImage displayedImage = imageCache.get(selectedFile);
-        imageViewer.display(displayedImage);
-        seen.add(selectedFile);
+        File next = remaining.get(index);
+        selectImage(next);
     }
 
     private void selectImage(File file) {
         if (file != null) {
+            history.add(file);
             imageViewer.display(imageCache.get(file));
         }
     }
 
     private void openSelectedFile() {
-        if (selectedFile != null) {
+        if (!history.isEmpty()) {
             if (Platform.isMac()) {
-                MacIntegration.revealInFinder(selectedFile);
+                MacIntegration.revealInFinder(history.getLast());
             } else {
-                SwingUtils.openFile(selectedFile);
+                SwingUtils.openFile(history.getLast());
             }
+        }
+    }
+
+    private void previous() {
+        if (!history.isEmpty()) {
+            File previousFile = history.removeLast();
+            imageViewer.display(imageCache.get(previousFile));
         }
     }
 }

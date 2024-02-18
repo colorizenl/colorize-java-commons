@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -132,5 +132,23 @@ class HistogramTest {
 
         assertEquals("{2=4, 1=1}", histogram.getBinFrequency(JANUARY).toString());
         assertEquals("{2=1}", histogram.getBinFrequency(FEBRUARY).toString());
+    }
+
+    @Test
+    void merge() {
+        Histogram<DateRange> histogram = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "2");
+
+        Histogram<DateRange> other = new Histogram<>();
+        histogram.count(JANUARY, "1");
+        histogram.count(JANUARY, "3");
+        histogram.count(MARCH, "1");
+
+        histogram.merge(other);
+
+        assertEquals("{1=2, 2=1, 3=1}", histogram.getBinFrequency(JANUARY).toString());
+        assertEquals("{}", histogram.getBinFrequency(FEBRUARY).toString());
+        assertEquals("{1=1}", histogram.getBinFrequency(MARCH).toString());
     }
 }

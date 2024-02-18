@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -219,14 +219,9 @@ public class PostData {
     }
 
     /**
-     * Creates a {@code PostData} instance from existing key/value pairs.
-     *
-     * @deprecated Using a map does not allow for an explicit iteration order,
-     *             and it also does not allow multiple parameters to use the
-     *             same name. Use {@link #create(String, String, String...)}
-     *             instead.
+     * Creates a {@code PostData} instance from existing key/value pairs. The
+     * parameter order will be based on the map's iteration order.
      */
-    @Deprecated
     public static PostData create(Map<String, ?> data) {
         TupleList<String, String> params = new TupleList<>();
 

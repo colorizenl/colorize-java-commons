@@ -1,11 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2023 Colorize
+// Copyright 2007-2024 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -201,5 +202,63 @@ class SubscribableTest {
         subject.next("3");
 
         assertEquals("[a1, b1, a2, b2, b3]", received.toString());
+    }
+
+    @Test
+    void retry() {
+        List<Integer> result = new ArrayList<>();
+        List<Integer> invocations = new ArrayList<>();
+
+        Subscribable<Integer> subject = new Subscribable<>();
+        subject.subscribe(result::add);
+        subject.retry(() -> {
+            int n = invocations.size() + 1;
+            invocations.add(n);
+            Preconditions.checkArgument(n >= 2, "Fail!");
+            return n;
+        }, 3);
+
+        assertEquals(1, result.size());
+        assertEquals(2, result.getFirst());
+    }
+
+    @Test
+    void throwLastExceptionIfRetryFailed() {
+        List<Integer> result = new ArrayList<>();
+        List<Exception> errors = new ArrayList<>();
+        List<Integer> invocations = new ArrayList<>();
+
+        Subscribable<Integer> subject = new Subscribable<>();
+        subject.subscribe(result::add);
+        subject.subscribeErrors(errors::add);
+        subject.retry(() -> {
+            int n = invocations.size() + 1;
+            invocations.add(n);
+            Preconditions.checkArgument(n >= 5, "Fail!");
+            return n;
+        }, 3);
+
+        assertEquals(0, result.size());
+        assertEquals(1, errors.size());
+    }
+
+    @Test
+    void retryWithDelay() {
+        List<Integer> result = new ArrayList<>();
+        List<Exception> errors = new ArrayList<>();
+        List<Integer> invocations = new ArrayList<>();
+
+        Subscribable<Integer> subject = new Subscribable<>();
+        subject.subscribe(result::add);
+        subject.subscribeErrors(errors::add);
+        subject.retry(() -> {
+            int n = invocations.size() + 1;
+            invocations.add(n);
+            Preconditions.checkArgument(n >= 2, "Fail!");
+            return n;
+        }, 3, 500L);
+
+        assertEquals(1, result.size());
+        assertEquals(0, errors.size());
     }
 }
