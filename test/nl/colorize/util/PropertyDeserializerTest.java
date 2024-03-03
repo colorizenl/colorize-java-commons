@@ -77,7 +77,7 @@ class PropertyDeserializerTest {
 
     @Test
     void preprocessor() {
-        Properties properties = LoadUtils.loadProperties("a=2");
+        Properties properties = PropertyUtils.loadProperties("a=2");
 
         PropertyDeserializer withoutPreprocessor = new PropertyDeserializer();
         PropertyDeserializer withPreprocessor = new PropertyDeserializer();
@@ -117,22 +117,6 @@ class PropertyDeserializerTest {
         assertEquals(1234L, propertyDeserializer.parseLong("d", -1L));
         assertEquals(5.6, propertyDeserializer.parseDouble("e", -1f), 0.001);
         assertEquals("5.6", propertyDeserializer.parseString("e", ""));
-    }
-
-    @Test
-    void fromCSV() {
-        CSVRecord csv = CSVRecord.create(List.of("name", "age"), List.of("John", "38"));
-        PropertyDeserializer parser = PropertyDeserializer.fromCSV(csv);
-
-        assertEquals("John", parser.parseString("name", "?"));
-        assertEquals(38, parser.parseInt("age", -1));
-    }
-
-    @Test
-    void csvMissingColumnNamesCannotBeParsed() {
-        CSVRecord csv = CSVRecord.create("John", "38");
-
-        assertThrows(IllegalArgumentException.class, () -> PropertyDeserializer.fromCSV(csv));
     }
 
     @Test

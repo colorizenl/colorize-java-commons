@@ -217,6 +217,22 @@ class CommandLineArgumentParserTest {
         assertEquals(expected.strip(), buffer.toString().strip());
     }
 
+    @Test
+    void handleEqualsSignInValue() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        Example values = argParser.parse(toArgs("--a", "b=c"), Example.class);
+
+        assertEquals("b=c", values.a);
+    }
+
+    @Test
+    void handleEqualsSignInBothEntryAndValue() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        Example values = argParser.parse(toArgs("--a=b=c"), Example.class);
+
+        assertEquals("b=c", values.a);
+    }
+
     private String[] toArgs(String... argv) {
         return argv;
     }

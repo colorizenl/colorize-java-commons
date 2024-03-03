@@ -24,21 +24,12 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class LoadUtilsTest {
+public class PropertyUtilsTest {
 
     @Test
-    public void testReadFirstLines() throws IOException {
-        assertEquals("", LoadUtils.readFirstLines(new StringReader(""), 2));
-        assertEquals("a\nb", LoadUtils.readFirstLines(new StringReader("a\nb\n"), 2));
-        assertEquals("a\nb", LoadUtils.readFirstLines(new StringReader("a\nb"), 2));
-        assertEquals("a\nb", LoadUtils.readFirstLines(new StringReader("a\nb\nc\n"), 2));
-        assertEquals("a", LoadUtils.readFirstLines(new StringReader("a\n"), 2));
-    }
-    
-    @Test
-    public void testLoadProperties() throws IOException {
+    public void testLoadProperties() {
         String str = "a=value\nb=valu\u00C9 2";
-        Properties p1 = LoadUtils.loadProperties(new StringReader(str));
+        Properties p1 = PropertyUtils.loadProperties(new StringReader(str));
 
         assertEquals("value", p1.getProperty("a"));
         assertEquals("valu\u00C9 2", p1.getProperty("b"));
@@ -47,9 +38,9 @@ public class LoadUtilsTest {
     @Test
     public void testSaveProperties(@TempDir File tempDir) throws IOException {
         File tempFile = new File(tempDir, "a.properties");
-        Properties props = LoadUtils.loadProperties(
+        Properties props = PropertyUtils.loadProperties(
             new StringReader("a=something\nb=test\na.x=2"));
-        LoadUtils.saveProperties(props, tempFile, Charsets.UTF_8);
+        PropertyUtils.saveProperties(props, tempFile, Charsets.UTF_8);
         
         String expected = "";
         expected += "a=something\n";
@@ -62,7 +53,7 @@ public class LoadUtilsTest {
 
     @Test
     void loadPropertiesFromString() {
-        Properties properties = LoadUtils.loadProperties(new StringReader("a=1\nb=2"));
+        Properties properties = PropertyUtils.loadProperties(new StringReader("a=1\nb=2"));
 
         assertEquals("1", properties.getProperty("a"));
         assertEquals("2", properties.getProperty("b"));
@@ -74,7 +65,7 @@ public class LoadUtilsTest {
         data.put("a", "1");
         data.put("c", null);
 
-        Properties properties = LoadUtils.toProperties(data);
+        Properties properties = PropertyUtils.toProperties(data);
 
         assertEquals("1", properties.getProperty("a"));
         assertEquals("3", properties.getProperty("c", "3"));
@@ -85,7 +76,7 @@ public class LoadUtilsTest {
         Properties properties = new Properties();
         properties.setProperty("a", "2");
 
-        assertEquals("a=2\n", LoadUtils.serializeProperties(properties));
+        assertEquals("a=2\n", PropertyUtils.serializeProperties(properties));
     }
 
     @Test
@@ -93,7 +84,7 @@ public class LoadUtilsTest {
         Properties properties = new Properties();
         properties.setProperty("a", "2");
 
-        Map<String, String> map = LoadUtils.toMap(properties);
+        Map<String, String> map = PropertyUtils.toMap(properties);
 
         assertEquals("{a=2}", map.toString());
     }
@@ -107,7 +98,7 @@ public class LoadUtilsTest {
         source.add("c=some other text");
 
         Properties properties = new Properties();
-        LoadUtils.emulateUnicodeProperties(String.join("\n", source), properties);
+        PropertyUtils.emulateUnicodeProperties(String.join("\n", source), properties);
 
         assertEquals("some text", properties.getProperty("a"));
         assertEquals("text that spans multiple lines", properties.getProperty("b"));
@@ -116,11 +107,22 @@ public class LoadUtilsTest {
 
     @Test
     void filterPrefix() {
-        Properties original = LoadUtils.loadProperties(new StringReader("a.x=2\na.y=3\nb.x=4\nb.y=5"));
-        Properties filtered = LoadUtils.filterPrefix(original, "b.");
+        Properties original = PropertyUtils.loadProperties(new StringReader("a.x=2\na.y=3\nb.x=4\nb.y=5"));
+        Properties filtered = PropertyUtils.filterPrefix(original, "b.");
 
         assertEquals(Set.of("x", "y"), filtered.stringPropertyNames());
         assertEquals("4", filtered.getProperty("x"));
         assertEquals("5", filtered.getProperty("y"));
+    }
+
+    @Test
+    void savePropertiesFileUTF8(@TempDir File tempDir) throws IOException {
+        Properties properties = new Properties();
+        properties.setProperty("a", "b\u25B6c");
+
+        File tempFile = new File(tempDir, "test.properties");
+        PropertyUtils.saveProperties(properties, tempFile);
+
+        assertEquals("a=b\u25B6c\n", Files.readString(tempFile.toPath(), Charsets.UTF_8));
     }
 }

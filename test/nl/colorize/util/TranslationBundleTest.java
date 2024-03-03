@@ -8,7 +8,6 @@ package nl.colorize.util;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -17,6 +16,7 @@ import java.io.StringReader;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -24,7 +24,7 @@ class TranslationBundleTest {
 
     @Test
     void formatPlaceholders() {
-        Map<String, String> text = ImmutableMap.of(
+        Map<String, String> text = Map.of(
             "key.a", "value",
             "key.b", "this is {0} parameter",
             "key.c", "this is {0}'s MessageFormat"
@@ -40,7 +40,7 @@ class TranslationBundleTest {
 
     @Test
     void fromUTF8() {
-        Map<String, String> text = ImmutableMap.of("key.e", "привет{0}");
+        Map<String, String> text = Map.of("key.e", "привет{0}");
         TranslationBundle bundle = TranslationBundle.fromMap(text);
 
         assertEquals("привет!", bundle.getText("key.e", "!"));
@@ -48,13 +48,13 @@ class TranslationBundleTest {
 
     @Test
     void getTranslation() {
-        Map<String, String> textEN = ImmutableMap.of(
+        Map<String, String> textEN = Map.of(
             "key.a", "value",
             "key.b", "this is {0} parameter",
             "key.c", "this is not translated"
         );
 
-        Map<String, String> textNL = ImmutableMap.of(
+        Map<String, String> textNL = Map.of(
             "key.a", "waarde",
             "key.b", "dit is {0} parameter"
         );
@@ -84,16 +84,16 @@ class TranslationBundleTest {
         TranslationBundle bundle = TranslationBundle.fromMap(textEN);
         bundle.addTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
 
-        assertEquals(ImmutableSet.of("key.a", "key.b", "key.c"), bundle.getKeys(new Locale("nl")));
-        assertEquals(ImmutableSet.of("key.a", "key.b"), bundle.getKeys());
-        assertEquals(ImmutableSet.of("key.a", "key.b"), bundle.getKeys(new Locale("it")));
+        assertEquals(Set.of("key.a", "key.b", "key.c"), bundle.getKeys(new Locale("nl")));
+        assertEquals(Set.of("key.a", "key.b"), bundle.getKeys());
+        assertEquals(Set.of("key.a", "key.b"), bundle.getKeys(new Locale("it")));
     }
 
     @Test
     void loadFromPropertiesFile() throws IOException {
         File tempFile = FileUtils.createTempFile("a=test\nb=multi \\\nline\nc=other", Charsets.UTF_8);
-        Properties properties = LoadUtils.loadProperties(tempFile, Charsets.UTF_8);
-        TranslationBundle bundle = TranslationBundle.fromProperties(properties);
+        Properties properties = PropertyUtils.loadProperties(tempFile, Charsets.UTF_8);
+        TranslationBundle bundle = TranslationBundle.from(properties);
 
         assertEquals("test", bundle.getText("a"));
         assertEquals("multi line", bundle.getText("b"));
@@ -102,9 +102,9 @@ class TranslationBundleTest {
 
     @Test
     void loadFromText() {
-        Properties properties = LoadUtils.loadProperties(new StringReader(
+        Properties properties = PropertyUtils.loadProperties(new StringReader(
             "a=this is a test\nb = this is also a test"));
-        TranslationBundle bundle = TranslationBundle.fromProperties(properties);
+        TranslationBundle bundle = TranslationBundle.from(properties);
 
         assertEquals("this is a test", bundle.getText("a"));
         assertEquals("this is also a test", bundle.getText("b"));

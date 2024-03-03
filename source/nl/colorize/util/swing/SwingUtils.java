@@ -92,8 +92,8 @@ public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
-    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE =
-        TranslationBundle.fromPropertiesFile(new ResourceFile("custom-swing-components.properties"));
+    private static final ResourceFile BUNDLE_FILE = new ResourceFile("custom-swing-components.properties");
+    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE = TranslationBundle.from(BUNDLE_FILE);
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color ALT_ROW_COLOR = new Color(245, 245, 245);
@@ -575,7 +575,7 @@ public final class SwingUtils {
      * events to a {@code ActionListener}. This can be used to make non-button
      * components still behave like buttons.
      */
-    public static void attachPseudoActionListener(JComponent component, final ActionListener listener) {
+    public static void attachPseudoActionListener(JComponent component, ActionListener listener) {
         component.addMouseListener(new MouseAdapter() {
             public void mouseReleased(MouseEvent e) {
                 listener.actionPerformed(new ActionEvent(e.getSource(), e.getID(), ""));
@@ -603,14 +603,42 @@ public final class SwingUtils {
     }
 
     /**
-     * Creates a component that consists of a list of items, plus buttons to add
-     * and/or remove items. Changes made using those buttons are immediately
-     * reflected in the list of items. After using one of the buttons the list
-     * is automatically updated.
+     * Returns a {@link KeyListener} that forwards {@code keyReleased} events
+     * to the specified callback method.
+     */
+    public static KeyListener toKeyReleasedListener(Consumer<KeyEvent> callback) {
+        return new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent event) {
+                callback.accept(event);
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link MouseListener} that forwards {@code mouseReleased}
+     * events to the specified callback method.
+     */
+    public static MouseListener toMouseReleasedListener(Consumer<MouseEvent> callback) {
+        return new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                callback.accept(event);
+            }
+        };
+    }
+
+    /**
+     * Creates a component that consists of a list of items, plus buttons to
+     * add and/or remove items. Changes made using those buttons are
+     * immediately reflected in the list of items. After using one of the
+     * buttons the list is automatically updated.
+     *
      * @param itemSupplier Used to populate the list of items, both initially
      *                     and after updates.
      * @param addButtonAction Performed when the add button is used.
      * @param removeButtonAction Performed when the remove button is used.
+     *
      * @deprecated Use {@link PropertyEditor} instead.
      */
     @Deprecated

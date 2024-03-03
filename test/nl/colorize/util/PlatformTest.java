@@ -9,6 +9,7 @@ package nl.colorize.util;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,5 +77,12 @@ public class PlatformTest {
         File tempDir = Platform.getTempDir();
         assertTrue(tempDir.exists());
         assertTrue(tempDir.isDirectory());
+    }
+
+    @Test
+    void nativeLibraryPath() {
+        List<File> nativeLibraryPath = Platform.getNativeLibraryPath();
+
+        assertFalse(nativeLibraryPath.isEmpty());
     }
 }

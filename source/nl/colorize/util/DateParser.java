@@ -64,7 +64,12 @@ public final class DateParser {
         ChronoUnit.SECONDS, GregorianCalendar.SECOND
     );
 
-    private static TranslationBundle BUNDLE = TranslationBundle.fromPropertiesFile("""
+    /**
+     * Translation bundle that is used for formatting relative dates. This uses
+     * a constant instead of a "real" {@code .properties} file in order to
+     * preserve compatibility with TeaVM.
+     */
+    private static final TranslationBundle BUNDLE = TranslationBundle.fromPropertiesFile("""
         future=the future
         now=just now
         second=just now

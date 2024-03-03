@@ -50,7 +50,7 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation LINEAR = (x0, x1, delta) -> {
-        return x0 + clampDelta(delta) * (x1 - x0);
+        return x0 + Math.clamp(delta, 0f, 1f) * (x1 - x0);
     };
 
     /**
@@ -69,7 +69,7 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation EASE = (x0, x1, delta) -> {
-        float delta2 = 3f - (clampDelta(delta) * 2f);
+        float delta2 = 3f - (Math.clamp(delta, 0f, 1f) * 2f);
         return x0 + (delta * delta * delta2) * (x1 - x0);
     };
 
@@ -89,7 +89,7 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation CUBIC = (x0, x1, delta) -> {
-        delta = clampDelta(delta) / 0.5f;
+        delta = Math.clamp(delta, 0f, 1f) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta * delta + x0;
         } else {
@@ -114,7 +114,7 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation QUADRATIC = (x0, x1, delta) -> {
-        delta = clampDelta(delta) / 0.5f;
+        delta = Math.clamp(delta, 0f, 1f) / 0.5f;
         if (delta < 1f) {
             return (x1 - x0) / 2f * delta * delta + x0;
         } else {
@@ -129,8 +129,4 @@ public interface Interpolation {
      * animation has been completed.
      */
     public float interpolate(float x0, float x1, float delta);
-
-    private static float clampDelta(float delta) {
-        return Math.min(Math.max(delta, 0f), 1f);
-    }
 }

@@ -9,7 +9,6 @@ package nl.colorize.util;
 import com.google.common.base.Preconditions;
 
 import java.text.MessageFormat;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -44,10 +43,9 @@ public final class TranslationBundle {
      * translation. Additional translations can be added afterward.
      * <p>
      * In most cases, translation data will be stored in {@code .properties}
-     * files. The factory methods {@link #fromProperties(Properties)} and/or
-     * {@link #fromPropertiesFile(ResourceFile)} can be used to create an
-     * instance directly from such a file, rather than first parsing the file
-     * and then using this constructor.
+     * files. Use the {@link #from(Properties)} or {@link #from(ResourceFile)}
+     * factory methods to create a {@link TranslationBundle} instance from the
+     * contents of such a file.
      */
     private TranslationBundle(Map<String, String> defaultTranslation) {
         this.defaultTranslation = Map.copyOf(defaultTranslation);
@@ -119,8 +117,13 @@ public final class TranslationBundle {
         return getText(null, key, params);
     }
 
+    /**
+     * Returns all translation keys that exist for the translation for the
+     * specified locale, using the default translation as a fallback where
+     * necessary. The keys will be returned in random order.
+     */
     public Set<String> getKeys(Locale locale) {
-        HashSet<String> keys = new HashSet<>();
+        Set<String> keys = new HashSet<>();
         keys.addAll(defaultTranslation.keySet());
         if (translations.containsKey(locale)) {
             keys.addAll(translations.get(locale).defaultTranslation.keySet());
@@ -128,57 +131,55 @@ public final class TranslationBundle {
         return keys;
     }
 
+    /**
+     * Returns all translation keys that exist for the default translation.
+     * The keys will be returned in random order.
+     */
     public Set<String> getKeys() {
         return Set.copyOf(defaultTranslation.keySet());
     }
 
     /**
-     * Factory method that creates a {@link TranslationBundle} from a map with
-     * key/value pairs for the default translation. Additional translations
+     * Returns a {@link TranslationBundle} that will use the specified
+     * {@link Properties} as its default translation. Additional translations
      * can be added afterward.
+     */
+    public static TranslationBundle from(Properties defaultTranslation) {
+        return new TranslationBundle(PropertyUtils.toMap(defaultTranslation));
+    }
+
+    /**
+     * Loads the specified {@code .properties} file, then uses the resulting
+     * properties as the default translation for a {@link TranslationBundle}.
+     * Additional translations can be added afterward.
+     * <p>
+     * {@link PropertyUtils#loadProperties(ResourceFile)} is used to load the
+     * file. Refer to the documentation of that method for more information on
+     * supported character encodings for different platforms.
+     */
+    public static TranslationBundle from(ResourceFile propertiesFile) {
+        return from(PropertyUtils.loadProperties(propertiesFile));
+    }
+
+    /**
+     * Returns a {@link TranslationBundle} that loads the <em>contents</em> of
+     * a {@code .properties} file, then uses the resulting properties as the
+     * default translation. Additional translations can be added afterward.
+     * <p>
+     * {@link PropertyUtils#loadProperties(String)} is used to load the file.
+     * Refer to the documentation of that method for more information on
+     * supported character encodings for different platforms.
+     */
+    public static TranslationBundle fromPropertiesFile(String propertiesFileContents) {
+        return from(PropertyUtils.loadProperties(propertiesFileContents));
+    }
+
+    /**
+     * Returns a {@link TranslationBundle} that will use the key/value
+     * properties in the specified map as its default translation. Additional
+     * translations can be added afterward.
      */
     public static TranslationBundle fromMap(Map<String, String> defaultTranslation) {
         return new TranslationBundle(defaultTranslation);
-    }
-
-    /**
-     * Factory method that creates a {@link TranslationBundle} from an existing
-     * {@link Properties} instance with key/value pairs for the default
-     * translation. Additional translations can be added afterward.
-     */
-    public static TranslationBundle fromProperties(Properties defaultTranslation) {
-        return new TranslationBundle(LoadUtils.toMap(defaultTranslation));
-    }
-
-    /**
-     * Convenience factory method that loads data from a {@code .properties}
-     * file, and then uses that data to create a {@link TranslationBundle}
-     * instance. The file is assumed to use the UTF-8 character encoding, and
-     * loaded using {@link LoadUtils#loadProperties(ResourceFile)}.
-     */
-    public static TranslationBundle fromPropertiesFile(ResourceFile propertiesFile) {
-        Preconditions.checkArgument(propertiesFile.getName().endsWith(".properties"),
-            propertiesFile + " is not a .properties file");
-
-        Properties properties = LoadUtils.loadProperties(propertiesFile);
-        return fromProperties(properties);
-    }
-
-    /**
-     * Convenience factory method that loads data from the contents of
-     * a {@code .properties} file, and then uses that data to create a
-     * {@link TranslationBundle} instance.
-     */
-    public static TranslationBundle fromPropertiesFile(String propertiesFileContents) {
-        Properties properties = LoadUtils.loadProperties(propertiesFileContents);
-        return fromProperties(properties);
-    }
-
-    /**
-     * Returns a bundle that, unless additional translations for specific locales
-     * are added, will not actually translate anything and just use the keys.
-     */
-    public static TranslationBundle empty() {
-        return new TranslationBundle(Collections.emptyMap());
     }
 }

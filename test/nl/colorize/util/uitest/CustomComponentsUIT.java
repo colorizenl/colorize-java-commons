@@ -37,7 +37,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -51,9 +51,7 @@ public class CustomComponentsUIT {
     
     private JFrame frame;
     private SwingAnimator animator;
-    private Table<String> table;
-    private List<String> items;
-    
+
     private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
@@ -106,7 +104,8 @@ public class CustomComponentsUIT {
         customHeightLabel.setBackground(new Color(255, 200, 200));
         SwingUtils.setPreferredHeight(customHeightLabel, 50);
 
-        List<String> labels = Arrays.asList("text label");
+        List<String> labels = new ArrayList<>();
+        labels.add("text label");
         
         FormPanel form = new FormPanel();
         form.addRow("Row with textfield:", new JTextField());
@@ -116,7 +115,7 @@ public class CustomComponentsUIT {
         form.addEmptyRow();
         form.addRow(new JCheckBox("Row with checkbox"));
         form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
-        form.addEllipsesRow(() -> labels.get(0), () -> labels.set(0, "something else"));
+        form.addEllipsesRow(() -> labels.getFirst(), () -> labels.set(0, "something else"));
         return form;
     }
 
@@ -137,14 +136,16 @@ public class CustomComponentsUIT {
     }
 
     private JPanel createSimpleTableTab() {
-        table = new Table<>("Name", "Year of Birth");
+        Table<String> table = new Table<>("Name", "Year of Birth", "Historical");
         table.setColumnWidth(1, 100);
-        table.addRow("D", "Dave", "1984");
-        table.addRow("J", "Jim", "1983");
-        table.addRow("N", "Nick", "1984");
+        table.setColumnWidth(2, 100);
+        table.addRow("D", "Dave", 1984, false);
+        table.addRow("J", "Jim", 1983, false);
+        table.addRow("N", "Nick", 1984, false);
+        table.addRow("B", "Balthasar", 557, true);
         table.setRowTooltip("D", "This is a tooltip text for a row which is different from its cells"); 
-        table.addActionListener(e -> tableSelectionChanged());
-        table.getDoubleClick().subscribe(this::tableDoubleClicked);
+        table.onSelect().subscribe(row -> LOGGER.info("Selected row: " + row));
+        table.onDoubleClick().subscribe(row -> LOGGER.info("Double-clicked on row: " + row));
         return table;
     }
 
@@ -194,12 +195,12 @@ public class CustomComponentsUIT {
     }
 
     private JPanel createStripedListTab() {
-        JList<String> list = SwingUtils.createStripedList(
-            List.of("First", "Second", "Third", "Fourth", "Fifth"));
+        List<String> elements = List.of("First", "Second", "Third", "Fourth", "Fifth");
+        JList<String> list = SwingUtils.createStripedList(elements);
         SwingUtils.setPreferredSize(list, 300, 600);
 
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        tab.add(list);
+        tab.add(SwingUtils.wrapInScrollPane(list));
         return tab;
     }
     
@@ -242,13 +243,5 @@ public class CustomComponentsUIT {
         LOGGER.info("Selected file: " + dialog.showOpenDialog(frame));
         Popups.message(frame, "Save file dialog");
         LOGGER.info("Selected file: " + dialog.showSaveDialog(frame, "txt"));
-    }
-    
-    public void tableSelectionChanged() {
-        LOGGER.info("Selected row: " + table.getSelectedRowKey());
-    }
-    
-    public void tableDoubleClicked(Table<?> table) {
-        LOGGER.info("Double-clicked on row: " + table.getSelectedRowKey());
     }
 }

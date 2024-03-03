@@ -96,7 +96,7 @@ public final class TextUtils {
      * only if it is not already there.
      */
     public static String addLeading(String str, String prefix) {
-        if (str.startsWith(prefix)) {
+        if (prefix.isEmpty() || str.startsWith(prefix)) {
             return str;
         }
         return prefix + str;
@@ -107,7 +107,7 @@ public final class TextUtils {
      * only if it is not already there.
      */
     public static String addTrailing(String str, String suffix) {
-        if (str.endsWith(suffix)) {
+        if (suffix.isEmpty() || str.endsWith(suffix)) {
             return str;
         }
         return str + suffix;

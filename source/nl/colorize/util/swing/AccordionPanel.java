@@ -17,8 +17,6 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.LayoutManager;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -56,18 +54,13 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
     }
     
     public void addSubPanel(K key, JComponent titlePanel, JComponent detailsPanel) {
-        final SubPanelInfo subPanelInfo = new SubPanelInfo(key, titlePanel, detailsPanel);
-        subPanels.add(subPanelInfo);
+        SubPanelInfo info = new SubPanelInfo(key, titlePanel, detailsPanel);
+        subPanels.add(info);
         
         add(titlePanel);
         add(detailsPanel);
         
-        titlePanel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                expandSubPanel(subPanelInfo);
-            }
-        });
+        titlePanel.addMouseListener(SwingUtils.toMouseReleasedListener(e -> expandSubPanel(info)));
     }
     
     public void removeSubPanel(K key) {

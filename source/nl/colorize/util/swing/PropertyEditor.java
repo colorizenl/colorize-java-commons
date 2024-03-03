@@ -66,19 +66,19 @@ public class PropertyEditor extends JPanel {
     }
 
     private JPanel createButtonPanel() {
-        JButton addButton = new JButton(bundle.getString("PropertyEditor.add"));
+        JButton addButton = new JButton(bundle.getText("PropertyEditor.add"));
         addButton.addActionListener(e -> addProperty());
 
-        JButton editButton = new JButton(bundle.getString("PropertyEditor.edit"));
+        JButton editButton = new JButton(bundle.getText("PropertyEditor.edit"));
         editButton.addActionListener(e -> editProperty());
 
-        JButton removeButton = new JButton(bundle.getString("PropertyEditor.remove"));
+        JButton removeButton = new JButton(bundle.getText("PropertyEditor.remove"));
         removeButton.addActionListener(e -> removeProperty());
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         buttonPanel.add(addButton);
-        buttonPanel.add(editButton);
         buttonPanel.add(removeButton);
+        buttonPanel.add(editButton);
         return buttonPanel;
     }
 

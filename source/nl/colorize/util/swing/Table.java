@@ -8,11 +8,11 @@ package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import nl.colorize.util.LogHelper;
 import nl.colorize.util.Subscribable;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.TableModelEvent;
@@ -20,6 +20,7 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+import javax.swing.table.TableStringConverter;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Graphics;
@@ -27,23 +28,23 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.Objects;
+import java.util.Set;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Wrapper around {@link javax.swing.JTable}. It allows for rows to be identified
- * by key instead of by index. Apart from that, it improves the appearance of the
- * table by adding column borders and a striped background (both depending on the
- * platform). Finally, it makes common operations such as tracking the selected
- * row, resizing columns, and filtering rows easier.
+ * Wrapper around {@link JTable} that allows rows to be identified by key,
+ * instead of only by index. It also improves the appearance of the standard
+ * {@link JTable} by adding column borders and a striped background, both
+ * depending on the platform look-and-feel.
+ *
  * @param <R> The type of object used as row keys. 
  */
 public class Table<R> extends JPanel implements TableModel {
@@ -55,10 +56,8 @@ public class Table<R> extends JPanel implements TableModel {
     private List<TableModelListener> modelListeners;
     private Subscribable<Table<R>> doubleClick;
 
-    /**
-     * Creates a new table with the specified columns.
-     * @throws IllegalArgumentException when there are no columns.
-     */
+    private static final Logger LOGGER = LogHelper.getLogger(Table.class);
+
     public Table(List<String> columns) {
         super(new BorderLayout());
 
@@ -71,9 +70,9 @@ public class Table<R> extends JPanel implements TableModel {
         this.doubleClick = new Subscribable<>();
 
         createTable();
-        initRowSorter();
+        initDefaultSortOrder();
     }
-    
+
     public Table(String... columns) {
         this(ImmutableList.copyOf(columns));
     }
@@ -83,44 +82,41 @@ public class Table<R> extends JPanel implements TableModel {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateColumnsFromModel(false);
         table.createDefaultColumnsFromModel();
-        table.addMouseListener(new MouseAdapter() {
+        table.setAutoCreateRowSorter(true);
+        table.addMouseListener(SwingUtils.toMouseReleasedListener(e -> {
+            if (e.getClickCount() == 2) {
+                doubleClick.next(Table.this);
+            }
+        }));
+
+        add(SwingUtils.wrapInScrollPane(table), BorderLayout.CENTER);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initDefaultSortOrder() {
+        TableRowSorter<TableModel> rowSorter = (TableRowSorter<TableModel>) table.getRowSorter();
+        rowSorter.setModel(this);
+        rowSorter.setStringConverter(new TableStringConverter() {
             @Override
-            public void mouseReleased(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    doubleClick.next(Table.this);
-                }
+            public String toString(TableModel model, int row, int column) {
+                Object value = getValueAt(row, column);
+                return Objects.toString(value);
             }
         });
 
-        JScrollPane tablePane = new JScrollPane(table);
-        tablePane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        add(tablePane, BorderLayout.CENTER);
-    }
-
-    private void initRowSorter() {
-        TableRowSorter<TableModel> rowSorter = new TableRowSorter<>(this);
-        table.setRowSorter(rowSorter);
-
-        for (int i = 0; i < getColumnCount(); i++) {
-            rowSorter.setComparator(i, this::sortRows);
+        for (int i = 0; i < columns.size(); i++) {
+            setColumnSorter(i, this::sortRows);
         }
     }
 
     /**
-     * Auto-detects if the data is a string or a number, and sorts the rows
-     * based on that. This will not produce the intended results for every
-     * possible table, but it is still more reasonable default behavior
-     * without having to define a custom comparator for every indiviudal
-     * column.
+     * Default sort order that is used when no explicit order is defined for
+     * that column. Use {@link #setColumnSorter(int, Comparator)} to define
+     * an explicit sort order.
      */
     private int sortRows(Object a, Object b) {
-        try {
-            float numberA = Float.parseFloat(a.toString());
-            float numberB = Float.parseFloat(b.toString());
-            return Float.compare(numberA, numberB);
-        } catch (NumberFormatException e) {
-            return a.toString().compareTo(b.toString());
-        }
+        System.out.println(a + "  " + b);
+        return 0;
     }
 
     @Override
@@ -130,9 +126,29 @@ public class Table<R> extends JPanel implements TableModel {
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        return String.class;
+        Set<Class<?>> cellClasses = List.copyOf(rows).stream()
+            .map(row -> row.cells.get(columnIndex))
+            .map(this::getCellClass)
+            .collect(Collectors.toSet());
+
+        if (cellClasses.isEmpty()) {
+            return String.class;
+        } else if (cellClasses.size() == 1) {
+            return cellClasses.iterator().next();
+        } else {
+            LOGGER.info("Column combines cells of different types: " + cellClasses);
+            return Object.class;
+        }
     }
-    
+
+    private Class<?> getCellClass(Object cell) {
+        return switch (cell) {
+            case null -> Object.class;
+            case Number n -> Number.class;
+            default -> cell.getClass();
+        };
+    }
+
     @Override
     public int getColumnCount() {
         return columns.size();
@@ -140,12 +156,10 @@ public class Table<R> extends JPanel implements TableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
-        Preconditions.checkArgument(rowIndex >= 0 && columnIndex >= 0 && columnIndex < columns.size(),
-            "Invalid cell");
-        Preconditions.checkArgument(rowIndex < rows.size(),
-            "Cannot use setValueAt(...) to insert rows, use addRow(...) instead");
-        
-        List<String> rowCells = rows.get(rowIndex).cells;
+        assertRowIndex(rowIndex);
+        assertColumnIndex(columnIndex);
+
+        List<Object> rowCells = rows.get(rowIndex).cells;
         rowCells.set(columnIndex, value.toString());
         fireTableEvent(rowIndex, columnIndex, TableModelEvent.UPDATE);
     }
@@ -158,7 +172,7 @@ public class Table<R> extends JPanel implements TableModel {
     }
 
     @Override
-    public String getValueAt(int rowIndex, int columnIndex) {
+    public Object getValueAt(int rowIndex, int columnIndex) {
         assertRowIndex(rowIndex);
         assertColumnIndex(columnIndex);
         return rows.get(rowIndex).cells.get(columnIndex);
@@ -168,27 +182,52 @@ public class Table<R> extends JPanel implements TableModel {
     public boolean isCellEditable(int rowIndex, int columnIndex) {
         return false;
     }
-    
-    public void addRow(R key, List<String> data) {
-        Preconditions.checkArgument(key != null, "Rows keys cannot be null");
-        Preconditions.checkArgument(data.size() == columns.size(),
-            "Invalid number of columns: " + data.size());
-        
-        rows.add(new Row<R>(key, replaceNulls(data)));
+
+    /**
+     * Adds a row to this table. The {@code key} will be used to identify the
+     * row, {@code cells} is used to populate the table.
+     *
+     * @throws IllegalArgumentException if the number of cells does not match
+     *         the number of columns in this table.
+     */
+    public void addRow(R key, List<?> cells) {
+        Preconditions.checkArgument(cells.size() == columns.size(),
+            "Invalid number of columns: " + cells.size() + ", expected " + columns.size());
+
+        List<Object> formattedCells = cells.stream()
+            .map(this::formatCell)
+            .toList();
+
+        Row<R> row = new Row<>(key, formattedCells);
+        rows.add(row);
         fireTableEvent(rows.size() - 1, TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT);
     }
-    
-    public void addRow(R key, String... data) {
-        addRow(key, Arrays.asList(data));
+
+    /**
+     * Adds a row to this table. The {@code key} will be used to identify the
+     * row, {@code cells} is used to populate the table.
+     *
+     * @throws IllegalArgumentException if the number of cells does not match
+     *         the number of columns in this table.
+     */
+    public void addRow(R key, String firstCell, Object... otherCells) {
+        List<Object> cells = new ArrayList<>();
+        cells.add(firstCell);
+        for (Object otherCell : otherCells) {
+            cells.add(otherCell);
+        }
+
+        addRow(key, cells);
     }
     
-    private List<String> replaceNulls(List<String> data) {
-        for (int i = 0; i < data.size(); i++) {
-            if (data.get(i) == null) {
-                data.set(i, "");
-            }
-        }
-        return data;
+    private Object formatCell(Object cell) {
+        return switch (cell) {
+            case null -> "";
+            case String textCell -> textCell;
+            case Number numericalCall -> numericalCall;
+            case Boolean booleanCell -> booleanCell ? "\u2713" : "";
+            default -> cell.toString();
+        };
     }
     
     public void removeRow(R rowKey) {
@@ -235,33 +274,20 @@ public class Table<R> extends JPanel implements TableModel {
     
     private int getRowIndex(R rowKey) {
         for (int i = 0; i < getRowCount(); i++) {
-            if (getRowKey(i).equals(rowKey)) {
+            if (rowKey.equals(getRowKey(i))) {
                 return i;
             }
         }
         return -1;
     }
-    
-    public List<R> getRowKeys() {
-        return rows.stream()
-            .map(row -> row.key)
-            .collect(Collectors.toList());
-    }
-    
-    public List<String> getRowData(R rowKey) {
-        for (Row<R> row : rows) {
-            if (row.key.equals(rowKey)) {
-                return row.cells;
-            }
-        }
-        return null;
-    }
-    
+
     /**
-     * Returns the index of the row that is currently selected, or -1 when no
-     * row is selected.
+     * Returns the index of the row that is currently selected, or -1 when
+     * no row is selected.
      *
-     * @deprecated Use {@link #getSelectedRowKey()} instead.
+     * @deprecated Use {@link #getSelectedRowKey()} instead. Using the row
+     *             index is an unreliable way of identifying towsr, as
+     *             sorting the table will actually change the row order.
      */
     @Deprecated
     public int getSelectedRowIndex() {
@@ -269,6 +295,20 @@ public class Table<R> extends JPanel implements TableModel {
             return -1;
         }
         return table.convertRowIndexToModel(table.getSelectedRow());
+    }
+
+    /**
+     * Changes the selected row to the row associated with the specified key.
+     * If the key does not match any of the rows currently displayed in this
+     * table, this method does nothing.
+     */
+    public void setSelectedRowKey(R rowKey) {
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).key.equals(rowKey)) {
+                table.setRowSelectionInterval(i, i);
+                return;
+            }
+        }
     }
     
     /**
@@ -278,30 +318,19 @@ public class Table<R> extends JPanel implements TableModel {
     public R getSelectedRowKey() {
         return getRowKey(getSelectedRowIndex());
     }
-    
-    /**
-     * Returns a {@link Supplier} that produces the currentlty selected row key
-     * when called. Returns {@code null} when no row is selected. 
-     */
-    public Supplier<R> getSelectedRowKeySupplier() {
-        return () -> getSelectedRowKey();
-    }
 
     private void assertColumnIndex(int columnIndex) {
-        if (columnIndex < 0 || columnIndex >= columns.size()) {
-            throw new IllegalArgumentException("Invalid column: " + columnIndex);
-        }
+        Preconditions.checkArgument(columnIndex >= 0 && columnIndex < columns.size(),
+            "Invalid column index: " + columnIndex);
     }
     
     private void assertRowIndex(int rowIndex) {
-        if (rowIndex < 0 || rowIndex >= rows.size()) {
-            throw new IllegalArgumentException("Invalid row: " + rowIndex);
-        }
+        Preconditions.checkArgument(rowIndex >= 0 && rowIndex < rows.size(),
+            "Invalid row index: " + rowIndex);
     }
     
     public void setColumnSorter(int columnIndex, Comparator<String> columnSorter) {
         assertColumnIndex(columnIndex);
-
         TableRowSorter<?> rowSorter = (TableRowSorter<?>) table.getRowSorter();
         rowSorter.setComparator(columnIndex, columnSorter);
     }
@@ -343,12 +372,37 @@ public class Table<R> extends JPanel implements TableModel {
         });
     }
 
-    public Subscribable<R> subscribeSelected() {
+    /**
+     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * whenever the selected row changes.
+     */
+    public Subscribable<R> onSelect() {
         Subscribable<R> subject = new Subscribable<>();
         addActionListener(e -> subject.next(getSelectedRowKey()));
         return subject;
     }
 
+    /**
+     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * whenever the selected row is double-clicked. The event passed to
+     * subscribers is the currently selected row key, i.e. the row that was
+     * double-clicked.
+     */
+    public Subscribable<R> onDoubleClick() {
+        return doubleClick
+            .map(table -> getSelectedRowKey())
+            .filter(row -> row != null);
+    }
+
+    /**
+     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * whenever the selected row is double-clicked. The event passed to
+     * subscribers represents the currently selected row key.
+     *
+     * @deprecated Use {@link #onDoubleClick()} instead, which passes the
+     *             double-clicked row as the event.
+     */
+    @Deprecated
     public Subscribable<Table<R>> getDoubleClick() {
         return doubleClick;
     }
@@ -434,6 +488,6 @@ public class Table<R> extends JPanel implements TableModel {
      * and a number of cells. The cells are matched to the table's columns
      * based on their index.
      */
-    private record Row<R>(R key, List<String> cells) {
+    private record Row<R>(R key, List<Object> cells) {
     }
 }

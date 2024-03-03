@@ -264,7 +264,7 @@ public class Histogram<B extends Comparable<B>> {
 
         Map<String, Float> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : original.entrySet()) {
-            float percentage = Statistics.percentage(entry.getValue(), total);
+            float percentage = Aggregate.percentage(entry.getValue(), total);
             normalized.put(entry.getKey(), percentage);
         }
         return normalized;

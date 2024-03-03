@@ -14,7 +14,6 @@ import com.google.common.base.Splitter;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -27,76 +26,49 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Utility class to load and save data of various types. Data can be loaded from
- * a number of different sources. Typically, all methods in this class that work
- * with binary data use a {@link java.io.InputStream} and methods that work with
- * text use a {@link java.io.Reader}.
+ * Utility class for working with {@link Properties} and {@code .properties}
+ * files. Although {@code .properties} files are widely used in Java
+ * applications, the standard API for working with them is relatively limited.
+ * This class adds a number of convenience methods to more easily load
+ * {@code .properties} from multiple sources, to manipulate {@link Properties}
+ * instances, and to serialize the results.
  */
-public final class LoadUtils {
+public final class PropertyUtils {
 
     private static final CharMatcher PROPERTY_NAME = CharMatcher.anyOf("=:\n\\");
 
-    private LoadUtils() { 
+    private PropertyUtils() {
     }
 
-    /**
-     * Reads the first N lines. Depending on the size of the input the number of
-     * lines might not be reached. The stream is closed afterwards.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     * @throws IllegalArgumentException if {@code n} is less than 1.
-     */
-    public static String readFirstLines(Reader source, int n) throws IOException {
-        Preconditions.checkArgument(n >= 1, "Invalid number of lines: " + n);
-
-        String lineSeparator = System.lineSeparator();
-
-        try (BufferedReader buffer = toBufferedReader(source)) {
-            return buffer.lines()
-                .limit(n)
-                .collect(Collectors.joining(lineSeparator));
-        }
-    }
-
-    private static BufferedReader toBufferedReader(Reader reader) {
-        if (reader instanceof BufferedReader) {
-            return (BufferedReader) reader;
-        } else {
-            return new BufferedReader(reader);
-        }
-    }
-    
     /**
      * Loads a properties file from a reader and returns the resulting
      * {@link Properties} object.
      * <p>
      * For {@code .properties} files containing non-ASCII characters, the
      * behavior of this method is different depending on the platform.
-     * Originally, {@code .properties} files were required to use the ISO-8859-1
-     * character encoding, with non-ASCII characters respresented by Unicode
-     * escape sequences in the form {@code uXXXX}. Modern versions of the
-     * {@code .properties} file format allow any character encoding to be used,
-     * but this is still not supported on all platforms by all Java
-     * implementations.
+     * Originally, {@code .properties} files were required to use the
+     * ISO-8859-1 character encoding, with non-ASCII characters respresented
+     * by Unicode escape sequences in the form {@code uXXXX}. Modern versions
+     * of the {@code .properties} file format allow any character encoding to
+     * be used, but this is still not supported on all platforms, and by all
+     * Java implementations.
      * <p>
-     * This method will load the {@code .properties} file from a reader. If the
-     * current platform supports {@code .properties} files with any character
-     * encoding, the reader's character encoding is used to load the file. If
-     * the platform only supports {@code .properties} files with the ISO-8859-1
-     * character encoding, this encoding is used as a fallback, regardless of
-     * the reader's actual character encoding. On such platforms, files that
-     * contain non-ASCII characters will not be loaded correctly.
+     * This method will load the {@code .properties} file from a reader. If
+     * the current platform supports {@code .properties} files with any
+     * character encoding, the reader's character encoding is used to load
+     * the file. If the platform only supports {@code .properties} files with
+     * the ISO-8859-1 character encoding, this encoding is used as a fallback,
+     * regardless of the reader's actual character encoding. On such platforms,
+     * files that contain non-ASCII characters will not be loaded correctly.
      * <p>
      * The reader is closed by this method after the {@code .properties} file
      * has been loaded.
      *
-     * @throws ResourceException if an I/O error occurs while reading the
-     *         properties file.
+     * @throws ResourceException if an I/O error occurs while reading the file.
      */
     public static Properties loadProperties(Reader source) {
         Properties properties = new Properties();
@@ -119,6 +91,12 @@ public final class LoadUtils {
         return !Platform.isTeaVM();
     }
 
+    /**
+     * Emulates loading {@code .properties} files that contain non-ASCII
+     * characters, on platforms that do not support loading such files
+     * natively. The documentation {@link #loadProperties(Reader)} contains
+     * more information on how and when this is used.
+     */
     @VisibleForTesting
     protected static void emulateUnicodeProperties(String contents, Properties properties) {
         Splitter lineSplitter = Splitter.on("\n").trimResults();
@@ -136,11 +114,10 @@ public final class LoadUtils {
     }
 
     /**
-     * Loads a {@code .properties file} using the specified character encoding.
-     * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
+     * Uses the logic described in {@link #loadProperties(Reader)} to load a
+     * {@code .properties} file, using the specified character encoding.
      *
-     * @throws ResourceException if an I/O error occurs while reading the
-     *         properties file.
+     * @throws ResourceException if an I/O error occurs while reading the file.
      */
     public static Properties loadProperties(ResourceFile file, Charset charset) {
         try (Reader reader = file.openReader(charset)) {
@@ -151,23 +128,20 @@ public final class LoadUtils {
     }
 
     /**
-     * Loads a {@code .properties file} that is assumed to use the UTF-8 character
-     * encoding. Parsing the file is done using
-     * {@link LoadUtils#loadProperties(Reader)}.
+     * Uses the logic described in {@link #loadProperties(Reader)} to load a
+     * {@code .properties} file, using the UTF-8 character encoding.
      *
-     * @throws ResourceException if an I/O error occurs while reading the
-     *         properties file.
+     * @throws ResourceException if an I/O error occurs while reading the file.
      */
     public static Properties loadProperties(ResourceFile file) {
         return loadProperties(file, UTF_8);
     }
 
     /**
-     * Loads a properties file from a local file. Parsing the file is done using
-     * {@link LoadUtils#loadProperties(Reader)}.
+     * Uses the logic described in {@link #loadProperties(Reader)} to load a
+     * {@code .properties} file, using the specified character encoding.
      *
-     * @throws IOException if an I/O error occurs while reading the properties
-     *         file.
+     * @throws IOException if an I/O error occurs while reading the file.
      */
     public static Properties loadProperties(File source, Charset charset) throws IOException {
         try (Reader reader = Files.newReader(source, charset)) {
@@ -176,16 +150,18 @@ public final class LoadUtils {
     }
 
     /**
-     * Loads a properties file from a string containing the file contents.
-     * Parsing the file is done using {@link LoadUtils#loadProperties(Reader)}.
-     * <p>
-     * This method will load the {@code .properties} file from a reader. If the
-     * current platform supports {@code .properties} files with any character
-     * encoding, the reader's character encoding is used to load the file. If
-     * the platform only supports {@code .properties} files with the ISO-8859-1
-     * character encoding, this encoding is used as a fallback, regardless of
-     * the reader's actual character encoding. On such platforms, files that
-     * contain non-ASCII characters will not be loaded correctly.
+     * Uses the logic described in {@link #loadProperties(Reader)} to load a
+     * {@code .properties} file, using the UTF-8 character encoding.
+     *
+     * @throws IOException if an I/O error occurs while reading the file.
+     */
+    public static Properties loadProperties(File source) throws IOException {
+        return loadProperties(source, UTF_8);
+    }
+
+    /**
+     * Uses the logic described in {@link #loadProperties(Reader)} to load
+     * {@code .properties} file contents from a string.
      */
     public static Properties loadProperties(String contents) {
         if (isUnicodePropertiesFilesSupported()) {
@@ -196,6 +172,65 @@ public final class LoadUtils {
             Properties properties = new Properties();
             emulateUnicodeProperties(contents, properties);
             return properties;
+        }
+    }
+
+    /**
+     * Serializes a {@code Properties} object to the specified writer. This method
+     * differs from the standard {@link java.util.Properties#store(Writer, String)}
+     * in that it writes the properties in a deterministic (alphabetical) order.
+     * The writer is closed afterward.
+     *
+     * @throws IOException if an I/O error occurs while writing. 
+     */
+    public static void saveProperties(Properties data, Writer dest) throws IOException {
+        List<String> names = data.stringPropertyNames().stream()
+            .sorted()
+            .toList();
+
+        try (PrintWriter writer = new PrintWriter(dest)) {
+            for (String name : names) {
+                String encodedName = PROPERTY_NAME.removeFrom(name);
+                String value = data.getProperty(name, "");
+                writer.println(encodedName + "=" + value);
+            }
+        }
+    }
+    
+    /**
+     * Uses the logic from {@link #saveProperties(Properties, Writer)} to
+     * serialize a {@link Properties} instance to a {@code .properties} file.
+     * The file is created using the specified character encoding.
+     *
+     * @throws IOException if an I/O error occurs while writing the file.
+     */
+    public static void saveProperties(Properties data, File dest, Charset charset) throws IOException {
+        PrintWriter writer = new PrintWriter(dest, charset.displayName());
+        saveProperties(data, writer);
+    }
+
+    /**
+     * Uses the logic from {@link #saveProperties(Properties, Writer)} to
+     * serialize a {@link Properties} instance to a {@code .properties} file.
+     * The file is created using the UTF-8 character encoding.
+     *
+     * @throws IOException if an I/O error occurs while writing the file.
+     */
+    public static void saveProperties(Properties data, File dest) throws IOException {
+        saveProperties(data, dest, UTF_8);
+    }
+
+    /**
+     * Uses the logic from {@link #saveProperties(Properties, Writer)} to
+     * serialize a {@link Properties} instance to {@code .properties} file
+     * contents.
+     */
+    public static String serializeProperties(Properties data) {
+        try (StringWriter buffer = new StringWriter()) {
+            saveProperties(data, buffer);
+            return buffer.toString();
+        } catch (IOException e) {
+            throw new AssertionError(e);
         }
     }
 
@@ -239,6 +274,8 @@ public final class LoadUtils {
      * The property names in the result instance will have the prefix removed
      * from their name. For example, if the original included a property "a.x",
      * and the prefix is "a.", the result will include a property named "x".
+     *
+     * @throws IllegalArgumentException if the provided prefix is empty.
      */
     public static Properties filterPrefix(Properties original, String prefix) {
         Preconditions.checkArgument(!prefix.isEmpty(), "Empty prefix");
@@ -254,53 +291,5 @@ public final class LoadUtils {
         }
 
         return filtered;
-    }
-
-    /**
-     * Serializes a {@code Properties} object to the specified writer. This method
-     * differs from the standard {@link java.util.Properties#store(Writer, String)}
-     * in that it writes the properties in a deterministic (alphabetical) order.
-     * The writer is closed afterward.
-     *
-     * @throws IOException if an I/O error occurs while writing. 
-     */
-    public static void saveProperties(Properties properties, Writer dest) throws IOException {
-        List<String> names = properties.stringPropertyNames().stream()
-            .sorted()
-            .toList();
-
-        try (PrintWriter writer = new PrintWriter(dest)) {
-            for (String name : names) {
-                String encodedName = PROPERTY_NAME.removeFrom(name);
-                String value = properties.getProperty(name, "");
-                writer.println(encodedName + "=" + value);
-            }
-        }
-    }
-    
-    /**
-     * Serializes a {@code Properties} object to the specified file. This method
-     * is different from the standard {@link java.util.Properties#store(Writer, String)}
-     * in that it writes the properties in a consistent and predictable order.
-     *
-     * @throws IOException if an I/O error occurs while writing. 
-     */
-    public static void saveProperties(Properties properties, File dest, Charset charset)
-            throws IOException {
-        PrintWriter writer = new PrintWriter(dest, charset.displayName());
-        saveProperties(properties, writer);
-    }
-
-    /**
-     * Seralizes a {@code Properties} object to its text representation, which
-     * would normally serve as the contents of the {@code .properties} file.
-     */
-    public static String serializeProperties(Properties properties) {
-        try (StringWriter buffer = new StringWriter()) {
-            saveProperties(properties, buffer);
-            return buffer.toString();
-        } catch (IOException e) {
-            throw new AssertionError(e);
-        }
     }
 }

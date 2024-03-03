@@ -14,9 +14,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
 
 /**
@@ -65,37 +62,6 @@ public record ResourceFile(String path) implements Resource {
         return path.substring(index + 1);
     }
 
-    /**
-     * Returns a URI that describes the location of this resource file. For
-     * resource files in the local file system, this returns a {@code file://}
-     * URI. For classpath resources in JAR files, this returns a {@code jar:}
-     * URI.
-     *
-     * @throws ResourceException if this resource file cannot be located.
-     */
-    public URI toURI() {
-        // Attempt 1: Locate file in classpath.
-        ClassLoader classLoader = ResourceFile.class.getClassLoader();
-        URL inClassPath = classLoader.getResource(path);
-
-        if (inClassPath != null) {
-            try {
-                return inClassPath.toURI();
-            } catch (URISyntaxException e) {
-                throw new ResourceException("Invalid classpath resource URL: " + inClassPath);
-            }
-        }
-
-        // Attempt 2: Locate file in local file system.
-        File inFileSystem = new File(path);
-
-        if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
-            return inFileSystem.toURI();
-        }
-
-        throw new ResourceException("Resource file not found: " + path);
-    }
-    
     @Override
     public InputStream openStream() {
         // Attempt 1: Locate file in classpath.

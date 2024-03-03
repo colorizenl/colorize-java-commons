@@ -15,13 +15,13 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Utility class for working with statistics on numerical data sets with float
- * precision. Unless stated otherwise, methods in this class will return zero
- * instead of throwing an exception when faced with an empty data set.
+ * Utility class for aggregating numerical data sets. All operations assume
+ * the data points have float precision. If the data set is empty, methods in
+ * this class will return zero instead of throwing an exception.
  */
-public final class Statistics {
+public final class Aggregate {
 
-    private Statistics() {
+    private Aggregate() {
     }
 
     public static float sum(Collection<? extends Number> values) {

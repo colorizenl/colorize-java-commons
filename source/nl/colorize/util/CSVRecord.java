@@ -22,7 +22,12 @@ import java.util.stream.Collectors;
  * Immutable record within a CSV file. Cells are separated by a delimiter,
  * records are separated by newlines. Cells can be referenced by column index,
  * or by column name if the CSV record includes column name information.
+ *
+ * @deprecated This class is intended for quick-and-dirty CSV support.
+ *             Applications interacting with CSV files should prefer using
+ *             a full-blown CSV library such as Apache Commons CSV or FastCSV.
  */
+@Deprecated
 public class CSVRecord {
 
     private List<String> columns;

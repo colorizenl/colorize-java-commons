@@ -9,7 +9,7 @@ apply plugin: "maven-publish"
 apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2024.2"
+version = "2024.3"
 compileJava.options.encoding = "UTF-8"
 
 java {

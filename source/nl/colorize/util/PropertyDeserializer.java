@@ -142,6 +142,7 @@ public class PropertyDeserializer {
      *         registered for the specified type.
      * @throws NullPointerException when trying to deserialize a null value.
      */
+    @SuppressWarnings("unchecked")
     public <T> T parse(String value, Class<T> type) {
         Preconditions.checkNotNull(value, "Cannot deserialize null value");
 
@@ -220,19 +221,6 @@ public class PropertyDeserializer {
     public static PropertyDeserializer fromProperties(Properties properties) {
         PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
         propertyDeserializer.registerPreprocessor(properties::getProperty);
-        return propertyDeserializer;
-    }
-
-    /**
-     * Returns a {@link PropertyDeserializer} that acts as a live view for
-     * parsing values from the specified CSV record.
-     */
-    public static PropertyDeserializer fromCSV(CSVRecord record) {
-        Preconditions.checkArgument(record.hasColumnNameInformation(),
-            "CSV is missing column name information");
-
-        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
-        propertyDeserializer.registerPreprocessor(record::get);
         return propertyDeserializer;
     }
 }

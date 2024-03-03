@@ -6,13 +6,17 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 
 import javax.swing.filechooser.FileSystemView;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -65,6 +69,10 @@ public enum Platform {
         .put("13.", "Ventura")
         .put("14.", "Sonoma")
         .build();
+
+    private static final Splitter NATIVE_PATH_SPLITTER = Splitter.on(CharMatcher.anyOf(":;"))
+        .trimResults()
+        .omitEmptyStrings();
 
     private static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
     private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
@@ -182,23 +190,6 @@ public enum Platform {
     }
 
     /**
-     * Returns the system's processor architecture, as described by the
-     * {@code os.arch} system property.
-     */
-    public static String getSystemArchitecture() {
-        return System.getProperty("os.arch");
-    }
-    
-    /**
-     * Returns the amount of heap memory that is currently being used by the
-     * Java Virtual Machine, in bytes.
-     */
-    public static long getUsedHeapMemory() {
-        Runtime runtime = Runtime.getRuntime();
-        return runtime.totalMemory() - runtime.freeMemory();
-    }
-    
-    /**
      * Returns the version of the Java Virtual Machine. Examples of returned
      * version numbers are "1.7.0_55" and "21.0.1". Detection is based on the
      * value of the {@code java.version} system property. Returns
@@ -212,6 +203,49 @@ public enum Platform {
             return Version.UNKNOWN;
         }
         return Version.parse(javaVersion);
+    }
+
+    /**
+     * Returns the system's processor architecture, as described by the
+     * {@code os.arch} system property.
+     */
+    public static String getSystemArchitecture() {
+        return System.getProperty("os.arch");
+    }
+
+    /**
+     * Returns the amount of heap memory that is currently being used by the
+     * Java Virtual Machine, in bytes.
+     */
+    @Deprecated
+    public static long getUsedHeapMemory() {
+        Runtime runtime = Runtime.getRuntime();
+        return runtime.totalMemory() - runtime.freeMemory();
+    }
+
+    /**
+     * Returns the native library path, indicated by the system property
+     * {@code java.library.path}, as a list of {@link File} objects that
+     * represent each directory.
+     *
+     * @throws UnsupportedOperationException if the current platform does
+     *         not allow the application to load or access native libraries
+     *         at runtime.
+     */
+    public static List<File> getNativeLibraryPath() {
+        if (isGoogleCloud() || isTeaVM()) {
+            throw new UnsupportedOperationException("Native library path not supported by platform");
+        }
+
+        String path = System.getProperty("java.library.path");
+
+        if (path == null || path.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return NATIVE_PATH_SPLITTER.splitToStream(path)
+            .map(File::new)
+            .toList();
     }
 
     /**

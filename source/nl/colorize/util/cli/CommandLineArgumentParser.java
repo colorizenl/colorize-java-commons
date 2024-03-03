@@ -6,7 +6,6 @@
 
 package nl.colorize.util.cli;
 
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import nl.colorize.util.Platform;
 import nl.colorize.util.PropertyDeserializer;
@@ -23,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Define supported arguments for a command line interface, then parse the
@@ -303,11 +303,19 @@ public class CommandLineArgumentParser {
      * {@code --a b} and {@code --a=b} both produce {@code [--a, b]}.
      */
     private List<String> processProvidedArgs(String[] argv) {
-        Splitter argSplitter = Splitter.on("=").trimResults();
-
         return Arrays.stream(argv)
-            .flatMap(argSplitter::splitToStream)
+            .flatMap(this::splitProvidedArg)
             .toList();
+    }
+
+    private Stream<String> splitProvidedArg(String arg) {
+        if (arg.startsWith("-") && arg.contains("=")) {
+            String name = arg.substring(0, arg.indexOf("="));
+            String value = arg.substring(name.length() + 1);
+            return Stream.of(name, value);
+        } else {
+            return Stream.of(arg);
+        }
     }
 
     private String getArgName(Field field, Arg config) {

@@ -95,10 +95,12 @@ public class ImageViewerUIT {
 
     private void createImageList() {
         TranslationBundle bundle = SwingUtils.getCustomComponentsBundle();
-        imageList = new Table<>(bundle.getString("ImageViewer.imageFile"),
-            bundle.getString("ImageViewer.imageFileSize"));
+        imageList = new Table<>(
+            bundle.getString("ImageViewer.imageFile"),
+            bundle.getString("ImageViewer.imageFileSize")
+        );
         imageList.setColumnWidth(1, 80);
-        imageList.getDoubleClick().subscribe(t -> selectImage(imageList.getSelectedRowKey()));
+        imageList.onDoubleClick().subscribe(this::selectImage);
         SwingUtils.setPreferredWidth(imageList, 300);
     }
 
@@ -120,7 +122,7 @@ public class ImageViewerUIT {
             imageFiles = locateImageFiles(dir);
             imageCache.forgetAll();
             refreshImageList();
-            selectRandomImage();
+            selectImage(selected);
         }
     }
 
@@ -162,8 +164,9 @@ public class ImageViewerUIT {
 
     private void selectImage(File file) {
         if (file != null) {
-            history.add(file);
             imageViewer.display(imageCache.get(file));
+            imageList.setSelectedRowKey(file);
+            history.add(file);
         }
     }
 
@@ -178,9 +181,12 @@ public class ImageViewerUIT {
     }
 
     private void previous() {
-        if (!history.isEmpty()) {
+        if (history.size() >= 2) {
+            history.removeLast();
             File previousFile = history.removeLast();
             imageViewer.display(imageCache.get(previousFile));
+            imageList.setSelectedRowKey(previousFile);
+            history.add(previousFile);
         }
     }
 }
