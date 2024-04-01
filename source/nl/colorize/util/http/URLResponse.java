@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
+import static lombok.AccessLevel.PROTECTED;
+
 /**
  * Represents an HTTP response that is returned after sending an HTTP request
  * to a URL. Used in conjunction with {@link URLLoader}, which supports/uses
@@ -33,7 +35,7 @@ public class URLResponse implements Resource {
     private int status;
     private Headers headers;
     private byte[] body;
-    @Setter(AccessLevel.PROTECTED) private SSLSession sslSession;
+    @Setter(PROTECTED) private SSLSession sslSession;
 
     public URLResponse(int status, Headers headers, byte[] body) {
         this.status = status;

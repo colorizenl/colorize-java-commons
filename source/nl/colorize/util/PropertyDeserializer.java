@@ -7,6 +7,7 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
+import nl.colorize.util.stats.CSVRecord;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -221,6 +222,35 @@ public class PropertyDeserializer {
     public static PropertyDeserializer fromProperties(Properties properties) {
         PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
         propertyDeserializer.registerPreprocessor(properties::getProperty);
+        return propertyDeserializer;
+    }
+
+    /**
+     * Returns a {@link PropertyDeserializer} that acts as a live view for
+     * parsing values from the specified map.
+     */
+    public static PropertyDeserializer fromMap(Map<String, ?> properties) {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.registerPreprocessor(name -> {
+            Object value = properties.get(name);
+            return value != null ? value.toString() : null;
+        });
+        return propertyDeserializer;
+    }
+
+    /**
+     * Returns a {@link PropertyDeserializer} that acts as a live view for
+     * parsing values from the specified CSV record.
+     *
+     * @throws IllegalStateException if the CSV does not include any column
+     *         information.
+     */
+    public static PropertyDeserializer fromCSV(CSVRecord record) {
+        Preconditions.checkState(record.hasColumnInformation(),
+            "CSV does not include column information");
+
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.registerPreprocessor(record::get);
         return propertyDeserializer;
     }
 }

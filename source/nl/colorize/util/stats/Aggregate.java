@@ -87,6 +87,10 @@ public final class Aggregate {
         return value * 100f / total;
     }
 
+    public static float multiplyPercentage(float percentageA, float percentageB) {
+        return ((percentageA / 100f) * (percentageB / 100f)) * 100f;
+    }
+
     /**
      * Calculates the value of the Nth percentile for the specified data set.
      * This method will interpolate between values if none of the values in

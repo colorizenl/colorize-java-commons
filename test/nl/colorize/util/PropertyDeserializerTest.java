@@ -7,6 +7,8 @@
 package nl.colorize.util;
 
 import com.google.common.base.Splitter;
+import nl.colorize.util.stats.CSVFormat;
+import nl.colorize.util.stats.CSVRecord;
 import nl.colorize.util.stats.DateRange;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -137,5 +140,24 @@ class PropertyDeserializerTest {
 
         assertEquals(LocalDate.of(2018, 3, 18), date);
         assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30), datetime);
+    }
+
+    @Test
+    void fromMap() {
+        Map<String, Object> properties = Map.of("a", "b", "c", 2);
+        PropertyDeserializer propertyDeserializer = PropertyDeserializer.fromMap(properties);
+
+        assertEquals("b", propertyDeserializer.parseString("a", "?"));
+        assertEquals(2, propertyDeserializer.parseInt("c", -1));
+        assertEquals(-1, propertyDeserializer.parseInt("d", -1));
+    }
+
+    @Test
+    void fromCSV() {
+        CSVRecord record = CSVFormat.SEMICOLON.parseCSV("name;age\njohn;38").getFirst();
+        PropertyDeserializer propertyDeserializer = PropertyDeserializer.fromCSV(record);
+
+        assertEquals("john", propertyDeserializer.parseString("name", ""));
+        assertEquals(38, propertyDeserializer.parseInt("age", -1));
     }
 }

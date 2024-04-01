@@ -39,10 +39,12 @@ public final class TextUtils {
 
     public static final Splitter LINE_SPLITTER = Splitter.on("\n");
     public static final Joiner LINE_JOINER = Joiner.on("\n");
+
     private static final Pattern WORD_SEPARATOR = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR).omitEmptyStrings();
     
-    private static final CharMatcher TEXT_MATCHER = CharMatcher.forPredicate(Character::isLetterOrDigit)
+    private static final CharMatcher TEXT_MATCHER = CharMatcher
+        .forPredicate(Character::isLetterOrDigit)
         .or(CharMatcher.whitespace());
 
     private TextUtils() {

@@ -86,4 +86,13 @@ class AggregateTest {
         assertEquals(-0.90f, Aggregate.correlation(original, differentOrder), EPSILON);
         assertEquals(0.13f, Aggregate.correlation(original, dissimilar), EPSILON);
     }
+
+    @Test
+    void multiplyPercentage() {
+        assertEquals(0f, Aggregate.multiplyPercentage(0f, 0f), EPSILON);
+        assertEquals(0f, Aggregate.multiplyPercentage(0f, 50f), EPSILON);
+        assertEquals(100f, Aggregate.multiplyPercentage(100f, 100f), EPSILON);
+        assertEquals(50f, Aggregate.multiplyPercentage(100f, 50f), EPSILON);
+        assertEquals(25f, Aggregate.multiplyPercentage(50f, 50f), EPSILON);
+    }
 }

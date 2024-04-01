@@ -11,9 +11,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -34,7 +33,7 @@ class SubscribableTest {
     void dontReceiveAfterDispose() {
         List<String> received = new ArrayList<>();
         Subscribable<String> subject = new Subscribable<>();
-        Consumer<String> subscriber = received::add;
+        Subscriber<String> subscriber = received::add;
 
         subject.subscribe(subscriber);
         subject.next("a");
@@ -189,16 +188,16 @@ class SubscribableTest {
 
     @Test
     void unsubscribe() {
-        UUID idA = UUID.randomUUID();
-        UUID idB = UUID.randomUUID();
         List<String> received = new ArrayList<>();
+        Subscriber<String> a = event -> received.add("a" + event);
+        Subscriber<String> b = event -> received.add("b" + event);
 
         Subscribable<String> subject = new Subscribable<>();
-        subject.subscribe(idA, event -> received.add("a" + event), null);
-        subject.subscribe(idB, event -> received.add("b" + event), null);
+        subject.subscribe(a);
+        subject.subscribe(b);
         subject.next("1");
         subject.next("2");
-        subject.unsubscribe(idA);
+        subject.unsubscribe(a);
         subject.next("3");
 
         assertEquals("[a1, b1, a2, b2, b3]", received.toString());
@@ -260,5 +259,46 @@ class SubscribableTest {
 
         assertEquals(1, result.size());
         assertEquals(0, errors.size());
+    }
+
+    @Test
+    void completedEvent() {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        Subscribable<String> subject = new Subscribable<>();
+        subject.subscribe(new Subscriber<>() {
+            @Override
+            public void onEvent(String event) {
+            }
+
+            @Override
+            public void onComplete() {
+                counter.incrementAndGet();
+            }
+        });
+        subject.complete();
+
+        assertEquals(1, counter.get());
+    }
+
+    @Test
+    void doNotSendCompletedEventTwice() {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        Subscribable<String> subject = new Subscribable<>();
+        subject.subscribe(new Subscriber<>() {
+            @Override
+            public void onEvent(String event) {
+            }
+
+            @Override
+            public void onComplete() {
+                counter.incrementAndGet();
+            }
+        });
+        subject.complete();
+        subject.complete();
+
+        assertEquals(1, counter.get());
     }
 }

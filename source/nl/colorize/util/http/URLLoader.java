@@ -331,8 +331,8 @@ public class URLLoader {
      *         will be thrown.
      */
     public URLResponse send() throws IOException {
-        boolean force = System.getProperty(FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "").equals("true");
-        boolean classicHttpClient = Platform.isTeaVM() || force;
+        boolean classicHttpClient = Platform.isTeaVM() ||
+            System.getProperty(FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "").equals("true");
 
         if (classicHttpClient) {
             URI fullURL = getFullURL();

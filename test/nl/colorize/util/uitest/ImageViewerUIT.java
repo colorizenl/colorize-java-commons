@@ -44,7 +44,7 @@ public class ImageViewerUIT {
     private ImageViewer imageViewer;
     private Table<File> imageList;
 
-    private static final int IMAGE_CACHE_SIZE = 1100;
+    private static final int IMAGE_CACHE_SIZE = 1000;
 
     public static void main(String[] args) {
         SwingUtils.initializeSwing();

@@ -24,12 +24,12 @@ import java.util.logging.Logger;
  * asynchronous) operation, allowing for publish/subscribe workflows.
  * Subscribers can be notified for events, for errors, or for both.
  * <p>
- * Such workflows can also be created in other ways, most commonly using
- * {@code java.util.concurrent} and its Flow API. However, the Flow API is
- * not yet supported on all platforms that are supported by this library,
- * making this class a more portable alternative.
+ * This type of workflow can also be created in other ways, most commonly
+ * using {@code java.util.concurrent} and its Flow API. However, the Flow
+ * API is not yet available on all platforms that are supported by this
+ * library, making this class a more portable alternative.
  * <p>
- * On platforms that do support concurrency, {@link Subscribable} instances
+ * On platforms that support concurrency, {@link Subscribable} instances
  * are thread-safe and can be accessed from multiple threads.
  *
  * @param <T> The type of event that can be subscribed to.
@@ -43,16 +43,15 @@ public final class Subscribable<T> {
     private static final Logger LOGGER = LogHelper.getLogger(Subscribable.class);
 
     public Subscribable() {
-        this.subscribers = prepareList();
-        this.history = prepareList();
+        this.subscribers = new ArrayList<>();
+        this.history = new ArrayList<>();
         this.completed = false;
-    }
 
-    private <S> List<S> prepareList() {
-        if (Platform.isTeaVM()) {
-            return new ArrayList<>();
-        } else {
-            return new CopyOnWriteArrayList<>();
+        // This needs to be in a block so this class can be
+        // compiled and run within TeaVM.
+        if (!Platform.isTeaVM()) {
+            subscribers = new CopyOnWriteArrayList<>();
+            history = new CopyOnWriteArrayList<>();
         }
     }
 
@@ -62,17 +61,13 @@ public final class Subscribable<T> {
      * completed.
      */
     public void next(T event) {
-        if (completed) {
-            return;
-        }
-
-        for (Subscriber<T> subscriber : subscribers) {
-            if (subscriber.onEvent != null) {
-                subscriber.onEvent.accept(event);
+        if (!completed) {
+            for (Subscriber<T> subscriber : subscribers) {
+                subscriber.onEvent(event);
             }
-        }
 
-        history.add(event);
+            history.add(event);
+        }
     }
 
     /**
@@ -83,24 +78,13 @@ public final class Subscribable<T> {
      * marked as completed.
      */
     public void nextError(Exception error) {
-        if (completed) {
-            return;
-        }
-
-        boolean handled = false;
-
-        for (Subscriber<T> subscriber : subscribers) {
-            if (subscriber.onError != null) {
-                subscriber.onError.accept(error);
-                handled = true;
+        if (!completed) {
+            for (Subscriber<T> subscriber : subscribers) {
+                subscriber.onError(error);
             }
-        }
 
-        if (!handled) {
-            LOGGER.warning("Unhandled error: " + error.getMessage());
+            history.add(error);
         }
-
-        history.add(error);
     }
 
     /**
@@ -112,15 +96,13 @@ public final class Subscribable<T> {
      * completed.
      */
     public void next(Callable<T> operation) {
-        if (completed) {
-            return;
-        }
-
-        try {
-            T event = operation.call();
-            next(event);
-        } catch (Exception e) {
-            nextError(e);
+        if (!completed) {
+            try {
+                T event = operation.call();
+                next(event);
+            } catch (Exception e) {
+                nextError(e);
+            }
         }
     }
 
@@ -177,22 +159,23 @@ public final class Subscribable<T> {
     }
 
     /**
-     * Registers the specified callback functions as event and error
-     * subscribers. The subscribers will immediately be notified of previously
-     * published events and/or errors. The {@code id} parameter can be used to
-     * identify the subscriber.
+     * Registers the specified subscriber to receive published events and
+     * errors. The subscriber will immediately be notified of previously
+     * published events.
      *
      * @return This {@link Subscribable}, for method chaining.
      */
-    public Subscribable<T> subscribe(UUID id, Consumer<T> onEvent, Consumer<Exception> onError) {
-        Subscriber<T> subscriber = new Subscriber<>(id, onEvent, onError);
+    @SuppressWarnings("unchecked")
+    public Subscribable<T> subscribe(Subscriber<T> subscriber) {
+        Preconditions.checkNotNull(subscriber, "Null subscriber");
+
         subscribers.add(subscriber);
 
         for (Object historicEvent : history) {
-            if (onError != null && historicEvent instanceof Exception error) {
-                onError.accept(error);
-            } else if (onEvent != null) {
-                onEvent.accept((T) historicEvent);
+            if (historicEvent instanceof Exception error) {
+                subscriber.onError(error);
+            } else {
+                subscriber.onEvent((T) historicEvent);
             }
         }
 
@@ -201,23 +184,23 @@ public final class Subscribable<T> {
 
     /**
      * Registers the specified callback functions as event and error
-     * subscribers. The subscribers will immediately be notified of previously
-     * published events and/or errors.
+     * subscribers. The subscribers will immediately be notified of
+     * previously published events and/or errors.
      *
      * @return This {@link Subscribable}, for method chaining.
      */
-    public Subscribable<T> subscribe(Consumer<T> onEvent, Consumer<Exception> onError) {
-        return subscribe(UUID.randomUUID(), onEvent, onError);
-    }
+    public Subscribable<T> subscribe(Consumer<T> eventFn, Consumer<Exception> errorFn) {
+        return subscribe(new Subscriber<T>() {
+            @Override
+            public void onEvent(T event) {
+                eventFn.accept(event);
+            }
 
-    /**
-     * Registers the specified callback function as an event subscriber. The
-     * subscriber will immediately be notified of previously published events.
-     *
-     * @return This {@link Subscribable}, for method chaining.
-     */
-    public Subscribable<T> subscribe(Consumer<T> onEvent) {
-        return subscribe(onEvent, null);
+            @Override
+            public void onError(Exception error) {
+                errorFn.accept(error);
+            }
+        });
     }
 
     /**
@@ -227,7 +210,8 @@ public final class Subscribable<T> {
      * @return This {@link Subscribable}, for method chaining.
      */
     public Subscribable<T> subscribeErrors(Consumer<Exception> onError) {
-        return subscribe(null, onError);
+        Consumer<T> onEvent = event -> {};
+        return subscribe(onEvent, onError);
     }
 
     /**
@@ -243,12 +227,12 @@ public final class Subscribable<T> {
     }
 
     /**
-     * Removes a previously registered subscriber, identifying the subscriber
-     * by its ID. This method does nothing if none of the current subscribers
-     * match the ID.
+     * Removes a previously registered subscriber. If the subscriber is not
+     * currently registered with this {@link Subscribable}, this method does
+     * nothing.
      */
-    public void unsubscribe(UUID id) {
-        subscribers.removeIf(subscriber -> subscriber.id.equals(id));
+    public void unsubscribe(Subscriber<T> subscriber) {
+        subscribers.remove(subscriber);
     }
 
     /**
@@ -257,7 +241,13 @@ public final class Subscribable<T> {
      * might still be published when additional subscribers are registered.
      */
     public void complete() {
-        completed = true;
+        if (!completed) {
+            completed = true;
+
+            for (Subscriber<T> subscriber : subscribers) {
+                subscriber.onComplete();
+            }
+        }
     }
 
     /**
@@ -349,13 +339,5 @@ public final class Subscribable<T> {
         backgroundThread.start();
 
         return subscribable;
-    }
-
-    /**
-     * Internal data structure that creates a subscriber objects from callback
-     * methods. Callback methods can be {@code null} if the subscriber is not
-     * interested in certain events.
-     */
-    private record Subscriber<T>(UUID id, Consumer<T> onEvent, Consumer<Exception> onError) {
     }
 }
