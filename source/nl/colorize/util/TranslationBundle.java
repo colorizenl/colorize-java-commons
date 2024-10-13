@@ -9,6 +9,7 @@ package nl.colorize.util;
 import com.google.common.base.Preconditions;
 
 import java.text.MessageFormat;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -47,24 +48,30 @@ public final class TranslationBundle {
      * factory methods to create a {@link TranslationBundle} instance from the
      * contents of such a file.
      */
-    private TranslationBundle(Map<String, String> defaultTranslation) {
+    private TranslationBundle(Map<String, String> defaultTranslation,
+                              Map<Locale, TranslationBundle> translations) {
         this.defaultTranslation = Map.copyOf(defaultTranslation);
-        this.translations = new HashMap<>();
+        this.translations = Map.copyOf(translations);
     }
 
     /**
-     * Adds a translation for the specified locale. The default translation
+     * Returns a new {@link TranslationBundle} that adds the specified
+     * translation. This {@link TranslationBundle}'s default translation
      * will act as a fallback for any keys that are not included in the
      * translation.
      *
      * @throws IllegalArgumentException if this {@link TranslationBundle}
      *         already includes a translation for the same locale.
      */
-    public void addTranslation(Locale locale, TranslationBundle translation) {
+    public TranslationBundle withTranslation(Locale locale, TranslationBundle translation) {
         Preconditions.checkArgument(!translations.containsKey(locale),
             "Translation for locale already exists: " + locale);
 
-        translations.put(locale, translation);
+        Map<Locale, TranslationBundle> newTranslations = new HashMap<>();
+        newTranslations.putAll(translations);
+        newTranslations.put(locale, translation);
+
+        return new TranslationBundle(defaultTranslation, newTranslations);
     }
 
     /**
@@ -136,7 +143,7 @@ public final class TranslationBundle {
      * The keys will be returned in random order.
      */
     public Set<String> getKeys() {
-        return Set.copyOf(defaultTranslation.keySet());
+        return defaultTranslation.keySet();
     }
 
     /**
@@ -145,7 +152,8 @@ public final class TranslationBundle {
      * can be added afterward.
      */
     public static TranslationBundle from(Properties defaultTranslation) {
-        return new TranslationBundle(PropertyUtils.toMap(defaultTranslation));
+        return new TranslationBundle(PropertyUtils.toMap(defaultTranslation),
+            Collections.emptyMap());
     }
 
     /**
@@ -180,6 +188,6 @@ public final class TranslationBundle {
      * translations can be added afterward.
      */
     public static TranslationBundle fromMap(Map<String, String> defaultTranslation) {
-        return new TranslationBundle(defaultTranslation);
+        return new TranslationBundle(defaultTranslation, Collections.emptyMap());
     }
 }

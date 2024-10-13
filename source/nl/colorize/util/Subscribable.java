@@ -20,17 +20,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Proxy for accessing multiple events that are produced by a (possibly
- * asynchronous) operation, allowing for publish/subscribe workflows.
- * Subscribers can be notified for events, for errors, or for both.
+ * Acts as a message broker for publish/subscribe workflows, where producers
+ * publish (possibly asynchronous) events, which are then consumed by
+ * subscribers. These subscribers can be notified for events, for errors, or
+ * for both.
  * <p>
- * This type of workflow can also be created in other ways, most commonly
- * using {@code java.util.concurrent} and its Flow API. However, the Flow
- * API is not yet available on all platforms that are supported by this
- * library, making this class a more portable alternative.
+ * {@link Subscribable} instances are thread-safe and can be accessed from
+ * multiple threads. This allows for workflows where publishers and
+ * subscribers operate on different threads.
  * <p>
- * On platforms that support concurrency, {@link Subscribable} instances
- * are thread-safe and can be accessed from multiple threads.
+ * This class is part of a portable framework for
+ * <a href="https://en.wikipedia.org/wiki/Publish-subscribe_pattern">publish/subscribe</a>
+ * communication. This framework can be used across different platforms,
+ * including platforms where {@code java.util.concurrent} is not available,
+ * such as <a href="https://teavm.org">TeaVM</a>.
  *
  * @param <T> The type of event that can be subscribed to.
  */
@@ -43,13 +46,14 @@ public final class Subscribable<T> {
     private static final Logger LOGGER = LogHelper.getLogger(Subscribable.class);
 
     public Subscribable() {
-        this.subscribers = new ArrayList<>();
-        this.history = new ArrayList<>();
         this.completed = false;
 
         // This needs to be in a block so this class can be
-        // compiled and run within TeaVM.
-        if (!Platform.isTeaVM()) {
+        // compiled and used from within TeaVM.
+        if (Platform.isTeaVM()) {
+            subscribers = new ArrayList<>();
+            history = new ArrayList<>();
+        } else {
             subscribers = new CopyOnWriteArrayList<>();
             history = new CopyOnWriteArrayList<>();
         }

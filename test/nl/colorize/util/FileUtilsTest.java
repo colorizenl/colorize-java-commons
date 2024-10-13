@@ -6,12 +6,10 @@
 
 package nl.colorize.util;
 
-import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
@@ -24,27 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FileUtilsTest {
 
-    @Test
-    public void testWriteLines() throws Exception {
-        List<String> lines = ImmutableList.of("first", "second", "third");
-        File tempFile = FileUtils.createTempFile("", UTF_8);
-        FileUtils.write(lines, UTF_8, tempFile);
-
-        assertEquals(lines, Files.readAllLines(tempFile.toPath(), UTF_8));
-    }
-    
-    @Test
-    public void testReadFirstLines() throws Exception {
-        File tempFile = FileUtils.createTempFile("a\nb\nc\nd\ne\n", UTF_8);
-        
-        assertEquals(ImmutableList.of("a", "b", "c"), 
-                FileUtils.readFirstLines(tempFile, UTF_8, 3));
-        assertEquals(ImmutableList.of("a", "b", "c", "d", "e"), 
-                FileUtils.readFirstLines(tempFile, UTF_8, 5));
-        assertEquals(ImmutableList.of("a", "b", "c", "d", "e"), 
-                FileUtils.readFirstLines(tempFile, UTF_8, 6));
-    }
-    
     @Test
     public void testMkDir(@TempDir File tempDir) throws IOException {
         File testDir = new File(tempDir, "test-" + System.currentTimeMillis());
@@ -94,8 +71,7 @@ public class FileUtilsTest {
 
         FileUtils.rewrite(tempFile, UTF_8, line -> "2" + line);
 
-        assertEquals(ImmutableList.of("2a", "2b", "2c", "2d"),
-            Files.readAllLines(tempFile.toPath(), UTF_8));
+        assertEquals(List.of("2a", "2b", "2c", "2d"), Files.readAllLines(tempFile.toPath(), UTF_8));
     }
 
     @Test
@@ -153,17 +129,6 @@ public class FileUtilsTest {
     }
 
     @Test
-    public void testFileExtensionFilter() {
-        FilenameFilter filter = FileUtils.getFileExtensionFilter("jpg", "png");
-
-        assertTrue(filter.accept(new File("/tmp"), "test.jpg"));
-        assertTrue(filter.accept(new File("/tmp"), "test.png"));
-        assertTrue(filter.accept(new File("/tmp"), "test.PNG"));
-        assertFalse(filter.accept(new File("/tmp"), "test.txt"));
-        assertFalse(filter.accept(new File("/tmp"), "test.jpg.txt"));
-    }
-
-    @Test
     void countDirectorySize(@TempDir File tempDir) throws IOException {
         Files.writeString(new File(tempDir, "1.txt").toPath(), "some text", UTF_8);
         Files.writeString(new File(tempDir, "2.txt").toPath(), "some more text", UTF_8);
@@ -196,11 +161,11 @@ public class FileUtilsTest {
 
     @Test
     void walkFiles(@TempDir File tempDir) throws IOException {
-        FileUtils.write("a", UTF_8, new File(tempDir, "a.txt"));
-        FileUtils.write("b", UTF_8, new File(tempDir, "b.txt"));
-        FileUtils.write("c", UTF_8, new File(tempDir, "c.txt"));
+        Files.writeString(new File(tempDir, "a.txt").toPath(), "a", UTF_8);
+        Files.writeString(new File(tempDir, "b.txt").toPath(), "b", UTF_8);
+        Files.writeString(new File(tempDir, "c.txt").toPath(), "c", UTF_8);
         File d = FileUtils.mkdir(tempDir, "d");
-        FileUtils.write("d1", UTF_8, new File(tempDir, "d1.txt"));
+        Files.writeString(new File(tempDir, "d1.txt").toPath(), "d1", UTF_8);
 
         List<File> files = FileUtils.walkFiles(tempDir, f -> !f.getName().startsWith("c"));
 
@@ -213,7 +178,7 @@ public class FileUtilsTest {
     @Test
     void walkFilesOnSingleFile(@TempDir File tempDir) throws IOException {
         File tempFile = new File(tempDir, "test.txt");
-        FileUtils.write("1234", UTF_8, tempFile);
+        Files.writeString(tempFile.toPath(), "1234", UTF_8);
 
         assertEquals(1, FileUtils.walkFiles(tempFile, f -> f.getName().contains("test")).size());
         assertEquals(0, FileUtils.walkFiles(tempFile, f -> f.getName().contains("no")).size());
@@ -223,17 +188,6 @@ public class FileUtilsTest {
     void createTempFile() throws IOException {
         byte[] contents = {1, 2, 3, 4};
         File tempFile = FileUtils.createTempFile(contents);
-
-        assertTrue(tempFile.exists());
-        assertArrayEquals(contents, Files.readAllBytes(tempFile.toPath()));
-        assertEquals("4 bytes", FileUtils.formatFileSize(tempFile));
-    }
-
-    @Test
-    void writeBinaryFile(@TempDir File tempDir) throws IOException {
-        File tempFile = new File(tempDir, "test");
-        byte[] contents = {1, 2, 3, 4};
-        FileUtils.write(contents, tempFile);
 
         assertTrue(tempFile.exists());
         assertArrayEquals(contents, Files.readAllBytes(tempFile.toPath()));

@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -25,6 +24,7 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,7 +83,7 @@ public class LogHelperTest {
     @Test
     public void testFileHandler(@TempDir File tempDir) throws IOException {
         File tempFile = new File(tempDir, "test.log");
-        FileHandler fileHandler = LogHelper.createFileHandler(tempFile, Charsets.UTF_8);
+        FileHandler fileHandler = LogHelper.createFileHandler(tempFile, UTF_8);
         fileHandler.setFormatter(LogHelper.createCompactFormatter());
 
         Logger logger = LogHelper.getLogger("nl.test.x.y.z");
@@ -91,7 +91,7 @@ public class LogHelperTest {
         logger.info("Test log message");
 
         assertEquals("INFO     Test log message\n",
-            Files.readString(tempFile.toPath(), Charsets.UTF_8)
+            Files.readString(tempFile.toPath(), UTF_8)
             .replaceFirst("[\\d-: ]+", ""));
     }
     

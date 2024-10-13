@@ -17,4 +17,11 @@ class AnsiColorTest {
         assertEquals("\u001B[31mtest\u001B[0m", AnsiColor.RED.format("test"));
         assertEquals("\u001B[1m\u001B[33mtest\u001B[0m", AnsiColor.YELLOW_BOLD.format("test"));
     }
+
+    @Test
+    void clean() {
+        assertEquals("test", AnsiColor.clean("\u001B[31mtest\u001B[0m"));
+        assertEquals("test", AnsiColor.clean("\u001B[1m\u001B[33mtest\u001B[0m"));
+        assertEquals("This is a test", AnsiColor.clean("This is a \u001B[31;1mtest\u001B[0m"));
+    }
 }

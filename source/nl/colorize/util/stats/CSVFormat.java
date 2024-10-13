@@ -35,6 +35,9 @@ public class CSVFormat {
     public static final CSVFormat TAB = withHeaders('\t');
     public static final CSVFormat SEMICOLON = withHeaders(';');
 
+    private static final CharMatcher NEWLINE_MATCHER = CharMatcher.is('\n');
+    private static final CharMatcher QUOTE_MATCHER = CharMatcher.is('"');
+
     private CSVFormat(boolean headers, char delimiter, String lineSeparator, boolean quotes) {
         this.headers = headers;
         this.delimiter = delimiter;
@@ -89,8 +92,11 @@ public class CSVFormat {
             if (line.charAt(i) == delimiter && !quoting) {
                 cells.add(buffer.toString());
                 buffer.delete(0, buffer.length());
-            } else if (line.charAt(i) == '\"') {
+            } else if (line.charAt(i) == '"') {
                 quoting = !quoting;
+                if (i > 0 && line.charAt(i - 1) == '\"') {
+                    buffer.append('"');
+                }
             } else {
                 buffer.append(line.charAt(i));
             }
@@ -115,10 +121,8 @@ public class CSVFormat {
     public String toCSV(List<String> cells) {
         Preconditions.checkArgument(!cells.isEmpty(), "Empty CSV record");
 
-        CharMatcher illegalCharacters = CharMatcher.anyOf("\r\n\"" + delimiter);
-
         return cells.stream()
-            .map(illegalCharacters::removeFrom)
+            .map(this::encodeCell)
             .collect(Collectors.joining(String.valueOf(delimiter))) + lineSeparator;
     }
 
@@ -144,6 +148,17 @@ public class CSVFormat {
      */
     public String toCSV(CSVRecord record) {
         return toCSV(record.getCells());
+    }
+
+    private String encodeCell(String value) {
+        CharMatcher delimiterMatcher = CharMatcher.is(delimiter);
+        String cell = NEWLINE_MATCHER.replaceFrom(value, " ");
+
+        if (quotes) {
+            return "\"" + QUOTE_MATCHER.replaceFrom(cell, "\"\"") + "\"";
+        } else {
+            return QUOTE_MATCHER.removeFrom(delimiterMatcher.removeFrom(cell));
+        }
     }
 
     public static CSVFormat withHeaders(char delimiter) {

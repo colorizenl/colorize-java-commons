@@ -6,9 +6,7 @@
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Chars;
 import nl.colorize.util.Platform;
@@ -20,6 +18,8 @@ import javax.swing.filechooser.FileFilter;
 import java.awt.FileDialog;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -38,9 +38,9 @@ public class ComboFileDialog {
     
     protected TranslationBundle bundle;
     
-    private static final Charset FILENAME_CHARSET = Charsets.US_ASCII;
+    private static final Charset FILENAME_CHARSET = StandardCharsets.US_ASCII;
     private static final List<Character> ILLEGAL_CHARS = Chars.asList('\\', '/', ':', ';', '*', '|', '<', '>');
-    private static final List<String> SYSTEM_FILES = ImmutableList.of("desktop.ini");
+    private static final List<String> SYSTEM_FILES = List.of("desktop.ini");
     
     /**
      * Creates a file dialog with the specified title and start directory.
@@ -218,7 +218,7 @@ public class ComboFileDialog {
             }
         }
         
-        return name.trim().length() >= 1 && FILENAME_CHARSET.newEncoder().canEncode(name);
+        return !name.trim().isEmpty() && FILENAME_CHARSET.newEncoder().canEncode(name);
     }
 
     private boolean hasValidExtension(File file, String... extensions) {
@@ -231,7 +231,7 @@ public class ComboFileDialog {
         }
         
         String ext = Files.getFileExtension(file.getName()).toLowerCase();
-        return ImmutableList.copyOf(FileExtFilter.normalizeFileExtensions(extensions)).contains(ext);
+        return FileExtFilter.normalizeFileExtensions(extensions).contains(ext);
     }
     
     public void setTitle(String title) {
@@ -297,7 +297,7 @@ public class ComboFileDialog {
     
         public FileExtFilter(String description, String... extensions) {
             this.description = description + " (" + Joiner.on(", ").join(extensions) + ")";
-            this.extensions = ImmutableList.copyOf(normalizeFileExtensions(extensions));
+            this.extensions = normalizeFileExtensions(extensions);
         }
         
         @Override
@@ -315,13 +315,10 @@ public class ComboFileDialog {
             return description;
         }
         
-        public static String[] normalizeFileExtensions(String[] ext) {
-            for (int i = 0; i < ext.length; i++) {
-                if (ext[i].indexOf('.') != -1) {
-                    ext[i] = ext[i].substring(ext[i].indexOf('.') + 1);
-                }
-            }
-            return ext;
+        public static List<String> normalizeFileExtensions(String[] extensions) {
+            return Arrays.stream(extensions)
+                .map(ext -> ext.startsWith(".") ? ext.substring(1) : ext)
+                .toList();
         }
     }
 }

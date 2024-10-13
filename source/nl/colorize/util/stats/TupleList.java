@@ -8,7 +8,6 @@ package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ForwardingList;
-import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -122,7 +121,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
      * will result in an {@link UnsupportedOperationException}.
      */
     public TupleList<L, R> immutable() {
-        return new TupleList<>(ImmutableList.copyOf(tuples));
+        return new TupleList<>(List.copyOf(tuples));
     }
 
     /**

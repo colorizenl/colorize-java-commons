@@ -6,14 +6,13 @@
 
 package nl.colorize.util.http;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,28 +21,28 @@ public class PostDataTest {
 
     @Test
     public void testParse() {
-        assertEquals(Map.of(), PostData.parse("", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", "2"), PostData.parse("a=2", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", "", "b", "4"), PostData.parse("a=&b=4", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", "3>4"), PostData.parse("a=3%3E4", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of(), PostData.parse("?", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", "7"), PostData.parse("?a=7", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", ""), PostData.parse("a=", Charsets.UTF_8).toMap());
-        assertEquals(ImmutableMap.of("a", ""), PostData.parse("a", Charsets.UTF_8).toMap());
+        assertEquals(Map.of(), PostData.parse("", UTF_8).toMap());
+        assertEquals(Map.of("a", "2"), PostData.parse("a=2", UTF_8).toMap());
+        assertEquals(Map.of("a", "", "b", "4"), PostData.parse("a=&b=4", UTF_8).toMap());
+        assertEquals(Map.of("a", "3>4"), PostData.parse("a=3%3E4", UTF_8).toMap());
+        assertEquals(Map.of(), PostData.parse("?", UTF_8).toMap());
+        assertEquals(Map.of("a", "7"), PostData.parse("?a=7", UTF_8).toMap());
+        assertEquals(Map.of("a", ""), PostData.parse("a=", UTF_8).toMap());
+        assertEquals(Map.of("a", ""), PostData.parse("a", UTF_8).toMap());
     }
 
     @Test
     public void testEncode() {
-        assertEquals("", PostData.create(ImmutableMap.of()).encode(Charsets.UTF_8));
-        assertEquals("a=2", PostData.create(ImmutableMap.of("a", "2")).encode(Charsets.UTF_8));
-        assertEquals("a=2&b=3", PostData.create(ImmutableMap.of("a", "2", "b", "3")).encode(Charsets.UTF_8));
-        assertEquals("a=2&b", PostData.create(ImmutableMap.of("a", "2", "b", "")).encode(Charsets.UTF_8));
-        assertEquals("a=3%3E4", PostData.create(ImmutableMap.of("a", "3>4")).encode(Charsets.UTF_8));
+        assertEquals("", PostData.create(Map.of()).encode(UTF_8));
+        assertEquals("a=2", PostData.create(Map.of("a", "2")).encode(UTF_8));
+        assertEquals("a=2&b=3", PostData.create("a", "2", "b", "3").encode(UTF_8));
+        assertEquals("a=2&b", PostData.create("a", "2", "b", "").encode(UTF_8));
+        assertEquals("a=3%3E4", PostData.create("a", "3>4").encode(UTF_8));
     }
 
     @Test
     public void testGetRequired() {
-        PostData postData = PostData.create(ImmutableMap.of("a", "2", "b", "3"));
+        PostData postData = PostData.create("a", "2", "b", "3");
 
         assertEquals("2", postData.getRequiredParameter("a"));
         assertEquals("3", postData.getRequiredParameter("b"));
@@ -51,14 +50,14 @@ public class PostDataTest {
 
     @Test
     public void testGetRequiredMissing() {
-        PostData postData = PostData.create(ImmutableMap.of("a", "2", "b", "3"));
+        PostData postData = PostData.create("a", "2", "b", "3");
 
         assertThrows(IllegalStateException.class, () -> postData.getRequiredParameter("c"));
     }
 
     @Test
     public void testGetOptional() {
-        PostData postData = PostData.create(ImmutableMap.of("a", "2", "b", "3", "c", ""));
+        PostData postData = PostData.create("a", "2", "b", "3", "c", "");
 
         assertEquals("2", postData.getOptionalParameter("a", "0"));
         assertEquals("3", postData.getOptionalParameter("b", "0"));
@@ -71,7 +70,7 @@ public class PostDataTest {
         Map<String, String> map = new HashMap<>();
         map.put("a", null);
 
-        assertEquals(ImmutableMap.of("a", ""), PostData.create(map).toMap());
+        assertEquals(Map.of("a", ""), PostData.create(map).toMap());
     }
 
     @Test
@@ -97,7 +96,7 @@ public class PostDataTest {
         PostData b = PostData.create("b", "3");
         PostData merged = a.merge(b);
 
-        assertEquals(ImmutableMap.of("a", "2", "b", "3"), merged.toMap());
+        assertEquals(Map.of("a", "2", "b", "3"), merged.toMap());
     }
 
     @Test
@@ -110,7 +109,7 @@ public class PostDataTest {
 
     @Test
     void keyWithoutValue() {
-        PostData postData = PostData.parse("a=2&b=&c", Charsets.UTF_8);
+        PostData postData = PostData.parse("a=2&b=&c", UTF_8);
 
         assertEquals("2", postData.getOptionalParameter("a", "?"));
         assertTrue(postData.contains("b"));

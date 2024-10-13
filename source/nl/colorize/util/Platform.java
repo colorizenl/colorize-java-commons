@@ -10,6 +10,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import lombok.AllArgsConstructor;
 
 import javax.swing.filechooser.FileSystemView;
 import java.io.File;
@@ -18,7 +19,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
+import java.util.logging.Logger;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Provides access to the underlying platform. This includes basic information
@@ -37,6 +42,7 @@ import java.util.TimeZone;
  * therefore provides a way to manage application data and preferences in a way
  * that is considered suitable and native for each platform.
  */
+@AllArgsConstructor
 public enum Platform {
 
     WINDOWS("Windows", "windows"),
@@ -68,6 +74,7 @@ public enum Platform {
         .put("12.", "Monterey")
         .put("13.", "Ventura")
         .put("14.", "Sonoma")
+        .put("15.", "Sequoia")
         .build();
 
     private static final Splitter NATIVE_PATH_SPLITTER = Splitter.on(CharMatcher.anyOf(":;"))
@@ -76,11 +83,7 @@ public enum Platform {
 
     private static final String COLORIZE_TIMEZONE_ENV = "COLORIZE_TIMEZONE";
     private static final String AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
-
-    private Platform(String displayName, String osName) {
-        this.displayName = displayName;
-        this.osName = osName;
-    }
+    private static final Logger LOGGER = LogHelper.getLogger(Platform.class);
 
     /**
      * Returns the display name for this platform family. Examples are "macOS",
@@ -136,19 +139,50 @@ public enum Platform {
 
         return switch (platform) {
             case WINDOWS -> System.getProperty("os.name", "Unknown");
-            case MAC -> "macOS " + getMacVersionName();
+            case MAC -> getMacDisplayName();
             default -> platform.toString();
         };
     }
 
-    private static String getMacVersionName() {
+    private static String getMacDisplayName() {
         String osVersion = System.getProperty("os.version");
 
-        return MAC_VERSION_NAMES.keySet().stream()
+        String versionName = MAC_VERSION_NAMES.keySet().stream()
             .filter(v -> osVersion.startsWith(v))
             .map(MAC_VERSION_NAMES::get)
             .findFirst()
             .orElse(osVersion);
+
+        String suffix = getMacSystemArchitectureDisplayName()
+            .map(arch -> " (" + arch + ")")
+            .orElse("");
+
+        return "macOS " + versionName + suffix;
+    }
+
+    /**
+     * Returns the display name of the Mac system architecture, which is
+     * either "Intel" or "ARM". This does <em>not</em> rely on the
+     * {@code os.arch} system property, as that describes the system
+     * architecture used by the Java Virtual Machine, which might be
+     * different from the native system architecture.
+     */
+    private static Optional<String> getMacSystemArchitectureDisplayName() {
+        try {
+            Process process = new ProcessBuilder("sysctl", "-n", "machdep.cpu.brand_string")
+                .start();
+
+            String output = new String(process.getInputStream().readAllBytes(), UTF_8);
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0 && !output.isEmpty()) {
+                return Optional.of(output.startsWith("Apple M") ? "ARM" : "Intel");
+            }
+        } catch (Exception e) {
+            LOGGER.warning("sysctl error");
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -203,14 +237,6 @@ public enum Platform {
             return Version.UNKNOWN;
         }
         return Version.parse(javaVersion);
-    }
-
-    /**
-     * Returns the system's processor architecture, as described by the
-     * {@code os.arch} system property.
-     */
-    public static String getSystemArchitecture() {
-        return System.getProperty("os.arch");
     }
 
     /**
@@ -307,6 +333,7 @@ public enum Platform {
 
         File home = Platform.getUserHomeDir();
         File desktop = new File(home, "Desktop");
+
         if (desktop.exists()) {
             return desktop;
         } else {
@@ -445,11 +472,9 @@ public enum Platform {
      */
     public static TimeZone getDefaultTimeZone() {
         String requestedTimeZone = System.getenv(COLORIZE_TIMEZONE_ENV);
-
         if (requestedTimeZone == null || requestedTimeZone.isEmpty()) {
             requestedTimeZone = AMSTERDAM_TIME_ZONE;
         }
-
         return TimeZone.getTimeZone(requestedTimeZone);
     }
 }

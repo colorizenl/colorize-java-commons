@@ -28,6 +28,14 @@ public @interface Arg {
     public String name() default "$$default";
 
     /**
+     * List of alternative names for this argument. While {@link #name()}
+     * represents this argument's "primary" name, using aliases can be used
+     * for things like shorthand versions, or backward compatibility when
+     * renaming arguments.
+     */
+    public String[] aliases() default {};
+
+    /**
      * Indicates whether this is a required command line argument. When false,
      * the argument is considered optional. Failing to provide the argument
      * will result in the default value returned by {@link #defaultValue()},

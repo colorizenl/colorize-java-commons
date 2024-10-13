@@ -8,7 +8,6 @@ package nl.colorize.util.swing;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import nl.colorize.util.ResourceException;
@@ -52,6 +51,7 @@ import static java.awt.RenderingHints.KEY_TEXT_ANTIALIASING;
 import static java.awt.RenderingHints.VALUE_ANTIALIAS_ON;
 import static java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR;
 import static java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Utility methods for Java 2D, mainly focused on image manipulation. Some of
@@ -127,7 +127,7 @@ public final class Utils2D {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             Utils2D.savePNG(image, buffer);
             byte[] base64 = Base64.getEncoder().encode(buffer.toByteArray());
-            return "data:image/png;base64," + new String(base64, Charsets.UTF_8);
+            return "data:image/png;base64," + new String(base64, UTF_8);
         } catch (IOException e) {
             throw new UnsupportedOperationException("Unable to convert image to PNG", e);
         }

@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -81,59 +80,28 @@ public class TextUtilsTest {
         assertEquals(Arrays.asList("first", "second"),
             TextUtils.matchLines("first\nsecond\nthird", Pattern.compile(".*?s.*")));
     }
-    
-    @Test
-    public void testRemoveBetween() {
-        assertEquals("text  text", TextUtils.removeBetween("text from text to text", "from", "to"));
-        assertEquals(" text", TextUtils.removeBetween("from text to text", "from", "to"));
-        assertEquals("text from text", TextUtils.removeBetween("text from text", "from", "to"));
-        assertEquals("text to text", TextUtils.removeBetween("text to text", "from", "to"));
-        assertEquals("text text text", TextUtils.removeBetween("text text text", "from", "to"));
-    }
-    
-    @Test
-    public void testCalculateLongestCommonPrefix() {
-        assertEquals("", TextUtils.calculateLongestCommonPrefix("first", "second"));
-        assertEquals("test", TextUtils.calculateLongestCommonPrefix("test", "test"));
-        assertEquals("test ", TextUtils.calculateLongestCommonPrefix("test first", "test second"));
-        assertEquals(Arrays.asList("a", "b"), TextUtils.calculateLongestCommonPrefix(
-                Arrays.asList("a", "b", "c"), Arrays.asList("a", "b", "z")));
-    }
-    
-    @Test
-    public void testCalculateLevenshteinDistance() {
-        assertEquals(0, TextUtils.calculateLevenshteinDistance("", ""));
-        assertEquals(0, TextUtils.calculateLevenshteinDistance("test", "test"));
-        assertEquals(3, TextUtils.calculateLevenshteinDistance("kitten", "sitting"));
-        
-        assertEquals(0.0f, TextUtils.calculateRelativeLevenshteinDistance("test", "test"), 0.01f);
-        assertEquals(0.43f, TextUtils.calculateRelativeLevenshteinDistance("kitten", "sitting"), 0.01f);
-        assertEquals(0.0f, TextUtils.calculateRelativeLevenshteinDistance("te-st", "test"), 0.01f);
-        assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("", "test"), 0.01f);
-        assertEquals(1.0f, TextUtils.calculateRelativeLevenshteinDistance("test", ""), 0.01f);
-    }
 
     @Test
     void startsWith() {
-        assertTrue(TextUtils.startsWith("abc", ImmutableList.of("a", "b")));
-        assertTrue(TextUtils.startsWith("bbb", ImmutableList.of("a", "b")));
-        assertFalse(TextUtils.startsWith("zabc", ImmutableList.of("a", "b")));
-        assertFalse(TextUtils.startsWith("zzz", ImmutableList.of("a", "b")));
+        assertTrue(TextUtils.startsWith("abc", List.of("a", "b")));
+        assertTrue(TextUtils.startsWith("bbb", List.of("a", "b")));
+        assertFalse(TextUtils.startsWith("zabc", List.of("a", "b")));
+        assertFalse(TextUtils.startsWith("zzz", List.of("a", "b")));
     }
 
     @Test
     void endsWith() {
-        assertTrue(TextUtils.endsWith("abc", ImmutableList.of("c", "a")));
-        assertTrue(TextUtils.endsWith("bba", ImmutableList.of("c", "a")));
-        assertFalse(TextUtils.endsWith("abc", ImmutableList.of("a", "b")));
-        assertFalse(TextUtils.endsWith("zzz", ImmutableList.of("a", "b")));
+        assertTrue(TextUtils.endsWith("abc", List.of("c", "a")));
+        assertTrue(TextUtils.endsWith("bba", List.of("c", "a")));
+        assertFalse(TextUtils.endsWith("abc", List.of("a", "b")));
+        assertFalse(TextUtils.endsWith("zzz", List.of("a", "b")));
     }
 
     @Test
     void contains() {
-        assertTrue(TextUtils.contains("abc", ImmutableList.of("a", "b")));
-        assertTrue(TextUtils.contains("bc", ImmutableList.of("a", "b")));
-        assertFalse(TextUtils.contains("zz", ImmutableList.of("a", "b")));
+        assertTrue(TextUtils.contains("abc", List.of("a", "b")));
+        assertTrue(TextUtils.contains("bc", List.of("a", "b")));
+        assertFalse(TextUtils.contains("zz", List.of("a", "b")));
     }
 
     @Test
@@ -145,15 +113,7 @@ public class TextUtilsTest {
         TextUtils.matchLines(input, pattern,
             groups -> result.add(groups.get(1) + "/" + groups.get(2)));
 
-        assertEquals(ImmutableList.of("one/three", "six/eight"), result);
-    }
-
-    @Test
-    void countIndent() {
-        assertEquals(0, TextUtils.countIndent("a"));
-        assertEquals(1, TextUtils.countIndent(" a"));
-        assertEquals(2, TextUtils.countIndent("  a"));
-        assertEquals(4, TextUtils.countIndent("\ta"));
+        assertEquals(List.of("one/three", "six/eight"), result);
     }
 
     @Test

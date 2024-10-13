@@ -6,21 +6,16 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.RoundingMode;
-import java.nio.charset.Charset;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,10 +38,6 @@ public final class TextUtils {
     private static final Pattern WORD_SEPARATOR = Pattern.compile("[ _]");
     private static final Splitter WORD_SPLITTER = Splitter.on(WORD_SEPARATOR).omitEmptyStrings();
     
-    private static final CharMatcher TEXT_MATCHER = CharMatcher
-        .forPredicate(Character::isLetterOrDigit)
-        .or(CharMatcher.whitespace());
-
     private TextUtils() {
     }
 
@@ -158,7 +149,7 @@ public final class TextUtils {
         return alternatives.stream()
             .anyMatch(str::contains);
     }
-    
+
     /**
      * Returns all matches for a regular expression.
      *
@@ -225,36 +216,14 @@ public final class TextUtils {
     
     /**
      * Reads all lines, and returns only the lines that match a regular expression. 
-     * The reader is closed afterwards.
+     * The reader is closed afterward.
      *
      * @throws IOException if an I/O error occurs while reading.
      */
     public static List<String> matchLines(Reader input, Pattern regex) throws IOException {
         return matchLines(input, regex, 0);
     }
-    
-    /**
-     * Reads all lines from a file, and returns only the lines that match a 
-     * regular expression.
-     *
-     * @param group Adds the specified capture group to the list of results.
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static List<String> matchLines(File input, Charset charset, Pattern regex, int group) 
-            throws IOException {
-        return matchLines(Files.newReader(input, charset), regex, group);
-    }
-    
-    /**
-     * Reads all lines from a file, and returns only the lines that match a 
-     * regular expression.
-     *
-     * @throws IOException if an I/O error occurs while reading.
-     */
-    public static List<String> matchLines(File input, Charset charset, Pattern regex) throws IOException {
-        return matchLines(input, charset, regex, 0);
-    }
-    
+
     /**
      * Reads all lines in a string, and returns only the lines that match a regular
      * expression.
@@ -293,128 +262,6 @@ public final class TextUtils {
                 callback.accept(groups);
             }
         }
-    }
-
-    /**
-     * Removes all text between and including {@code from} and {@code to}. If the
-     * string does not contain both markers this does nothing and returns the 
-     * original string.
-     */
-    public static String removeBetween(String input, String from, String to) {
-        int fromIndex = input.indexOf(from);
-        int toIndex = input.indexOf(to);
-        
-        if (fromIndex == -1 || toIndex == -1 || fromIndex >= toIndex) {
-            return input;
-        }
-        
-        StringBuilder buffer = new StringBuilder();
-        buffer.append(input.substring(0, fromIndex));
-        buffer.append(input.substring(toIndex + to.length()));
-        return buffer.toString();
-    }
-
-    /**
-     * Counts the indent for the specified line. Tabs are counted as 4 spaces.
-     */
-    public static int countIndent(String line) {
-        int indent = 0;
-
-        for (int i = 0; i < Math.min(line.length(), 80); i++) {
-            if (line.charAt(i) == ' ') {
-                indent++;
-            } else if (line.charAt(i) == '\t') {
-                indent += 4;
-            }
-        }
-
-        return indent;
-    }
-
-    /**
-     * Returns the longest possible string that is a prefix for both {@code a}
-     * and {@code b}. Returns an empty string if there is no common prefix.
-     */
-    public static String calculateLongestCommonPrefix(String a, String b) {
-        for (int i = 0; i < Math.min(a.length(), b.length()); i++) {
-            if (a.charAt(i) != b.charAt(i)) {
-                return a.substring(0, i);
-            }
-        }
-        return a;
-    }
-    
-    /**
-     * Returns the longest possible list of strings that is a prefix for both
-     * {@code a} and {@code b}. Returns an empty list if there is no common prefix.
-     */
-    public static List<String> calculateLongestCommonPrefix(List<String> a, List<String> b) {
-        for (int i = 0; i < Math.min(a.size(), b.size()); i++) {
-            if (!a.get(i).equals(b.get(i))) {
-                return List.copyOf(a.subList(0, i));
-            }
-        }
-        return List.copyOf(a);
-    }
-    
-    /**
-     * Returns the longest possible list of strings that is a prefix for both
-     * {@code a} and {@code b}. Returns an empty list if there is no common prefix.
-     */
-    public static List<String> calculateLongestCommonPrefix(String[] a, String[] b) {
-        return calculateLongestCommonPrefix(ImmutableList.copyOf(a), ImmutableList.copyOf(b));
-    }
-    
-    /**
-     * Calculates the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
-     * Levenshtein distance</a> between two strings.
-     */
-    public static int calculateLevenshteinDistance(String a, String b) {
-        a = normalizeText(a);
-        b = normalizeText(b);
-        
-        int[] cost = new int[a.length() + 1];
-        int[] newCost = new int[a.length() + 1];
-        for (int i = 0; i < cost.length; i++) {
-            cost[i] = i;
-        }
-        
-        for (int j = 1; j < b.length() + 1; j++) {
-            newCost[0] = j;
-            
-            for (int i = 1; i < a.length() + 1; i++) {
-                int match = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                int replaceCost = cost[i - 1] + match;
-                int insertCost = cost[i] + 1;
-                int deleteCost = newCost[i - 1] + 1;
-                newCost[i] = Math.min(Math.min(insertCost, deleteCost), replaceCost);
-            }
-            
-            int[] swap = cost;
-            cost = newCost;
-            newCost = swap;
-        }
-        
-        return cost[a.length()];
-    }
-    
-    private static String normalizeText(String text) {
-        return TEXT_MATCHER.retainFrom(text).toLowerCase();
-    }
-    
-    /**
-     * Calculates the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
-     * Levenshtein distance</a> between two strings, but returns the result relative
-     * to the length of the longest input string. The returned value is therefore
-     * a score between 0.0 (strings are equal) and 1.0 (strings are completely
-     * different).
-     */
-    public static float calculateRelativeLevenshteinDistance(String a, String b) {
-        int distance = calculateLevenshteinDistance(a, b);
-        float relativeDistance = distance / (float) Math.max(a.length(), b.length());
-        relativeDistance = Math.max(relativeDistance, 0f);
-        relativeDistance = Math.min(relativeDistance, 1f);
-        return relativeDistance;
     }
 
     private static BufferedReader toBufferedReader(Reader reader) {

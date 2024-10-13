@@ -6,7 +6,6 @@
 
 package nl.colorize.util.http;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
@@ -41,6 +40,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Cross-platform API for building HTTP requests, then sending those requests
@@ -276,7 +277,7 @@ public class URLLoader {
      */
     public URLLoader withBasicAuth(String user, String password) {
         String identity = user + ":" + password;
-        String base64 = Base64.getEncoder().encodeToString(identity.getBytes(Charsets.UTF_8));
+        String base64 = Base64.getEncoder().encodeToString(identity.getBytes(UTF_8));
         return withHeader(HttpHeaders.AUTHORIZATION, "Basic " + base64);
     }
 
@@ -591,7 +592,7 @@ public class URLLoader {
      * request will use the UTF-8 character encoding.
      */
     public static URLLoader get(String url) {
-        return new URLLoader(Method.GET, URI.create(url), Charsets.UTF_8);
+        return new URLLoader(Method.GET, URI.create(url), UTF_8);
     }
 
     /**
@@ -599,7 +600,7 @@ public class URLLoader {
      * request will use the UTF-8 character encoding.
      */
     public static URLLoader post(String url) {
-        return new URLLoader(Method.POST, URI.create(url), Charsets.UTF_8);
+        return new URLLoader(Method.POST, URI.create(url), UTF_8);
     }
 
     /**
@@ -607,7 +608,7 @@ public class URLLoader {
      * request will use the UTF-8 character encoding.
      */
     public static URLLoader put(String url) {
-        return new URLLoader(Method.PUT, URI.create(url), Charsets.UTF_8);
+        return new URLLoader(Method.PUT, URI.create(url), UTF_8);
     }
 
     /**
@@ -615,6 +616,6 @@ public class URLLoader {
      * request will use the UTF-8 character encoding.
      */
     public static URLLoader delete(String url) {
-        return new URLLoader(Method.DELETE, URI.create(url), Charsets.UTF_8);
+        return new URLLoader(Method.DELETE, URI.create(url), UTF_8);
     }
 }

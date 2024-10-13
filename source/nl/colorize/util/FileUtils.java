@@ -7,29 +7,20 @@
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * Utility class for loading data from and saving data to files. Unless stated
@@ -54,56 +45,16 @@ public final class FileUtils {
     }
 
     /**
-     * Reads a file's first N lines, or all lines if the file contains less.
-     */
-    public static List<String> readFirstLines(File source, Charset encoding, int n) throws IOException {
-        Preconditions.checkArgument(n >= 1, "Invalid number of lines: " + n);
-
-        try (BufferedReader reader = Files.newBufferedReader(source.toPath(), encoding)) {
-            return reader.lines()
-                .limit(n)
-                .toList();
-        }
-    }
-    
-    /**
-     * Writes the specified data to a file. If the file already exists its contents
-     * will be replaced.
-     */
-    public static void write(byte[] data, File dest) throws IOException {
-        Files.write(dest.toPath(), data);
-    }
-    
-    /**
-     * Writes the specified text to a file. If the file already exists its contents
-     * will be replaced.
-     */
-    public static void write(String text, Charset encoding, File dest) throws IOException {
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(dest), encoding)) {
-            writer.write(text);
-            writer.flush();
-        }
-    }
-    
-    /**
-     * Writes the specified lines to a file. If the file already exists its contents
-     * will be replaced.
-     */
-    public static void write(List<String> lines, Charset encoding, File dest) throws IOException {
-        Files.write(dest.toPath(), lines, encoding);
-    }
-
-    /**
      * Reads all lines in a file, then used the provided callback function to
      * rewrite the lines. The result is then used to overwrite the original file.
      */
-    public static void rewrite(File file, Charset charset, Function<String, String> lineProcessor)
+    public static void rewrite(File file, Charset charset, Function<String, String> mapper)
             throws IOException {
         List<String> originalLines = Files.readAllLines(file.toPath(), charset);
 
         try (PrintWriter writer = new PrintWriter(file, charset)) {
             for (String line : originalLines) {
-                writer.println(lineProcessor.apply(line));
+                writer.println(mapper.apply(line));
             }
         }
     }
@@ -230,12 +181,12 @@ public final class FileUtils {
         delete(dir);
     }
 
-    private static List<File> getDirectoryContents(File dir) {
+    private static File[] getDirectoryContents(File dir) {
         File[] contents = dir.listFiles();
         if (contents == null) {
-            return Collections.emptyList();
+            return new File[0];
         }
-        return ImmutableList.copyOf(contents);
+        return contents;
     }
 
     /**
@@ -291,37 +242,11 @@ public final class FileUtils {
      * file does not have a file extension this will return an aempty string.
      */
     public static String getFileExtension(File file) {
-        return getFileExtension(file.getName());
-    }
-
-    private static String getFileExtension(String fileName) {
+        String fileName = file.getName();
         if (fileName.indexOf('.') <= 0) {
             return "";
         }
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
-    }
-
-    /**
-     * Returns a file filter that will only accept files that match one of the
-     * specified file extensions. The file extension check is case-insensitive.
-     *
-     * @throws IllegalArgumentException if the provided list is empty.
-     */
-    public static FilenameFilter getFileExtensionFilter(String... extensions) {
-        Preconditions.checkArgument(extensions.length > 0, "No file extensions provided");
-
-        Set<String> normalizedExtensions = Arrays.stream(extensions)
-            .map(ext -> normalizeFileExtension(ext))
-            .collect(Collectors.toSet());
-
-        return (dir, name) -> normalizedExtensions.contains(getFileExtension(name).toLowerCase());
-    }
-
-    private static String normalizeFileExtension(String ext) {
-        if (ext.startsWith(".")) {
-            ext = ext.substring(1);
-        }
-        return ext.toLowerCase();
     }
 
     /**
@@ -380,7 +305,7 @@ public final class FileUtils {
      */
     public static File createTempFile(byte[] data) throws IOException {
         File tempFile = createTempFile();
-        write(data, tempFile);
+        Files.write(tempFile.toPath(), data);
         return tempFile;
     }
     
@@ -391,7 +316,7 @@ public final class FileUtils {
      */
     public static File createTempFile(String text, Charset encoding) throws IOException {
         File tempFile = createTempFile();
-        write(text, encoding, tempFile);
+        Files.writeString(tempFile.toPath(), text, encoding);
         return tempFile;
     }
     
@@ -409,8 +334,6 @@ public final class FileUtils {
      */
     public static File createTempDir(String name) throws IOException {
         File parentDir = createTempDir();
-        File tempDir = new File(parentDir, name);
-        mkdir(tempDir);
-        return tempDir;
+        return mkdir(parentDir, name);
     }
 }

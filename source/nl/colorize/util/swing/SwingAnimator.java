@@ -7,7 +7,6 @@
 package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.animation.Animatable;
 import nl.colorize.util.animation.Interpolation;
 import nl.colorize.util.animation.Timeline;
@@ -92,7 +91,7 @@ public class SwingAnimator {
      * Performs a frame update for all animations that are currently playing.
      */
     protected void performFrameUpdate(float deltaTime) {
-        List<Animatable> snapshot = ImmutableList.copyOf(currentlyPlaying);
+        List<Animatable> snapshot = List.copyOf(currentlyPlaying);
 
         for (Animatable anim : snapshot) {
             doFrameUpdate(anim, deltaTime);
@@ -200,6 +199,6 @@ public class SwingAnimator {
     }
 
     protected List<Animatable> getCurrentlyPlaying() {
-        return ImmutableList.copyOf(currentlyPlaying);
+        return List.copyOf(currentlyPlaying);
     }
 }

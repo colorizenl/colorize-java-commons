@@ -7,7 +7,6 @@
 package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JComponent;
@@ -102,7 +101,7 @@ public final class Popups {
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, JComponent panel, String... buttons) {
-        return message(parent, title, panel, ImmutableList.copyOf(buttons));
+        return message(parent, title, panel, Arrays.asList(buttons));
     }
 
     /**
@@ -128,7 +127,7 @@ public final class Popups {
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, String message, String... buttons) {
-        return message(parent, title, message, ImmutableList.copyOf(buttons));
+        return message(parent, title, message, Arrays.asList(buttons));
     }
     
     /**

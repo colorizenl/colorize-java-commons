@@ -6,8 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -18,6 +16,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TranslationBundleTest {
@@ -60,7 +59,7 @@ class TranslationBundleTest {
         );
 
         TranslationBundle bundle = TranslationBundle.fromMap(textEN);
-        bundle.addTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
+        bundle = bundle.withTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
 
         assertEquals("waarde", bundle.getText(new Locale("nl"), "key.a"));
         assertEquals("dit is 1 parameter", bundle.getText(new Locale("nl"), "key.b", "1"));
@@ -70,19 +69,19 @@ class TranslationBundleTest {
 
     @Test
     void combineKeys() {
-        Map<String, String> textEN = ImmutableMap.of(
+        Map<String, String> textEN = Map.of(
             "key.a", "value",
             "key.b", "this is {0} parameter"
         );
 
-        Map<String, String> textNL = ImmutableMap.of(
+        Map<String, String> textNL = Map.of(
             "key.a", "waarde",
             "key.b", "dit is {0} parameter",
             "key.c", "dit is iets anders"
         );
 
         TranslationBundle bundle = TranslationBundle.fromMap(textEN);
-        bundle.addTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
+        bundle = bundle.withTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
 
         assertEquals(Set.of("key.a", "key.b", "key.c"), bundle.getKeys(new Locale("nl")));
         assertEquals(Set.of("key.a", "key.b"), bundle.getKeys());
@@ -91,8 +90,8 @@ class TranslationBundleTest {
 
     @Test
     void loadFromPropertiesFile() throws IOException {
-        File tempFile = FileUtils.createTempFile("a=test\nb=multi \\\nline\nc=other", Charsets.UTF_8);
-        Properties properties = PropertyUtils.loadProperties(tempFile, Charsets.UTF_8);
+        File tempFile = FileUtils.createTempFile("a=test\nb=multi \\\nline\nc=other", UTF_8);
+        Properties properties = PropertyUtils.loadProperties(tempFile, UTF_8);
         TranslationBundle bundle = TranslationBundle.from(properties);
 
         assertEquals("test", bundle.getText("a"));

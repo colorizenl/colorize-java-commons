@@ -7,6 +7,7 @@
 package nl.colorize.util.cli;
 
 import com.google.common.base.Strings;
+import nl.colorize.util.FileUtils;
 import nl.colorize.util.Platform;
 import nl.colorize.util.PropertyDeserializer;
 
@@ -14,13 +15,12 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -66,7 +66,9 @@ public class CommandLineArgumentParser {
         this.exitOnFail = exitOnFail;
         this.descriptionLines = new ArrayList<>();
         this.colors = Platform.isMac() || Platform.isLinux();
-        this.propertyDeserializer = new PropertyDeserializer();
+
+        propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.register(Path.class, value -> FileUtils.expandUser(value).toPath());
     }
 
     /**
@@ -99,7 +101,7 @@ public class CommandLineArgumentParser {
      * is done automatically if the provides arguments are incomplete.
      */
     public void printUsage(Class<?> cli) {
-        Collection<Field> fields = findAnnotatedFields(cli).values();
+        List<Field> fields = findAnnotatedFields(cli);
 
         int nameColumnWidth = 2 + fields.stream()
             .mapToInt(field -> formatArgName(field).length())
@@ -163,21 +165,15 @@ public class CommandLineArgumentParser {
      */
     public <T> T parse(String[] argv, Class<T> cli) throws CommandLineInterfaceException {
         try {
-            Constructor<?> constructor = findDefaultConstructor(cli);
-            constructor.setAccessible(true);
-            T instance = (T) constructor.newInstance();
-
-            Map<String, Field> fields = findAnnotatedFields(cli);
-            setDefaultValues(instance, fields.values());
+            T instance = createInstance(cli);
+            List<Field> fields = findAnnotatedFields(cli);
+            setDefaultValues(instance, fields);
             parseArgValues(argv, instance, fields);
-            checkMissingRequiredArguments(instance, fields.values());
-
+            checkMissingRequiredArguments(instance, fields);
             return instance;
         } catch (CommandLineInterfaceException e) {
             handleInvalidCommandLineInput(cli, e);
             throw e;
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException("Error while initializing " + cli.getName(), e);
         }
     }
 
@@ -188,27 +184,25 @@ public class CommandLineArgumentParser {
         }
     }
 
-    private Constructor<?> findDefaultConstructor(Class<?> cli) {
+    private <T> T createInstance(Class<T> cli) {
         try {
-            return cli.getDeclaredConstructor();
+            Constructor<T> constructor = cli.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class missing default constructor: " + cli.getName());
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalArgumentException("Unable to instantiate class: " + cli.getName(), e);
         }
     }
 
-    private Map<String, Field> findAnnotatedFields(Class<?> cli) {
-        Map<String, Field> fields = new LinkedHashMap<>();
-
-        for (Field field : cli.getDeclaredFields()) {
-            if (field.getAnnotation(Arg.class) != null) {
-                fields.put(getArgName(field), field);
-            }
-        }
-
-        return fields;
+    private List<Field> findAnnotatedFields(Class<?> cli) {
+        return Arrays.stream(cli.getDeclaredFields())
+            .filter(field -> field.getAnnotation(Arg.class) != null)
+            .toList();
     }
 
-    private void parseArgValues(String[] argv, Object instance, Map<String, Field> fields) {
+    private void parseArgValues(String[] argv, Object instance, List<Field> fields) {
         List<String> providedArgs = processProvidedArgs(argv);
         int index = 0;
         Set<Field> fulfilled = new HashSet<>();
@@ -216,12 +210,12 @@ public class CommandLineArgumentParser {
         while (index < providedArgs.size()) {
             String current = providedArgs.get(index);
             String argName = normalizeArgumentName(current);
-            Field field = fields.get(argName);
+            Field field = findMatchingField(argName, fields).orElse(null);
 
             if (field == null) {
-                throw new CommandLineInterfaceException("Unexpected argument '" + current + "'");
+                throw new CommandLineInterfaceException("Unknown argument '" + current + "'");
             } else if (fulfilled.contains(field)) {
-                throw new CommandLineInterfaceException("Argument '" + argName + "' appears multiple times");
+                throw new CommandLineInterfaceException("Duplicate argument '" + argName + "'");
             } else if (field.getType() == boolean.class) {
                 setFieldValue(instance, field, "true");
                 fulfilled.add(field);
@@ -234,6 +228,21 @@ public class CommandLineArgumentParser {
                 index += 2;
             }
         }
+    }
+
+    private Optional<Field> findMatchingField(String needle, List<Field> haystack) {
+        return haystack.stream()
+            .filter(field -> getPossibleFieldNames(field).contains(needle))
+            .findFirst();
+    }
+
+    private Set<String> getPossibleFieldNames(Field field) {
+        Set<String> possibleNames = new HashSet<>();
+        possibleNames.add(getArgName(field));
+        for (String alias : field.getAnnotation(Arg.class).aliases()) {
+            possibleNames.add(normalizeArgumentName(alias));
+        }
+        return possibleNames;
     }
 
     private Object convertArgValue(Field field, String value) {
@@ -268,7 +277,7 @@ public class CommandLineArgumentParser {
         }
     }
 
-    private void setDefaultValues(Object instance, Collection<Field> fields) {
+    private void setDefaultValues(Object instance, List<Field> fields) {
         for (Field field : fields) {
             Arg config = field.getAnnotation(Arg.class);
             if (!config.defaultValue().equals(DEFAULT_VALUE_MARKER)) {
@@ -277,7 +286,7 @@ public class CommandLineArgumentParser {
         }
     }
 
-    private void checkMissingRequiredArguments(Object instance, Collection<Field> fields) {
+    private void checkMissingRequiredArguments(Object instance, List<Field> fields) {
         for (Field field : fields) {
             if (isRequired(field) && getFieldValue(instance, field) == null) {
                 String argName = getArgName(field);

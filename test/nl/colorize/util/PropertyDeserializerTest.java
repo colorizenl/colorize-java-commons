@@ -13,7 +13,6 @@ import nl.colorize.util.stats.DateRange;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -125,11 +124,9 @@ class PropertyDeserializerTest {
     @Test
     void convertFilePaths() {
         PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
-        Path absolute = propertyDeserializer.parse("/tmp/a.txt", Path.class);
-        Path user = propertyDeserializer.parse("~/Desktop/a.txt", Path.class);
+        File file = propertyDeserializer.parse("/tmp/a.txt", File.class);
 
-        assertEquals("/tmp/a.txt", absolute.toFile().getAbsolutePath());
-        assertTrue(user.toFile().getAbsolutePath().endsWith("/Desktop/a.txt"));
+        assertEquals("/tmp/a.txt", file.getAbsolutePath());
     }
 
     @Test

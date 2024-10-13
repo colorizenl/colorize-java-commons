@@ -6,7 +6,6 @@
 
 package nl.colorize.util.http;
 
-import com.google.common.base.Charsets;
 import com.google.common.net.HttpHeaders;
 import nl.colorize.util.swing.Utils2D;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -44,9 +44,9 @@ public class URLLoaderTest {
     
     @Test
     public void testLoadTextResponse() throws IOException {
-        String response = URLLoader.get("http://www.colorize.nl")
+        String response = URLLoader.get("https://clrz.nl")
             .send()
-            .read(Charsets.UTF_8);
+            .read(UTF_8);
 
         assertTrue(response.contains("<div class=\"content\">"));
         assertTrue(response.contains("</html>"));
@@ -54,24 +54,25 @@ public class URLLoaderTest {
     
     @Test
     public void testLoadBinaryResponse() throws IOException {
-        URLResponse response = URLLoader.get("http://www.colorize.nl/logo.png").send();
+        URLResponse response = URLLoader.get("https://clrz.nl/assets/images/colorize-logo.png")
+            .send();
 
         assertNotNull(Utils2D.loadImage(response.openStream()));
     }
 
     @Test
     public void test404() {
-        URLLoader loader = URLLoader.get("http://www.colorize.nl/nothing.jpg");
+        URLLoader loader = URLLoader.get("https://clrz.nl/nothing.jpg");
 
         assertThrows(IOException.class, loader::send);
     }
 
     @Test
     public void testUrlEncodeParameters() {
-        URLLoader loader = URLLoader.get("http://www.colorize.nl");
+        URLLoader loader = URLLoader.get("https://clrz.nl");
         loader.withQueryParam("a", "b c");
 
-        assertEquals("http://www.colorize.nl?a=b+c", loader.toString());
+        assertEquals("https://clrz.nl?a=b+c", loader.toString());
     }
 
     @Test
@@ -86,7 +87,7 @@ public class URLLoaderTest {
     public void testHttps() throws IOException {
         String response = URLLoader.get(TEST_HTTPS_URL)
             .send()
-            .read(Charsets.UTF_8);
+            .read(UTF_8);
 
         assertTrue(response.toLowerCase().contains("gazzetta"));
     }
@@ -99,7 +100,7 @@ public class URLLoaderTest {
     
     @Test
     public void testDownloadResponseHeaders() throws Exception {
-        URLLoader loader = URLLoader.get("http://www.colorize.nl");
+        URLLoader loader = URLLoader.get("https://clrz.nl");
         URLResponse response = loader.send();
 
         assertEquals("text/html", response.getHeader("Content-Type").get());
@@ -129,13 +130,13 @@ public class URLLoaderTest {
         URLResponse getResponse = URLLoader.get("http://www.colorize.nl").send();
 
         assertEquals(HttpStatus.OK, getResponse.getStatus());
-        assertFalse(getResponse.read(Charsets.UTF_8).isEmpty());
+        assertFalse(getResponse.read(UTF_8).isEmpty());
         
-        URLResponse headResponse = new URLLoader(Method.HEAD, "http://www.colorize.nl", Charsets.UTF_8)
+        URLResponse headResponse = new URLLoader(Method.HEAD, "http://www.colorize.nl", UTF_8)
             .send();
 
         assertEquals(HttpStatus.OK, headResponse.getStatus());
-        assertTrue(headResponse.read(Charsets.UTF_8).isEmpty());
+        assertTrue(headResponse.read(UTF_8).isEmpty());
     }
 
     @Test
@@ -174,7 +175,7 @@ public class URLLoaderTest {
         URLResponse response = request.send();
 
         assertEquals(HttpStatus.ACCEPTED, response.getStatus());
-        assertEquals("", response.read(Charsets.UTF_8));
+        assertEquals("", response.read(UTF_8));
     }
 
     @Test
@@ -217,9 +218,9 @@ public class URLLoaderTest {
     void classicLoaderGet() throws IOException {
         System.setProperty(URLLoader.FORCE_LEGACY_HTTP_CLIENT_SYSTEM_PROPERTY, "true");
 
-        String response = URLLoader.get("http://www.colorize.nl")
+        String response = URLLoader.get("https://clrz.nl")
             .send()
-            .read(Charsets.UTF_8);
+            .read(UTF_8);
 
         assertTrue(response.contains("<div class=\"content\">"));
         assertTrue(response.contains("</html>"));
@@ -234,8 +235,7 @@ public class URLLoaderTest {
         URLResponse response = request.send();
 
         assertEquals(HttpStatus.OK, response.getStatus());
-        assertTrue(response.read(Charsets.UTF_8).contains("\"message\": \"test\""),
-            response.read(Charsets.UTF_8));
+        assertTrue(response.read(UTF_8).contains("\"message\": \"test\""), response.read(UTF_8));
     }
 
     @Test
@@ -292,7 +292,7 @@ public class URLLoaderTest {
     void sendWithCallback() throws InterruptedException {
         List<Integer> result = new ArrayList<>();
 
-        URLLoader.get("https://www.colorize.nl")
+        URLLoader.get("https://clrz.nl")
             .sendBackground()
             .subscribe(response -> result.add(response.getStatus()));
 

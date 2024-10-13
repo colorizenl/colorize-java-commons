@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableMap;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -47,7 +48,7 @@ public final class DateParser {
         new DatePattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}",        "yyyy-MM-dd'T'HH:mm"),
         new DatePattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd HH:mm:ss"),
         new DatePattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm:ss"),
-        new DatePattern("\\d{1,2}-\\d{1,2}-\\d{4}",                      "dd-MM-yyyy"),
+        new DatePattern("\\d{1,2}-\\d{1,2}-\\d{4}",                  "dd-MM-yyyy"),
         new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}",        "dd-MM-yyyy HH:mm:ss"),
         new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss"),
         new DatePattern("\\d{2}/\\d{2}/\\d{4}",                      "MM/dd/yyyy")
@@ -129,6 +130,26 @@ public final class DateParser {
             .map(datePattern -> parse(input, datePattern.dateFormat))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Unable to detect date format: " + input));
+    }
+
+    /**
+     * Uses the same logic as {@link #parse(String)}, but returns the result
+     * as a {@link LocalDate} in the default time zone.
+     */
+    public static LocalDate parseLocalDate(String value) {
+        Date date = parse(value);
+        ZoneId zoneId = ZoneId.of(Platform.getDefaultTimeZone().getID());
+        return Instant.ofEpochMilli(date.getTime()).atZone(zoneId).toLocalDate();
+    }
+
+    /**
+     * Uses the same logic as {@link #parse(String)}, but returns the result
+     * as a {@link LocalDateTime} in the default time zone.
+     */
+    public static LocalDateTime parseLocalDateTime(String value) {
+        Date date = parse(value);
+        ZoneId zoneId = ZoneId.of(Platform.getDefaultTimeZone().getID());
+        return Instant.ofEpochMilli(date.getTime()).atZone(zoneId).toLocalDateTime();
     }
 
     /**
@@ -231,26 +252,6 @@ public final class DateParser {
      */
     public static String formatRelative(Date date) {
         return formatRelative(date, new Date());
-    }
-
-    /**
-     * Converts the specified {@link Date} instance to a {@link LocalDate}.
-     * This method will use timezone information as explained in the class
-     * documentation.
-     */
-    public static LocalDate convertDate(Date date) {
-        ZoneId timezone = Platform.getDefaultTimeZone().toZoneId();
-        return date.toInstant().atZone(timezone).toLocalDate();
-    }
-
-    /**
-     * Converts the specified {@link Date} instance to a {@link LocalDateTime}.
-     * This method will use timezone information as explained in the class
-     * documentation.
-     */
-    public static LocalDateTime convertDateTime(Date date) {
-        ZoneId timezone = Platform.getDefaultTimeZone().toZoneId();
-        return date.toInstant().atZone(timezone).toLocalDateTime();
     }
 
     /**

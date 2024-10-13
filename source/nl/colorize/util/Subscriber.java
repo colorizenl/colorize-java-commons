@@ -11,6 +11,12 @@ import java.util.logging.Logger;
 /**
  * Interface for subscribing to (possibly asynchronous) events that are
  * published by a {@link Subscribable}.
+ * <p>
+ * This class is part of a portable framework for
+ * <a href="https://en.wikipedia.org/wiki/Publish-subscribe_pattern">publish/subscribe</a>
+ * communication. This framework can be used across different platforms,
+ * including platforms where {@code java.util.concurrent} is not available,
+ * such as <a href="https://teavm.org">TeaVM</a>.
  *
  * @param <T> The type of event that can be subscribed to.
  */
@@ -29,7 +35,7 @@ public interface Subscriber<T> {
      */
     default void onError(Exception error) {
         Logger logger = LogHelper.getLogger(getClass());
-        logger.warning("Sunscriber:");
+        logger.warning("Unhandled subscriber error: " + error.getMessage());
     }
 
     /**

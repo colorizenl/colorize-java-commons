@@ -8,24 +8,29 @@ package nl.colorize.util;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
+import nl.colorize.util.stats.Tuple;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -39,78 +44,120 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public final class PropertyUtils {
 
-    private static final CharMatcher PROPERTY_NAME = CharMatcher.anyOf("=:\n\\");
+    private static final Splitter PROPERTY_LINE_SPLITTER = Splitter.on(CharMatcher.anyOf("=:"))
+        .trimResults()
+        .omitEmptyStrings()
+        .limit(2);
+
+    private static final CharMatcher PROPERTY_SPECIAL_CHARS = CharMatcher.anyOf("=:\n\\");
+    private static final Logger LOGGER = LogHelper.getLogger(PropertyUtils.class);
 
     private PropertyUtils() {
     }
 
     /**
-     * Loads a properties file from a reader and returns the resulting
-     * {@link Properties} object.
+     * Parses the contents of a {@code .properties} file and returns the
+     * resulting {@link Properties} object.
      * <p>
-     * For {@code .properties} files containing non-ASCII characters, the
-     * behavior of this method is different depending on the platform.
-     * Originally, {@code .properties} files were required to use the
-     * ISO-8859-1 character encoding, with non-ASCII characters respresented
-     * by Unicode escape sequences in the form {@code uXXXX}. Modern versions
-     * of the {@code .properties} file format allow any character encoding to
-     * be used, but this is still not supported on all platforms, and by all
-     * Java implementations.
-     * <p>
-     * This method will load the {@code .properties} file from a reader. If
-     * the current platform supports {@code .properties} files with any
-     * character encoding, the reader's character encoding is used to load
-     * the file. If the platform only supports {@code .properties} files with
-     * the ISO-8859-1 character encoding, this encoding is used as a fallback,
-     * regardless of the reader's actual character encoding. On such platforms,
-     * files that contain non-ASCII characters will not be loaded correctly.
-     * <p>
-     * The reader is closed by this method after the {@code .properties} file
-     * has been loaded.
+     * This method will use a different implementation depending on the
+     * platform. On platforms that do not support the standar
+     * {@link Properties#load(Reader)}, such as TeaVM, a custom
+     * implementation is used in order to support UTF-8 property files.
      *
      * @throws ResourceException if an I/O error occurs while reading the file.
      */
     public static Properties loadProperties(Reader source) {
-        Properties properties = new Properties();
-
         try (source) {
-            if (isUnicodePropertiesFilesSupported()) {
-                properties.load(source);
+            if (Platform.isTeaVM()) {
+                return emulateLoadProperties(source);
             } else {
-                String contents = CharStreams.toString(source);
-                emulateUnicodeProperties(contents, properties);
+                return loadPropertiesReflection(source);
             }
         } catch (IOException e) {
             throw new ResourceException("I/O error while reading .properties file", e);
+        }
+    }
+
+    /**
+     * Loads a {@code .properties} file from a {@link Reader} instead of from
+     * an {@link InputStream} (which only supports ISO-8859-1). This needs to
+     * use reflection, as TeaVM is otherwise unable to transpile this class.
+     */
+    private static Properties loadPropertiesReflection(Reader source) {
+        try {
+            Properties properties = new Properties();
+            Method loadMethod = properties.getClass().getMethod("load", Reader.class);
+            loadMethod.invoke(properties, source);
+            return properties;
+        } catch (NoSuchMethodException e) {
+            throw new UnsupportedOperationException("Properties.load(Reader) not supported", e);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new ResourceException("Error while calling Properties.load(Reader)", e);
+        }
+    }
+
+    /**
+     * Custom implementation for parsing {@code .properties} files. See the
+     * documentation for {@link #loadProperties(Reader)} for more information
+     * on when and why this is used.
+     */
+    @VisibleForTesting
+    protected static Properties emulateLoadProperties(Reader source) throws IOException {
+        Properties properties = new Properties();
+
+        try (BufferedReader buffer = new BufferedReader(source)) {
+            List<String> rawLines = buffer.lines().toList();
+            List<String> processedLines = mergeMultiLineStrings(rawLines);
+
+            processedLines.stream()
+                .map(line -> parsePropertyFileLine(line))
+                .filter(property -> property != null)
+                .forEach(property -> properties.setProperty(property.left(), property.right()));
         }
 
         return properties;
     }
 
-    private static boolean isUnicodePropertiesFilesSupported() {
-        return !Platform.isTeaVM();
+    private static Tuple<String, String> parsePropertyFileLine(String line) {
+        List<String> fields = PROPERTY_LINE_SPLITTER.splitToList(line);
+        if (fields.size() < 2) {
+            LOGGER.warning("Invalid property file line: " + line.trim());
+            return null;
+        }
+        return Tuple.of(fields.get(0), fields.get(1));
     }
 
-    /**
-     * Emulates loading {@code .properties} files that contain non-ASCII
-     * characters, on platforms that do not support loading such files
-     * natively. The documentation {@link #loadProperties(Reader)} contains
-     * more information on how and when this is used.
-     */
-    @VisibleForTesting
-    protected static void emulateUnicodeProperties(String contents, Properties properties) {
-        Splitter lineSplitter = Splitter.on("\n").trimResults();
-        List<String> trimmedLines = lineSplitter.splitToList(contents);
-        String merged = Joiner.on("\n").join(trimmedLines).replace("\\\n", "");
-        List<String> lines = lineSplitter.splitToList(merged);
+    private static boolean filterPropertyFileLine(String line) {
+        return !line.trim().isEmpty() &&
+            !line.startsWith("#") &&
+            !line.startsWith("!");
+    }
 
-        for (String line : lines) {
-            if (!line.trim().isEmpty() && !line.startsWith("#") && line.contains("=")) {
-                String name = line.substring(0, line.indexOf("="));
-                String value = line.substring(line.indexOf("=") + 1);
-                properties.setProperty(name, value);
+    private static String normalizePropertyFileLine(String line) {
+        return TextUtils.removeTrailing(line.trim(), "\\")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace("\\f", "\f");
+    }
+
+    private static List<String> mergeMultiLineStrings(List<String> raw) {
+        List<String> processed = new ArrayList<>();
+        boolean inMultiLine = false;
+
+        for (String line : raw) {
+            if (filterPropertyFileLine(line)) {
+                if (inMultiLine) {
+                    String lastLine = processed.removeLast();
+                    line = lastLine + line.trim();
+                }
+
+                processed.add(normalizePropertyFileLine(line));
+                inMultiLine = line.trim().endsWith("\\");
             }
         }
+
+        return processed;
     }
 
     /**
@@ -151,7 +198,7 @@ public final class PropertyUtils {
 
     /**
      * Uses the logic described in {@link #loadProperties(Reader)} to load a
-     * {@code .properties} file, using the UTF-8 character encoding.
+     * {@code .properties} file using the UTF-8 character encoding.
      *
      * @throws IOException if an I/O error occurs while reading the file.
      */
@@ -164,22 +211,13 @@ public final class PropertyUtils {
      * {@code .properties} file contents from a string.
      */
     public static Properties loadProperties(String contents) {
-        if (isUnicodePropertiesFilesSupported()) {
-            try (StringReader reader = new StringReader(contents)) {
-                return loadProperties(reader);
-            }
-        } else {
-            Properties properties = new Properties();
-            emulateUnicodeProperties(contents, properties);
-            return properties;
-        }
+        return loadProperties(new StringReader(contents));
     }
 
     /**
      * Serializes a {@code Properties} object to the specified writer. This method
-     * differs from the standard {@link java.util.Properties#store(Writer, String)}
-     * in that it writes the properties in a deterministic (alphabetical) order.
-     * The writer is closed afterward.
+     * differs from the standard {@link Properties#store(Writer, String)}, in that
+     * it writes the properties in a deterministic (alphabetical) order.
      *
      * @throws IOException if an I/O error occurs while writing. 
      */
@@ -190,7 +228,7 @@ public final class PropertyUtils {
 
         try (PrintWriter writer = new PrintWriter(dest)) {
             for (String name : names) {
-                String encodedName = PROPERTY_NAME.removeFrom(name);
+                String encodedName = PROPERTY_SPECIAL_CHARS.removeFrom(name);
                 String value = data.getProperty(name, "");
                 writer.println(encodedName + "=" + value);
             }

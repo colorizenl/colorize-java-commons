@@ -6,7 +6,6 @@
 
 package nl.colorize.util.swing;
 
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.Subscribable;
 import nl.colorize.util.TranslationBundle;
 
@@ -18,7 +17,6 @@ import java.awt.FlowLayout;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Simple user interface for editing name/value properties. The interface
@@ -57,11 +55,11 @@ public class PropertyEditor extends JPanel {
 
     private List<String> getInitialPropertyNames(Map<String, String> initialProperties) {
         if (initialProperties instanceof LinkedHashMap) {
-            return ImmutableList.copyOf(initialProperties.keySet());
+            return List.copyOf(initialProperties.keySet());
         } else {
             return initialProperties.keySet().stream()
                 .sorted()
-                .collect(Collectors.toList());
+                .toList();
         }
     }
 

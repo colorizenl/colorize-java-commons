@@ -106,9 +106,10 @@ class DateParserTest {
 
     @Test
     void convert() {
-        Date reference = parse("2018-03-18 15:30");
+        assertEquals(LocalDate.of(2018, 3, 18),
+            DateParser.parseLocalDate("2018-03-18 15:30"));
 
-        assertEquals(LocalDate.of(2018, 3, 18), DateParser.convertDate(reference));
-        assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30), DateParser.convertDateTime(reference));
+        assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30),
+            DateParser.parseLocalDateTime("2018-03-18 15:30"));
     }
 }

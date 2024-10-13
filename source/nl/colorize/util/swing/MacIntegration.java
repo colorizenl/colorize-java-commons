@@ -6,14 +6,12 @@
 
 package nl.colorize.util.swing;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.Version;
 
 import javax.swing.JFrame;
-import javax.swing.UIManager;
-import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Taskbar;
@@ -43,9 +41,6 @@ import java.util.logging.Logger;
  */
 public final class MacIntegration {
 
-    private static final Version MACOS_YOSEMITE = Version.parse("10.10");
-    private static final Version MACOS_BIG_SUR = Version.parse("10.16");
-
     // Apple-specific system properties
     private static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
     private static final String SYSTEM_PROPERTY_METAL = "sun.java2d.metal";
@@ -70,20 +65,6 @@ public final class MacIntegration {
     private MacIntegration() {
     }
     
-    private static Version getMacOSVersion() {
-        String version = System.getProperty("os.version");
-        if (Version.canParse(version)) {
-            return Version.parse(version);
-        } else {
-            LOGGER.warning("Cannot parse macOS version " + version);
-            return MACOS_YOSEMITE;
-        }
-    }
-    
-    private static boolean isAtLeast(Version minVersion) {
-        return Platform.isMac() && getMacOSVersion().isAtLeast(minVersion);
-    }
-
     /**
      * Enables the application menu bar for Swing applications. By default, Swing
      * will show separate menu bars for each window. This approach is common on
@@ -96,16 +77,6 @@ public final class MacIntegration {
     protected static void enableApplicationMenuBar() {
         if (Platform.isMac()) {
             System.setProperty(MacIntegration.SYSTEM_PROPERTY_MENUBAR, "true");
-        }
-    }
-
-    /**
-     * Augments the Swing look-and-feel to look more like native macOS applications.
-     * This includes different look-and-feels for different versions of macOS.
-     */
-    protected static void augmentLookAndFeel() {
-        if (isAtLeast(MACOS_BIG_SUR)) {
-            UIManager.put("TabbedPane.foreground", Color.BLACK);
         }
     }
 
@@ -150,15 +121,12 @@ public final class MacIntegration {
 
     /**
      * Sends a notification to the macOS Notification Center.
-     * <p>
-     * Integration with Notification Center is only allowed if the JVM was started
-     * from inside an application bundle. Notifications sent from other locations
-     * will not be shown.
      */
     public static void showNotification(String title, String message) {
         try {
+            CharMatcher quotes = CharMatcher.is('"');
             String script = String.format("display notification \"%s\" with title \"%s\"",
-                message.replace("\"", "'"), title.replace("\"", "'"));
+                quotes.removeFrom(message), quotes.removeFrom(title));
 
             Process process = new ProcessBuilder("osascript", "-e", script).start();
             int exitCode = process.waitFor();
@@ -240,16 +208,7 @@ public final class MacIntegration {
             appleApplicationClass.getMethod("requestToggleFullScreen", Window.class)
                 .invoke(instance, window);
         } catch (Exception e) {
-            window.setUndecorated(true);
             window.setExtendedState(JFrame.MAXIMIZED_BOTH);
         }
-    }
-
-    /**
-     * Returns true if a Swing or Java2D application is using the Metal renderer
-     * introduced in Java 17, and false if it is using the OpenGL renderer.
-     */
-    public static boolean usesMetalRenderer() {
-        return System.getProperty(SYSTEM_PROPERTY_METAL, "").equalsIgnoreCase("true");
     }
 }

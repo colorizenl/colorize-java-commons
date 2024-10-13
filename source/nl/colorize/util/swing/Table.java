@@ -7,7 +7,6 @@
 package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Subscribable;
 
@@ -30,6 +29,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +74,7 @@ public class Table<R> extends JPanel implements TableModel {
     }
 
     public Table(String... columns) {
-        this(ImmutableList.copyOf(columns));
+        this(Arrays.asList(columns));
     }
     
     private void createTable() {
@@ -255,7 +255,7 @@ public class Table<R> extends JPanel implements TableModel {
         Preconditions.checkArgument(!newColumns.isEmpty(),
             "Table must contain at least 1 column");
         
-        columns = ImmutableList.copyOf(newColumns);
+        columns = List.copyOf(newColumns);
         removeAllRows();
         table.createDefaultColumnsFromModel();
     }

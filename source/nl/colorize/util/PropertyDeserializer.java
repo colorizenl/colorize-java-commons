@@ -10,7 +10,6 @@ import com.google.common.base.Preconditions;
 import nl.colorize.util.stats.CSVRecord;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -43,11 +42,10 @@ import java.util.logging.Logger;
  *   <li>double/Double</li>
  *   <li>boolean/Boolean</li>
  *   <li>String</li>
- *   <li>Date (assuming the ISO 8601 date format)</li>
- *   <li>LocalDate (not supported on TeaVM, assuming the ISO 8601 date format)</li>
- *   <li>LocalDateTime (not supported on TeaVM, assuming the ISO 8601 date format)</li>
+ *   <li>Date (date format detection based on {@link DateParser})</li>
+ *   <li>LocalDate (date format detection based on {@link DateParser})</li>
+ *   <li>LocalDateTime (date format detection based on {@link DateParser})</li>
  *   <li>File</li>
- *   <li>Path (not supported on TeaVM)</li>
  *   <li>UUID</li>
  *   <li>Version</li>
  * </ul>
@@ -90,13 +88,9 @@ public class PropertyDeserializer {
         register(Date.class, DateParser::parse);
         register(File.class, FileUtils::expandUser);
         register(UUID.class, UUID::fromString);
+        register(LocalDate.class, value -> DateParser.parseLocalDate(value));
+        register(LocalDateTime.class, value -> DateParser.parseLocalDateTime(value));
         register(Version.class, Version::parse);
-
-        if (!Platform.isTeaVM()) {
-            register(LocalDate.class, value -> DateParser.convertDate(DateParser.parse(value)));
-            register(LocalDateTime.class, value -> DateParser.convertDateTime(DateParser.parse(value)));
-            register(Path.class, value -> FileUtils.expandUser(value).toPath());
-        }
     }
 
     /**

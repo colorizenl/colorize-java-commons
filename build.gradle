@@ -1,5 +1,5 @@
 plugins {
-    id "io.freefair.lombok" version "8.6"
+    id "io.freefair.lombok" version "8.10.2"
     id "com.github.ben-manes.versions" version "0.51.0"
 }
 
@@ -9,7 +9,7 @@ apply plugin: "maven-publish"
 apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2024.4"
+version = "2024.5"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -27,8 +27,8 @@ repositories {
 }
 
 dependencies {
-    api "com.google.guava:guava:33.1.0-jre"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    api "com.google.guava:guava:33.3.1-jre"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 

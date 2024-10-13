@@ -301,4 +301,13 @@ class SubscribableTest {
 
         assertEquals(1, counter.get());
     }
+
+    @Test
+    void ofIterable() {
+        Subscribable<String> subscribable = Subscribable.of(List.of("a", "b"));
+        List<String> buffer = new ArrayList<>();
+        subscribable.subscribe(buffer::add);
+
+        assertEquals("[a, b]", buffer.toString());
+    }
 }

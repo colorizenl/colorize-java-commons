@@ -9,7 +9,6 @@ package nl.colorize.util;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -32,7 +31,7 @@ public final class Version implements Comparable<Version> {
 
     private Version(String versionString, List<Integer> digits) {
         this.versionString = versionString;
-        this.digits = ImmutableList.copyOf(digits);
+        this.digits = List.copyOf(digits);
     }
 
     /**

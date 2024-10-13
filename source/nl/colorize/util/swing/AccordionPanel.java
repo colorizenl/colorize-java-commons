@@ -175,11 +175,7 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
             y += componentHeight;
         }
     }
-    
-    public int getNumSubPanels() {
-        return subPanels.size();
-    }
-    
+
     /**
      * Groups configuration information on how a sub-panel should be displayed.
      */

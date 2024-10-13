@@ -12,6 +12,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -54,7 +55,7 @@ public final class ReflectionUtils {
             return property;
         } catch (NoSuchFieldException e) {
             throw new IllegalArgumentException("Class " + forClass.getName() + 
-                    " does not have property " + propertyName);
+                " does not have property " + propertyName);
         }
     }
     
@@ -134,7 +135,8 @@ public final class ReflectionUtils {
      */
     public static void setProperty(Object subject, String propertyName, Object value) {
         try {
-            getProperty(subject.getClass(), propertyName).set(subject, value);
+            Field property = getProperty(subject.getClass(), propertyName);
+            property.set(subject, value);
         } catch (IllegalAccessException e) {
             throw new IllegalArgumentException("Property " + propertyName + " is not accessible");
         }
@@ -146,29 +148,18 @@ public final class ReflectionUtils {
      * {@link #getProperty(Object, String)}, including the exceptions that might
      * be thrown when trying to access the property.
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static <T> Comparator<T> getPropertyComparator(String propertyName) {
-        return new ReflectionPropertyComparator<T>(propertyName);
-    }
-    
-    private static class ReflectionPropertyComparator<T> implements Comparator<T> {
-        
-        private String propertyName;
-        
-        public ReflectionPropertyComparator(String propertyName) {
-            this.propertyName = propertyName;
-        }
-
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        public int compare(T a, T b) {
+        return (a, b) -> {
             Comparable propertyValueA = (Comparable) getProperty(a, propertyName);
             Comparable propertyValueB = (Comparable) getProperty(b, propertyName);
             if (propertyValueA == null || propertyValueB == null) {
                 return 0;
             }
             return propertyValueA.compareTo(propertyValueB);
-        }
+        };
     }
-    
+
     /**
      * Calls the object's method with the specified name using reflection. The
      * types of the arguments passed to the method ({@code args}) are also used
@@ -214,29 +205,19 @@ public final class ReflectionUtils {
      * Returns a list containing all of an object's methods that are marked with
      * the specified annotation.
      */
-    public static List<Method> getMethodsWithAnnotation(Object subject, 
-            Class<? extends Annotation> annotationClass) {
-        List<Method> matches = new ArrayList<>();
-        for (Method method : subject.getClass().getDeclaredMethods()) {
-            if (method.getAnnotation(annotationClass) != null) {
-                matches.add(method);
-            }
-        }
-        return matches;
+    public static List<Method> getMethodsWithAnnotation(Object obj, Class<? extends Annotation> type) {
+        return Arrays.stream(obj.getClass().getDeclaredMethods())
+            .filter(method -> method.getAnnotation(type) != null)
+            .toList();
     }
     
     /**
      * Returns a list containing all of an object's fields that are marked with
      * the specified annotation.
      */
-    public static List<Field> getFieldsWithAnnotation(Object subject,
-            Class<? extends Annotation> annotationClass) {
-        List<Field> matches = new ArrayList<>();
-        for (Field field : subject.getClass().getDeclaredFields()) {
-            if (field.getAnnotation(annotationClass) != null) {
-                matches.add(field);
-            }
-        }
-        return matches;
+    public static List<Field> getFieldsWithAnnotation(Object obj, Class<? extends Annotation> type) {
+        return Arrays.stream(obj.getClass().getDeclaredFields())
+            .filter(field -> field.getAnnotation(type) != null)
+            .toList();
     }
 }

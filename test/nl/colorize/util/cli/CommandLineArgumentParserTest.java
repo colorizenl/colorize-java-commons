@@ -108,7 +108,7 @@ class CommandLineArgumentParserTest {
                 [--c] \s
                 [--e] \s
                         
-            Unexpected argument 'unexpected'
+            Unknown argument 'unexpected'
             """;
 
         assertEquals(expected.strip(), buffer.toString().strip());
@@ -152,7 +152,7 @@ class CommandLineArgumentParserTest {
                 [--c] \s
                 [--e] \s
                         
-            Unexpected argument 'true'
+            Unknown argument 'true'
             """;
 
         assertEquals(expected.strip(), buffer.toString().strip());
@@ -211,7 +211,7 @@ class CommandLineArgumentParserTest {
                 [--c] \s
                 [--e] \s
                         
-            Argument 'a' appears multiple times
+            Duplicate argument 'a'
             """;
 
         assertEquals(expected.strip(), buffer.toString().strip());
@@ -233,12 +233,20 @@ class CommandLineArgumentParserTest {
         assertEquals("b=c", values.a);
     }
 
+    @Test
+    void argumentNameWithAlias() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        Example values = argParser.parse(toArgs("--aaa", "something"), Example.class);
+
+        assertEquals("something", values.a);
+    }
+
     private String[] toArgs(String... argv) {
         return argv;
     }
 
     private static class Example {
-        private @Arg String a;
+        private @Arg(aliases = {"aaa"}) String a;
         private @Arg(defaultValue = "2", usage = "This field has usage information") int b;
         private @Arg boolean c;
         private @Arg(name = "e", required = false) String d;

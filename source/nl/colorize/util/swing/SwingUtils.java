@@ -7,7 +7,6 @@
 package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
 import nl.colorize.util.Platform;
 import nl.colorize.util.ResourceFile;
@@ -74,6 +73,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -137,12 +137,8 @@ public final class SwingUtils {
         
         try {
             isSwingInitialized.set(true);
-            
             MacIntegration.enableApplicationMenuBar();
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            if (Platform.isMac()) {
-                MacIntegration.augmentLookAndFeel();
-            }
         } catch (Exception e) {
             throw new RuntimeException("Cannot initialize Swing look-and-feel", e);
         }
@@ -173,7 +169,9 @@ public final class SwingUtils {
     }
 
     /**
-     * Enables full-screen mode for the specified window.
+     * Enables full-screen mode for the specified window. If native fullscreen
+     * mode is not supported by the current platform, this will instead
+     * maximize the window.
      */
     public static void goFullScreen(JFrame window) {
         if (Platform.isMac()) {
@@ -880,7 +878,7 @@ public final class SwingUtils {
     }
 
     public static <T> JComboBox<String> createComboBox(T[] items, T selected) {
-        return createComboBox(ImmutableList.copyOf(items), selected);
+        return createComboBox(Arrays.asList(items), selected);
     }
 
     /**

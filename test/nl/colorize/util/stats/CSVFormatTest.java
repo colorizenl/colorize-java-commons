@@ -67,15 +67,18 @@ class CSVFormatTest {
             name;age
             "jo;hn";38
             jim;"old"
+            "escaped ""quotes"" in cell";1
             """;
 
         List<CSVRecord> records = CSVFormat.SEMICOLON.withQuotes().parseCSV(csv);
 
-        assertEquals(2, records.size());
+        assertEquals(3, records.size());
         assertEquals("jo;hn", records.get(0).get(0));
         assertEquals("38", records.get(0).get(1));
         assertEquals("jim", records.get(1).get(0));
         assertEquals("old", records.get(1).get(1));
+        assertEquals("escaped \"quotes\" in cell", records.get(2).get(0));
+        assertEquals("1", records.get(2).get(1));
     }
 
     @Test
@@ -86,5 +89,12 @@ class CSVFormatTest {
     @Test
     void escapeDelimiters() {
         assertEquals("john;38\n", CSVFormat.SEMICOLON.toCSV("jo;hn", "38"));
+    }
+
+    @Test
+    void quoteFields() {
+        CSVFormat format = CSVFormat.SEMICOLON.withQuotes();
+
+        assertEquals("\"john\"\"s name\";\"38\"\n", format.toCSV("john\"s name", "38"));
     }
 }

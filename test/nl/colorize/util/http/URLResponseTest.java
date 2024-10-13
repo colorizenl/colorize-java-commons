@@ -6,7 +6,6 @@
 
 package nl.colorize.util.http;
 
-import com.google.common.base.Charsets;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class URLResponseTest {
@@ -50,7 +50,7 @@ class URLResponseTest {
     @Test
     void stringForm() {
         Headers headers = Headers.fromMap(Map.of("Accept", "text/plain"));
-        byte[] body = "test\nanother line\n".getBytes(Charsets.UTF_8);
+        byte[] body = "test\nanother line\n".getBytes(UTF_8);
         URLResponse response = new URLResponse(HttpStatus.OK, headers, body);
 
         String expected = """
@@ -69,7 +69,7 @@ class URLResponseTest {
         URLResponse response = new URLResponse(HttpStatus.OK, Headers.none(), "This is a test");
         StringBuilder buffer = new StringBuilder();
 
-        try (Reader reader = response.openReader(Charsets.UTF_8)) {
+        try (Reader reader = response.openReader(UTF_8)) {
             while (true) {
                 int next = reader.read();
                 if (next == -1) {
