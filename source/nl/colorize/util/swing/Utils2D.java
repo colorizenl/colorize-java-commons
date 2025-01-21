@@ -1,15 +1,15 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import nl.colorize.util.Development;
 import nl.colorize.util.ResourceException;
 import nl.colorize.util.ResourceFile;
 
@@ -496,7 +496,7 @@ public final class Utils2D {
      * Returns an image that consists of a circle using the specified color.
      * This image is intended to be used for testing purposes.
      */
-    @VisibleForTesting
+    @Development
     public static BufferedImage createTestImage(int width, int height, Color color) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = createGraphics(image, true, true);
@@ -510,7 +510,7 @@ public final class Utils2D {
      * Returns an image that consists of a red circle with the specified width
      * and height. This image is intended to be used for testing purposes.
      */
-    @VisibleForTesting
+    @Development
     public static BufferedImage createTestImage(int width, int height) {
         return createTestImage(width, height, Color.RED);
     }

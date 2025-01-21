@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
-import nl.colorize.util.Subscribable;
+import nl.colorize.util.Subject;
 import nl.colorize.util.TextUtils;
 import nl.colorize.util.stats.Tuple;
 import nl.colorize.util.stats.TupleList;
@@ -361,11 +361,11 @@ public class URLLoader {
 
     /**
      * Starts a background thread that will send this request. Returns a
-     * {@link Subscribable} that can be used to subscribe to the response
+     * {@link Subject} that can be used to subscribe to the response
      * and/or errors.
      */
-    public Subscribable<URLResponse> sendBackground() {
-        return Subscribable.runBackground(this::send);
+    public Subject<URLResponse> sendBackground() {
+        return Subject.runBackground(this::send);
     }
 
     private HttpURLConnection openConnection(URI target) throws IOException {

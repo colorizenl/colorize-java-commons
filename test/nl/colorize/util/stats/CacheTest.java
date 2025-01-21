@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ class CacheTest {
         Cache<String, Integer> cache = Cache.from(values::get);
         cache.get("a");
         cache.get("b");
-        cache.forget("a");
+        cache.invalidate("a");
 
         assertEquals("Cache [1]\n    b=3", cache.toString());
     }
@@ -73,7 +73,7 @@ class CacheTest {
         Cache<String, Integer> cache = Cache.from(values::get);
         cache.get("a");
         cache.get("b");
-        cache.forgetAll();
+        cache.invalidate();
 
         assertEquals("Cache [0]", cache.toString());
     }

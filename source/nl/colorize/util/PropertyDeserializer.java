@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -137,16 +137,20 @@ public class PropertyDeserializer {
      *         registered for the specified type.
      * @throws NullPointerException when trying to deserialize a null value.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> T parse(String value, Class<T> type) {
         Preconditions.checkNotNull(value, "Cannot deserialize null value");
 
-        if (!typeMappers.containsKey(type)) {
+        String preprocessedValue = preprocessValue(value);
+        Function<String, ?> typeMapper = typeMappers.get(type);
+
+        if (typeMapper != null) {
+            return (T) typeMappers.get(type).apply(preprocessedValue);
+        } else if (type.isEnum()) {
+            return (T) Enum.valueOf((Class) type, preprocessedValue.toUpperCase());
+        } else {
             throw new UnsupportedOperationException("No type mapper registered for  " + type);
         }
-
-        String preprocessedValue = preprocessValue(value);
-        return (T) typeMappers.get(type).apply(preprocessedValue);
     }
 
     /**

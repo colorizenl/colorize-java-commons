@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ import nl.colorize.util.stats.DateRange;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.lang.annotation.RetentionPolicy;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.lang.annotation.RetentionPolicy.SOURCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -156,5 +159,23 @@ class PropertyDeserializerTest {
 
         assertEquals("john", propertyDeserializer.parseString("name", ""));
         assertEquals(38, propertyDeserializer.parseInt("age", -1));
+    }
+
+    @Test
+    void defaultDeserializerForEnum() {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+
+        assertEquals(RUNTIME, propertyDeserializer.parse("RUNTIME", RetentionPolicy.class));
+        assertEquals(RUNTIME, propertyDeserializer.parse("runtime", RetentionPolicy.class));
+        assertEquals(SOURCE, propertyDeserializer.parse("invalid", RetentionPolicy.class, SOURCE));
+    }
+
+    @Test
+    void customDeserializerForEnum() {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.register(RetentionPolicy.class, RetentionPolicy::valueOf);
+
+        assertEquals(RUNTIME, propertyDeserializer.parse("RUNTIME", RetentionPolicy.class));
+        assertEquals(SOURCE, propertyDeserializer.parse("invalid", RetentionPolicy.class, SOURCE));
     }
 }

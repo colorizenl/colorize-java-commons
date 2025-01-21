@@ -1,12 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util.swing;
 
-import nl.colorize.util.Subscribable;
+import nl.colorize.util.Subject;
 import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JButton;
@@ -28,7 +28,7 @@ public class PropertyEditor extends JPanel {
 
     private Map<String, String> properties;
     private TranslationBundle bundle;
-    private Subscribable<Map<String, String>> changes;
+    private Subject<Map<String, String>> changes;
     private Table<String> table;
 
     public PropertyEditor(Map<String, String> initialProperties) {
@@ -36,7 +36,7 @@ public class PropertyEditor extends JPanel {
 
         this.properties = new LinkedHashMap<>();
         this.bundle = SwingUtils.getCustomComponentsBundle();
-        this.changes = new Subscribable<>();
+        this.changes = new Subject<>();
 
         // Initialize the properties. The original map cannot be used
         // because we need to ensure the properties are a LinkedHashMap
@@ -135,7 +135,7 @@ public class PropertyEditor extends JPanel {
         return properties;
     }
 
-    public Subscribable<Map<String, String>> getChanges() {
+    public Subject<Map<String, String>> getChanges() {
         return changes;
     }
 }

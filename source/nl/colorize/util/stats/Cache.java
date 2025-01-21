@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ public class Cache<K, V> {
      * Forgets a cached key/value pairs in this cache. If the key/value pair
      * was not yet computed this method does nothing.
      */
-    public void forget(K key) {
+    public void invalidate(K key) {
         contents.remove(key);
         keyOrder.remove(key);
     }
@@ -86,7 +86,7 @@ public class Cache<K, V> {
     /**
      * Forgets all cached key/value pairs in this cache.
      */
-    public void forgetAll() {
+    public void invalidate() {
         contents.clear();
         keyOrder.clear();
     }
@@ -97,10 +97,6 @@ public class Cache<K, V> {
      */
     protected boolean isCached(K key) {
         return contents.containsKey(key);
-    }
-
-    public int getCapacity() {
-        return capacity;
     }
 
     @Override

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -90,7 +90,7 @@ public record DateRange(Date start, Date end) implements Predicate<Date>, Compar
      * Splits this date range into yearly intervals. This might include
      * partial years, depending on the start and end date of this date range.
      */
-    public List<DateRange> splitYearly() {
+    public List<DateRange> splitYears() {
         return toIntervals(GregorianCalendar.YEAR, 1, false);
     }
 

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ public class ResourceFileTest {
         assertEquals("d.xml", new ResourceFile("c:\\d.xml").getName());
         assertEquals("b", new ResourceFile("/a/b/").getName()); 
     }
-    
+
     @Test
     public void testOpenFile() throws IOException {
         File testFile = new File("build.gradle");
@@ -111,5 +111,11 @@ public class ResourceFileTest {
         ResourceFile file = new ResourceFile(tempFile);
 
         assertEquals(List.of("Test", "test"), file.readLines(UTF_8));
+    }
+
+    @Test
+    void getSibling() {
+        assertEquals("other.txt", new ResourceFile("test.txt").sibling("other.txt").path());
+        assertEquals("a/other.txt", new ResourceFile("a/test.txt").sibling("other.txt").path());
     }
 }

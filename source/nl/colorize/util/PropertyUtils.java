@@ -1,12 +1,11 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -101,7 +100,6 @@ public final class PropertyUtils {
      * documentation for {@link #loadProperties(Reader)} for more information
      * on when and why this is used.
      */
-    @VisibleForTesting
     protected static Properties emulateLoadProperties(Reader source) throws IOException {
         Properties properties = new Properties();
 

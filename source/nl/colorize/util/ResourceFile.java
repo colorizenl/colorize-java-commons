@@ -1,12 +1,13 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,6 +16,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Reference to a resource file (files included with the application). Resource
@@ -26,6 +29,8 @@ import java.nio.charset.Charset;
  * of the platform's file separator.
  */
 public record ResourceFile(String path) implements Resource {
+
+    private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
     
     public ResourceFile(String path) {
         Preconditions.checkArgument(!path.trim().isEmpty(), "Empty path");
@@ -55,16 +60,18 @@ public record ResourceFile(String path) implements Resource {
      * return a name of "c.txt".
      */
     public String getName() {
-        int index = path.lastIndexOf('/');
-        if (index == -1) {
-            return path;
-        }
-        return path.substring(index + 1);
+        List<String> pathComponents = PATH_SPLITTER.splitToList(path);
+        return pathComponents.getLast();
     }
 
     @Override
     public InputStream openStream() {
+        if (Platform.isTeaVM()) {
+            throw new UnsupportedOperationException("Resource files are not supported on TeaVM");
+        }
+
         // Attempt 1: Locate file in classpath.
+
         ClassLoader classLoader = ResourceFile.class.getClassLoader();
         InputStream inClassPath = classLoader.getResourceAsStream(path);
 
@@ -73,6 +80,7 @@ public record ResourceFile(String path) implements Resource {
         }
 
         // Attempt 2: Locate file in local file system.
+
         File inFileSystem = new File(path);
 
         if (inFileSystem.exists() && !inFileSystem.isDirectory()) {
@@ -101,6 +109,25 @@ public record ResourceFile(String path) implements Resource {
         } catch (IOException | ResourceException e) {
             return false;
         }
+    }
+
+    /**
+     * Returns a {@link ResourceFile} that points to a different file located
+     * in the same parent directory as this resource file.
+     *
+     * @throws IllegalArgumentException if trying to provide an absolute file
+     *         path to the {@code name} argument.
+     */
+    public ResourceFile sibling(String name) {
+        Preconditions.checkArgument(!name.startsWith("//"), "Cannot provide absolute path");
+
+        List<String> pathComponents = PATH_SPLITTER.splitToList(path);
+
+        List<String> siblingPath = new ArrayList<>();
+        siblingPath.addAll(pathComponents.subList(0, pathComponents.size() - 1));
+        siblingPath.add(name);
+
+        return new ResourceFile(String.join("/", siblingPath));
     }
 
     @Override

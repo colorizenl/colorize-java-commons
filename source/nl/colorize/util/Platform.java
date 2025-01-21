@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -34,13 +34,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * environment variables, or the {@link java.lang.System} class. However,
  * working directly with these properties is error-prone, since the properties
  * are scattered across various locations, need to be parsed by applications,
- * and do not always behave consistently across different platforms. In addition
- * to that, the standard APIs have not always been updated to reflect modern
- * best practices for each platform. For example, the {@code java.util.prefs}
- * API for storing application preferences was never updated for the introduction
- * of the Mac App Store in 2010, or Mac App Store sandboxing in 2014. This class
- * therefore provides a way to manage application data and preferences in a way
- * that is considered suitable and native for each platform.
+ * and do not always behave consistently across different platforms. In
+ * addition to that, the standard APIs have not always been updated to reflect
+ * modern best practices for each platform. For example, the
+ * {@code java.util.prefs} API for storing application preferences was never
+ * updated to handle the introduction of the Mac App Store in 2010, or Mac App
+ * Store sandboxing in 2014. This class therefore provides a way to manage
+ * application data and preferences in a way that is considered suitable and
+ * native for each platform.
  */
 @AllArgsConstructor
 public enum Platform {
@@ -212,6 +213,15 @@ public enum Platform {
     
     public static boolean isTeaVM() {
         return getPlatform() == TEAVM;
+    }
+
+    /**
+     * Convenience method that returns true if the current platform can be
+     * considered a desktop platform. The current implementation, somewhat
+     * controversially, does <em>not</em> consider Linux a desktop platform.
+     */
+    public static boolean isDesktopPlatform() {
+        return isWindows() || isMac();
     }
 
     /**

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,7 +8,7 @@ package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
-import nl.colorize.util.Subscribable;
+import nl.colorize.util.Subject;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -54,7 +54,7 @@ public class Table<R> extends JPanel implements TableModel {
     private List<Row<R>> rows;
     private Map<R, String> tooltips;
     private List<TableModelListener> modelListeners;
-    private Subscribable<Table<R>> doubleClick;
+    private Subject<Table<R>> doubleClick;
 
     private static final Logger LOGGER = LogHelper.getLogger(Table.class);
 
@@ -67,7 +67,7 @@ public class Table<R> extends JPanel implements TableModel {
         this.rows = new ArrayList<>();
         this.tooltips = new HashMap<>();
         this.modelListeners = new ArrayList<>();
-        this.doubleClick = new Subscribable<>();
+        this.doubleClick = new Subject<>();
 
         createTable();
         initDefaultSortOrder();
@@ -373,29 +373,29 @@ public class Table<R> extends JPanel implements TableModel {
     }
 
     /**
-     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * Returns a {@link Subject} that can be used to subscribe to events
      * whenever the selected row changes.
      */
-    public Subscribable<R> onSelect() {
-        Subscribable<R> subject = new Subscribable<>();
+    public Subject<R> onSelect() {
+        Subject<R> subject = new Subject<>();
         addActionListener(e -> subject.next(getSelectedRowKey()));
         return subject;
     }
 
     /**
-     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * Returns a {@link Subject} that can be used to subscribe to events
      * whenever the selected row is double-clicked. The event passed to
      * subscribers is the currently selected row key, i.e. the row that was
      * double-clicked.
      */
-    public Subscribable<R> onDoubleClick() {
+    public Subject<R> onDoubleClick() {
         return doubleClick
             .map(table -> getSelectedRowKey())
             .filter(row -> row != null);
     }
 
     /**
-     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * Returns a {@link Subject} that can be used to subscribe to events
      * whenever the selected row is double-clicked. The event passed to
      * subscribers represents the currently selected row key.
      *
@@ -403,7 +403,7 @@ public class Table<R> extends JPanel implements TableModel {
      *             double-clicked row as the event.
      */
     @Deprecated
-    public Subscribable<Table<R>> getDoubleClick() {
+    public Subject<Table<R>> getDoubleClick() {
         return doubleClick;
     }
 

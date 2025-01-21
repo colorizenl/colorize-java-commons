@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -81,6 +81,10 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
         
         subPanels.clear();
         revalidate();
+    }
+
+    public int getNumSubPanels() {
+        return subPanels.size();
     }
     
     private SubPanelInfo getSubPanel(K key) {

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2024 Colorize
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ class DateRangeTest {
     @Test
     void splitYears() {
         DateRange range = new DateRange("2018-10-01", "2018-12-15");
-        List<DateRange> intervals = range.splitYearly();
+        List<DateRange> intervals = range.splitYears();
 
         assertEquals(1, intervals.size());
         assertEquals("2018-10-01 - 2018-12-15", intervals.get(0).toString());
