@@ -6,7 +6,7 @@ jobs:
     container: colorizenl/colorize-ci
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Compile
         run: gradle compileJava
       - name: Unit tests
