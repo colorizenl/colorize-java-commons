@@ -128,7 +128,8 @@ public final class MacIntegration {
             String script = String.format("display notification \"%s\" with title \"%s\"",
                 quotes.removeFrom(message), quotes.removeFrom(title));
 
-            Process process = new ProcessBuilder("osascript", "-e", script).start();
+            Process process = new ProcessBuilder("osascript", "-e", script)
+                .start();
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {

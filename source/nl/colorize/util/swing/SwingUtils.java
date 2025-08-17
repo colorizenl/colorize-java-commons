@@ -240,7 +240,10 @@ public final class SwingUtils {
      * @param label The menu item's text label.
      * @param keycode One of the {@code KeyEvent.VK_X} fields, or -1 for none. 
      * @return The menu item that was created and added to the menu.
+     * @deprecated Use {@link #createMenuItem(String, int, Runnable)} or
+     *             {@link #createMenuItem(String, Runnable)} instead.
      */
+    @Deprecated
     public static JMenuItem createMenuItem(JMenu parent, String label, int keycode) {
         JMenuItem menuitem = new JMenuItem(label);
         if (keycode != -1) {
@@ -249,7 +252,30 @@ public final class SwingUtils {
         parent.add(menuitem);
         return menuitem;
     }
-    
+
+    /**
+     * Returns a new menu item that will perform the specified action. The menu
+     * item will be assigned a keyboard shortcut.
+     *
+     * @param keycode One of the {@code KeyEvent.VK_X} fields
+     */
+    public static JMenuItem createMenuItem(String label, int keycode, Runnable action) {
+        JMenuItem menuItem = new JMenuItem(label);
+        menuItem.addActionListener(e -> action.run());
+        if (keycode != -1) {
+            menuItem.setAccelerator(getKeyStroke(keycode));
+        }
+        return menuItem;
+    }
+
+    /**
+     * Returns a new menu item that will perform the specified action. The menu
+     * item will not be assigned a keyboard shortcut.
+     */
+    public static JMenuItem createMenuItem(String label, Runnable action) {
+        return createMenuItem(label, -1, action);
+    }
+
     /**
      * Returns a keystroke for a key that uses the platform-specific modifier key
      * for menu shortcuts.

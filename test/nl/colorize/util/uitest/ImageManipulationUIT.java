@@ -18,7 +18,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
-import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -26,9 +25,13 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Map;
 
 /**
  * Swing application that showcases the graphical effects for Java2D.
@@ -44,10 +47,10 @@ public class ImageManipulationUIT extends JPanel {
     private int shadowBlur;
     private int shadowAlpha;
 
-    private static final String TEST_IMAGE_URL = "https://www.colorize.nl/logo.png";
+    private static final String TEST_IMAGE_URL = "https://clrz.nl/assets/images/colorize-logo.png";
     private static final int PADDING = 50;
     
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         ImageManipulationUIT test = new ImageManipulationUIT();
         test.createWindow();
     }
@@ -82,13 +85,15 @@ public class ImageManipulationUIT extends JPanel {
     }
     
     private void loadPhoto() {
-        URLLoader loader = URLLoader.get(TEST_IMAGE_URL);
+        try (HttpClient httpClient = URLLoader.createClient()) {
+            HttpRequest request = URLLoader.buildRequest("GET", TEST_IMAGE_URL, Map.of(), null);
+            HttpResponse<byte[]> response = httpClient.send(request,
+                HttpResponse.BodyHandlers.ofByteArray());
 
-        try (InputStream stream = loader.send().openStream()) {
-            image = Utils2D.loadImage(stream);
+            image = Utils2D.loadImage(new ByteArrayInputStream(response.body()));
             image = Utils2D.makeImageCompatible(image);
             image = Utils2D.addPadding(image, PADDING);
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             throw new AssertionError(e);
         }
     }
@@ -134,11 +139,9 @@ public class ImageManipulationUIT extends JPanel {
     
     private FormPanel createScalingPanel() {
         final JSlider scaleSlider = new JSlider(10, 200, 100);
-        scaleSlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                scale = scaleSlider.getValue();
-                repaint();
-            }
+        scaleSlider.addChangeListener(e -> {
+            scale = scaleSlider.getValue();
+            repaint();
         });
         
         FormPanel panel = new FormPanel();
@@ -150,11 +153,9 @@ public class ImageManipulationUIT extends JPanel {
 
     private FormPanel createBlurPanel() {
         final JSlider blurSlider = new JSlider(0, 10, 0);
-        blurSlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                blur = blurSlider.getValue();
-                repaint();
-            }
+        blurSlider.addChangeListener(e -> {
+            blur = blurSlider.getValue();
+            repaint();
         });
         
         FormPanel panel = new FormPanel();

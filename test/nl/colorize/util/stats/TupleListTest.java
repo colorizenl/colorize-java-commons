@@ -76,7 +76,7 @@ class TupleListTest {
 
     @Test
     void fromValues() {
-        TupleList<String, Integer> tuples = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
+        TupleList<String, Integer> tuples = TupleList.of("a", 2, "b", 3);
 
         assertEquals(2, tuples.size());
         assertEquals("[(a, 2), (b, 3)]", tuples.toString());
@@ -84,7 +84,7 @@ class TupleListTest {
 
     @Test
     void forEach() {
-        TupleList<String, Integer> tuples = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
+        TupleList<String, Integer> tuples = TupleList.of("a", 2, "b", 3);
         List<Object> counter = new ArrayList<>();
         tuples.forEach((left, right) -> counter.add(left + "/" + right));
 
@@ -107,7 +107,7 @@ class TupleListTest {
 
     @Test
     void map() {
-        TupleList<String, String> original = TupleList.of(Tuple.of("a", "b"), Tuple.of("c", "d"));
+        TupleList<String, String> original = TupleList.of("a", "b", "c", "d");
         TupleList<String, String> mapped = original.map(x -> x + "2", y -> y + "3");
 
         assertEquals("[(a2, b3), (c2, d3)]", mapped.toString());
@@ -115,8 +115,8 @@ class TupleListTest {
 
     @Test
     void concat() {
-        TupleList<String, Integer> first = TupleList.of(Tuple.of("a", 2), Tuple.of("b", 3));
-        TupleList<String, Integer> second = TupleList.of(Tuple.of("d", 4));
+        TupleList<String, Integer> first = TupleList.of("a", 2, "b", 3);
+        TupleList<String, Integer> second = TupleList.of("d", 4);
         TupleList<String, Integer> result = first.concat(second);
 
         assertEquals("[(a, 2), (b, 3)]", first.toString());
@@ -126,7 +126,7 @@ class TupleListTest {
 
     @Test
     void append() {
-        TupleList<String, Integer> list = TupleList.of();
+        TupleList<String, Integer> list = TupleList.create();
         list.append("a", 2);
 
         assertEquals("[(a, 2)]", list.toString());
@@ -138,9 +138,16 @@ class TupleListTest {
         existing.add(Tuple.of("a", 2));
         existing.add(Tuple.of("b", 3));
 
-        TupleList<String, Integer> result = TupleList.of(existing);
+        TupleList<String, Integer> result = TupleList.copyOf(existing);
         result.add("c", 4);
 
         assertEquals("[(a, 2), (b, 3), (c, 4)]", result.toString());
+    }
+
+    @Test
+    void factoryMethods() {
+        assertEquals("[(1, 2)]", TupleList.of("1", "2").toString());
+        assertEquals("[(1, 2), (3, 4)]", TupleList.of("1", "2", "3", "4").toString());
+        assertEquals("[(1, 2), (3, 4), (5, 6)]", TupleList.of("1", "2", "3", "4", "5", "6").toString());
     }
 }

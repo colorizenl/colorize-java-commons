@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// Ape Attack
-// Copyright 2005, 2025 Colorize
+// Colorize Java Commons
+// Copyright 2007-2025 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 

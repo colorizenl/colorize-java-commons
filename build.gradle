@@ -1,15 +1,14 @@
 plugins {
-    id "io.freefair.lombok" version "8.11"
-    id "com.github.ben-manes.versions" version "0.51.0"
+    id "io.freefair.lombok" version "8.14"
+    id "com.vanniktech.maven.publish" version "0.34.0"
+    id "com.github.ben-manes.versions" version "0.52.0"
 }
 
 apply plugin: "java-library"
 apply plugin: "jacoco"
-apply plugin: "maven-publish"
-apply plugin: "signing"
 
 group = "nl.colorize"
-version = "2025.1"
+version = "2025.2"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -18,8 +17,6 @@ java {
     sourceSets.main.java.srcDirs = ["source"]
     sourceSets.main.resources.srcDirs = ["resources"]
     sourceSets.test.java.srcDirs = ["test"]
-    withJavadocJar()
-    withSourcesJar()
 }
 
 repositories {
@@ -27,8 +24,9 @@ repositories {
 }
 
 dependencies {
-    api "com.google.guava:guava:33.4.0-jre"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    api "org.jspecify:jspecify:1.0.0"
+    api "com.google.guava:guava:33.4.8-jre"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.13.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
@@ -53,52 +51,32 @@ task coverage(dependsOn: ["test", "jacocoTestReport"]) {
     }
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            artifactId = "colorize-java-commons"
-            from components.java
+mavenPublishing {
+    coordinates("nl.colorize", "colorize-java-commons", version)
 
-            pom {
-                name = "Colorize-Java-Commons"
-                description = "Library containing utility classes for web, desktop, and mobile applications."
-                url = "https://www.clrz.nl"
-
-                licenses {
-                    license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
+    pom {
+        name = "Colorize-Java-Commons"
+        description = "Library containing utility classes for web, desktop, and mobile applications."
+        url = "https://www.clrz.nl"
+        inceptionYear = "2007"
+        licenses {
+            license {
+                name = "The Apache License, Version 2.0"
+                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            }
+            developers {
+                developer {
+                    id = "colorize"
+                    name = "Colorize"
+                    url = "https://clrz.nl"
                 }
-
-                developers {
-                    developer {
-                        id = "colorize"
-                        name = "Colorize"
-                        email = "contact@colorize.nl"
-                    }
-                }
-
-                scm {
-                    connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
-                    developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
-                    url = "https://github.com/colorizenl/colorize-java-commons"
-                }
+            }
+            scm {
+                url = "https://github.com/colorizenl/colorize-java-commons"
+                connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+                developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
             }
         }
     }
-
-    repositories {
-        maven {
-            url = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            credentials {
-                username = mavenCentralUser
-                password = mavenCentralPassword
-            }
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.maven
 }

@@ -8,6 +8,7 @@ package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.io.CharStreams;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +30,7 @@ import java.util.List;
  * Resource file paths will always use forward slashes as delimiters, regardless
  * of the platform's file separator.
  */
-public record ResourceFile(String path) implements Resource {
+public record ResourceFile(String path) {
 
     private static final Splitter PATH_SPLITTER = Splitter.on("/").omitEmptyStrings();
     
@@ -64,7 +66,6 @@ public record ResourceFile(String path) implements Resource {
         return pathComponents.getLast();
     }
 
-    @Override
     public InputStream openStream() {
         if (Platform.isTeaVM()) {
             throw new UnsupportedOperationException("Resource files are not supported on TeaVM");
@@ -94,10 +95,41 @@ public record ResourceFile(String path) implements Resource {
         throw new ResourceException("Resource file not found: " + path);
     }
 
-    @Override
     public BufferedReader openReader(Charset charset) {
         InputStreamReader reader = new InputStreamReader(openStream(), charset);
         return new BufferedReader(reader);
+    }
+
+    public byte[] readBytes() {
+        try (InputStream stream = openStream()) {
+            return stream.readAllBytes();
+        } catch (IOException e) {
+            throw new ResourceException("Resource access failed", e);
+        }
+    }
+
+    public String read(Charset charset) {
+        try (BufferedReader reader = openReader(charset)) {
+            return CharStreams.toString(reader);
+        } catch (IOException e) {
+            throw new ResourceException("Resource access failed", e);
+        }
+    }
+
+    public String read() {
+        return read(StandardCharsets.UTF_8);
+    }
+
+    public List<String> readLines(Charset charset) {
+        try (BufferedReader reader = openReader(charset)) {
+            return reader.lines().toList();
+        } catch (IOException e) {
+            throw new ResourceException("Resource access failed", e);
+        }
+    }
+
+    public List<String> readLines() {
+        return readLines(StandardCharsets.UTF_8);
     }
 
     /**

@@ -115,7 +115,7 @@ public class CustomComponentsUIT {
         form.addEmptyRow();
         form.addRow(new JCheckBox("Row with checkbox"));
         form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
-        form.addEllipsesRow(() -> labels.getFirst(), () -> labels.set(0, "something else"));
+        form.addEllipsesRow(labels::getFirst, () -> labels.set(0, "something else"));
         return form;
     }
 

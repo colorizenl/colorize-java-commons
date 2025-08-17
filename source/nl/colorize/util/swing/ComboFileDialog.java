@@ -9,6 +9,7 @@ package nl.colorize.util.swing;
 import com.google.common.base.Joiner;
 import com.google.common.io.Files;
 import com.google.common.primitives.Chars;
+import lombok.Getter;
 import nl.colorize.util.Platform;
 import nl.colorize.util.TranslationBundle;
 
@@ -30,6 +31,7 @@ import java.util.List;
  * This class will therefore make the tradeoff which file dialog is best for the
  * current platform. 
  */
+@Getter
 public class ComboFileDialog {
 
     private String title;
@@ -237,11 +239,7 @@ public class ComboFileDialog {
     public void setTitle(String title) {
         this.title = title;
     }
-    
-    public String getTitle() {
-        return title;
-    }
-    
+
     public void setStartDirectory(File start) {
         if (start == null || !start.exists()) {
             // Use the platform default directory
@@ -263,18 +261,15 @@ public class ComboFileDialog {
             startDirectory = getDefaultStartDirectory();
         }
     }
-    
-    public File getStartDirectory() {
-        return startDirectory;
-    }
-    
+
     private File getDefaultStartDirectory() {
         return Platform.getUserDataDirectory();
     }
     
     /**
      * Sets a filter so that the dialog will only show files with the specified
-     * file extension(s). 
+     * file extension(s).
+     *
      * @param description A textual description of the filter.
      * @param extensions An array of file name extensions, such as "png", or "jpg".
      * @throws IllegalArgumentException if the filter has no file extensions.

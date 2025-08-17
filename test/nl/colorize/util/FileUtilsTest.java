@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 
-import static com.google.common.base.Charsets.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -192,5 +192,11 @@ public class FileUtilsTest {
         assertTrue(tempFile.exists());
         assertArrayEquals(contents, Files.readAllBytes(tempFile.toPath()));
         assertEquals("4 bytes", FileUtils.formatFileSize(tempFile));
+    }
+
+    @Test
+    void pathSplitter() {
+        assertEquals(List.of("a", "b"), FileUtils.PATH_SPLITTER.splitToList("a/b"));
+        assertEquals(List.of("a", "b"), FileUtils.PATH_SPLITTER.splitToList("/a/b"));
     }
 }

@@ -76,6 +76,7 @@ public enum Platform {
         .put("13.", "Ventura")
         .put("14.", "Sonoma")
         .put("15.", "Sequoia")
+        .put("26.", "Tahoe")
         .build();
 
     private static final Splitter NATIVE_PATH_SPLITTER = Splitter.on(CharMatcher.anyOf(":;"))

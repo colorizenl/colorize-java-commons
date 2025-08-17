@@ -82,7 +82,7 @@ public interface HttpStatus {
     }
 
     public static boolean isServerError(int status) {
-        return status >= 400 && status <= 499;
+        return status >= 500 && status <= 599;
     }
 
     public static boolean isError(int status) {

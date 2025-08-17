@@ -381,7 +381,25 @@ public final class Utils2D {
      * the range 0.0 - 1.0.
      */
     public static Color withAlpha(String hexColor, float alpha) {
-        return withAlpha(hexColor, Math.round(alpha * 255f));
+        return withAlpha(parseHexColor(hexColor), alpha);
+    }
+
+    /**
+     * Returns a color with the same RGB values as {@code hexColor}, but with a
+     * different alpha value. The provided alpha value is expected to be in
+     * the range 0 - 255.
+     */
+    public static Color withAlpha(int rgba, int alpha) {
+        return withAlpha(new Color(rgba), alpha);
+    }
+
+    /**
+     * Returns a color with the same RGB values as {@code rgba}, but with a
+     * different alpha value. The provided alpha value is expected to be in
+     * the range 0.0 - 1.0.
+     */
+    public static Color withAlpha(int rgba, float alpha) {
+        return withAlpha(new Color(rgba), Math.round(alpha * 255f));
     }
 
     /**

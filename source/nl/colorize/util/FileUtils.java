@@ -6,12 +6,15 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -31,6 +34,10 @@ import java.util.logging.Logger;
  * are no longer needed and can be replaced with {@link java.nio.file.Files}.
  */
 public final class FileUtils {
+
+    public static final Splitter PATH_SPLITTER = Splitter.on(CharMatcher.anyOf("/\\"))
+        .omitEmptyStrings()
+        .trimResults();
 
     // Consistent with the definitions used by Apple in the Finder,
     // see https://discussions.apple.com/thread/7375024.
@@ -318,6 +325,15 @@ public final class FileUtils {
         File tempFile = createTempFile();
         Files.writeString(tempFile.toPath(), text, encoding);
         return tempFile;
+    }
+
+    /**
+     * Creates a temporary file with the specified text as contents and using
+     * the UTF-8 character encoding. The file will be created in the platform's
+     * default location for storing temporary files.
+     */
+    public static File createTempFile(String text) throws IOException {
+        return createTempFile(text, StandardCharsets.UTF_8);
     }
     
     /**

@@ -32,13 +32,13 @@ to the dependencies section in `pom.xml`:
     <dependency>
         <groupId>nl.colorize</groupId>
         <artifactId>colorize-java-commons</artifactId>
-        <version>2025.1</version>
+        <version>2025.2</version>
     </dependency>
     
 The library can also be used in Gradle projects:
 
     dependencies {
-        implementation "nl.colorize:colorize-java-commons:2025.1"
+        implementation "nl.colorize:colorize-java-commons:2025.2"
     }
     
 Documentation
@@ -52,8 +52,8 @@ Examples
 ### Command line interface
 
 The `CommandLineArgumentParser` can be used to define and parse arguments for command line
-applications. It uses an approach that is quite different from the annotation-based approach
-used by [Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
+applications. It is quite similar to the annotation-based approach used by
+[Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
 since 2016.
 
 The following example shows how to define a simple command line interface:
@@ -88,6 +88,9 @@ that moves the ball across the screen in 0.4 seconds, using easing animation int
 The timeline can then be used for animation. The following example shows how to animate a Swing
 component's background color from red to blue:
 
+    SwingAnimator animator = new SwingAnimator();
+    animator.start();
+
     JPanel target = new JPanel();
     target.setOpaque(true);
     target.setBackground(Color.RED);
@@ -95,7 +98,7 @@ component's background color from red to blue:
     
     JButton animateButton = new JButton("Animate background color");
     animateButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
-
+d
 Build instructions
 ------------------
 
@@ -112,8 +115,8 @@ The following Gradle build tasks are available:
 - `gradle coverage` runs all unit tests and reports on test coverage
 - `gradle javadoc` generates the JavaDoc API documentation
 - `gradle dependencyUpdates` checks for and reports on library updates
-- `gradle publish` publishes the library to Maven central
-  (requires the Gradle properties `mavenCentralUser` and `mavenCentralPassword`)
+- `gradle publishToMavenCentral` publishes the library to Maven Central.
+  Requires [credentials](https://vanniktech.github.io/gradle-maven-publish-plugin/central/#secrets).
 
 License
 -------

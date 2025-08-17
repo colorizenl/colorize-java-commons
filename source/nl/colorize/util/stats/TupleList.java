@@ -132,28 +132,25 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
         return new TupleList<>();
     }
 
-    /**
-     * Factory method that creates a mutable {@link TupleList} from existing
-     * tuples.
-     */
-    @SafeVarargs
-    public static <L, R> TupleList<L, R> of(Tuple<L, R>... entries) {
+    public static <L, R> TupleList<L, R> of(L left, R right) {
         TupleList<L, R> result = TupleList.create();
-        result.addAll(List.of(entries));
+        result.add(left, right);
         return result;
     }
 
-    /**
-     * Factory method that creates a mutable {@link TupleList} from an
-     * existing list of tuples.
-     *
-     * @deprecated Renamed to {@link #copyOf(List)}, both because the new
-     *             name is more descriptive and to be consistent with other
-     *             collection classes.
-     */
-    @Deprecated
-    public static <L, R> TupleList<L, R> of(List<Tuple<L, R>> entries) {
-        return copyOf(entries);
+    public static <L, R> TupleList<L, R> of(L leftA, R rightA, L leftB, R rightB) {
+        TupleList<L, R> result = TupleList.create();
+        result.add(leftA, rightA);
+        result.add(leftB, rightB);
+        return result;
+    }
+
+    public static <L, R> TupleList<L, R> of(L leftA, R rightA, L leftB, R rightB, L leftC, R rightC) {
+        TupleList<L, R> result = TupleList.create();
+        result.add(leftA, rightA);
+        result.add(leftB, rightB);
+        result.add(leftC, rightC);
+        return result;
     }
 
     /**
