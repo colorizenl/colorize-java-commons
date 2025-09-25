@@ -418,6 +418,14 @@ public final class Utils2D {
         if (!hex.startsWith("#")) {
             hex = "#" + hex;
         }
+
+        if (hex.length() == 4) {
+            hex = "#" +
+                hex.charAt(1) + hex.charAt(1) +
+                hex.charAt(2) +  hex.charAt(2) +
+                hex.charAt(3) + hex.charAt(3);
+        }
+
         return Color.decode(hex);
     }
     

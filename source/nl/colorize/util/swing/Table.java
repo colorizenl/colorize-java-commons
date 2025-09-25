@@ -115,7 +115,6 @@ public class Table<R> extends JPanel implements TableModel {
      * an explicit sort order.
      */
     private int sortRows(Object a, Object b) {
-        System.out.println(a + "  " + b);
         return 0;
     }
 

@@ -10,6 +10,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
+import nl.colorize.util.Version;
 
 import javax.swing.JFrame;
 import java.awt.Desktop;
@@ -41,6 +42,9 @@ import java.util.logging.Logger;
  */
 public final class MacIntegration {
 
+    // macOS versions
+    public static final Version MACOS_TAHOE = Version.parse("26");
+
     // Apple-specific system properties
     private static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
     private static final String SYSTEM_PROPERTY_METAL = "sun.java2d.metal";
@@ -64,7 +68,27 @@ public final class MacIntegration {
 
     private MacIntegration() {
     }
-    
+
+    /**
+     * Returns true if the current platform is (A) a version of macOS, and (B)
+     * at least the specified version of macOS. The version number in
+     * {@code minVersion} is assumed to come from the {@code MACOS_X} constants
+     * in this class.
+     */
+    public static boolean isMacOS(Version minVersion) {
+        if (!Platform.isMac()) {
+            return false;
+        }
+
+        try {
+            Version osVersion = Version.parse(System.getProperty("os.version"));
+            return osVersion.isAtLeast(minVersion);
+        } catch (Exception e) {
+            LOGGER.warning("Error while trying to determine macOS version: " + e.getMessage());
+            return true;
+        }
+    }
+
     /**
      * Enables the application menu bar for Swing applications. By default, Swing
      * will show separate menu bars for each window. This approach is common on

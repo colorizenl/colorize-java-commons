@@ -10,13 +10,12 @@ import com.google.common.base.Preconditions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -125,7 +124,7 @@ class SubjectTest {
     @Test
     void inBackgroundThread() throws InterruptedException {
         List<String> received = new CopyOnWriteArrayList<>();
-        Subject<String> subject = Subject.runBackground(() -> {
+        Subject<String> subject = Subject.runAsync(() -> {
             Thread.sleep(500);
             return "1";
         });
@@ -165,6 +164,18 @@ class SubjectTest {
     }
 
     @Test
+    void flatMap() {
+        List<String> received = new ArrayList<>();
+
+        Subject<String> originalSubject = Subject.of("a", "b");
+        originalSubject.subscribe(received::add);
+        Subject<String> mappedSubject = originalSubject.flatMap(x -> Stream.of(x + "1", x + "2"));
+        mappedSubject.subscribe(received::add);
+
+        assertEquals("[a, b, a1, a2, b1, b2]", received.toString());
+    }
+
+    @Test
     void filter() {
         List<String> received = new ArrayList<>();
 
@@ -187,23 +198,6 @@ class SubjectTest {
         first.subscribe(second);
 
         assertEquals("[a, b, a2, b2]", received.toString());
-    }
-
-    @Test
-    void unsubscribe() {
-        List<String> received = new ArrayList<>();
-        Subscriber<String> a = Subject.createSubscriber(event -> received.add("a" + event));
-        Subscriber<String> b = Subject.createSubscriber(event -> received.add("b" + event));
-
-        Subject<String> subject = new Subject<>();
-        subject.subscribe(a);
-        subject.subscribe(b);
-        subject.next("1");
-        subject.next("2");
-        subject.unsubscribe(a);
-        subject.next("3");
-
-        assertEquals("[a1, b1, a2, b2, b3]", received.toString());
     }
 
     @Test
@@ -328,22 +322,6 @@ class SubjectTest {
         subject.subscribe(buffer::add);
 
         assertEquals("[a, b]", buffer.toString());
-    }
-
-    @Test
-    void collectInMessageQueue() {
-        Subject<String> subject = new Subject<>();
-        subject.next("a");
-        subject.next("b");
-
-        Queue<String> queue = new LinkedList<>();
-        subject.collect(queue);
-
-        assertEquals("[a, b]", queue.toString());
-
-        subject.next("c");
-
-        assertEquals("[a, b, c]", queue.toString());
     }
 
     @Test

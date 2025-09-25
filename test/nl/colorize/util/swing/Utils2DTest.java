@@ -21,7 +21,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
+import static java.awt.Color.WHITE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Utils2DTest {
@@ -112,7 +114,9 @@ public class Utils2DTest {
     @Test
     void parseHexColor() {
         assertEquals(RED, Utils2D.parseHexColor("#FF0000"));
-        assertEquals(Color.GREEN, Utils2D.parseHexColor("00FF00"));
+        assertEquals(GREEN, Utils2D.parseHexColor("00FF00"));
+        assertEquals(RED, Utils2D.parseHexColor("#f00"));
+        assertEquals(WHITE, Utils2D.parseHexColor("#fff"));
     }
 
     @Test
@@ -122,9 +126,9 @@ public class Utils2DTest {
         assertEquals(new Color(255, 150, 0), Utils2D.interpolateColor(RED, Color.ORANGE, 0.75f));
         assertEquals(new Color(255, 200, 0), Utils2D.interpolateColor(RED, Color.ORANGE, 1f));
         
-        assertEquals(new Color(255, 255, 255), Utils2D.interpolateColor(Color.WHITE, Color.BLACK, 0f));
-        assertEquals(new Color(128, 128, 128), Utils2D.interpolateColor(Color.WHITE, Color.BLACK, 0.5f));
-        assertEquals(new Color(0, 0, 0), Utils2D.interpolateColor(Color.WHITE, Color.BLACK, 1f));
+        assertEquals(new Color(255, 255, 255), Utils2D.interpolateColor(WHITE, Color.BLACK, 0f));
+        assertEquals(new Color(128, 128, 128), Utils2D.interpolateColor(WHITE, Color.BLACK, 0.5f));
+        assertEquals(new Color(0, 0, 0), Utils2D.interpolateColor(WHITE, Color.BLACK, 1f));
     }
 
     @Test

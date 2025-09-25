@@ -55,9 +55,9 @@ public class CustomComponentsUIT {
     private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
-        System.out.println("---------------------");
-        AnsiColor.RED_BOLD.println("Colorize Java Commons");
-        System.out.println("---------------------");
+        LOGGER.info("---------------------");
+        LOGGER.info(AnsiColor.RED_BOLD.format("Colorize Java Commons"));
+        LOGGER.info("---------------------");
 
         CustomComponentsUIT test = new CustomComponentsUIT();
         test.createWindow();

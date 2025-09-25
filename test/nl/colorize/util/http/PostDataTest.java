@@ -6,8 +6,10 @@
 
 package nl.colorize.util.http;
 
+import nl.colorize.util.stats.Tuple;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -142,5 +144,28 @@ public class PostDataTest {
 
         assertTrue(postData.contains("test"));
         assertEquals(List.of(""), postData.getParameterValues("test"));
+    }
+
+    @Test
+    void iterate() {
+        PostData postData = PostData.parse("?a=2&b=3");
+        List<String> names = new ArrayList<>();
+
+        for (Tuple<String, String> param : postData) {
+            names.add(param.left());
+        }
+
+        assertEquals(List.of("a", "b"), names);
+    }
+
+    @Test
+    void stream() {
+        PostData postData = PostData.parse("?a=2&b=3");
+
+        List<String> names = postData.stream()
+            .map(Tuple::left)
+            .toList();
+
+        assertEquals(List.of("a", "b"), names);
     }
 }

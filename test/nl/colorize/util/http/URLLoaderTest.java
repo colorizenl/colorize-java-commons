@@ -6,12 +6,16 @@
 
 package nl.colorize.util.http;
 
+import nl.colorize.util.stats.TupleList;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -127,5 +131,85 @@ public class URLLoaderTest {
         Thread.sleep(5000);
 
         assertEquals(List.of(200), result);
+    }
+
+    @Test
+    void mapToHeaders() {
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("a", "2");
+        headers.put("b", "3");
+
+        HttpHeaders result = URLLoader.toHeaders(headers);
+
+        assertEquals("2", result.firstValue("a").orElse(""));
+        assertEquals("3", result.firstValue("b").orElse(""));
+        assertEquals("", result.firstValue("c").orElse(""));
+    }
+
+    @Test
+    void tuplesToHeaders() {
+        HttpHeaders result = URLLoader.toHeaders(TupleList.of("a", "2", "b", "3", "b", "4"));
+
+        assertEquals(List.of("2"), result.allValues("a"));
+        assertEquals(List.of("3", "4"), result.allValues("b"));
+        assertEquals(List.of(), result.allValues("c"));
+    }
+
+    @Test
+    void buildResponse() {
+        HttpResponse<String> response = URLLoader.buildResponse(
+            "https://clrz.nl", 200, Map.of("a", "2"), "test");
+
+        assertEquals(HttpStatus.OK, response.statusCode());
+        assertEquals("2", response.headers().firstValue("a").orElse(""));
+        assertEquals("test", response.body());
+    }
+
+    @Test
+    void sendUnchecked() throws IOException {
+        HttpRequest request = URLLoader.buildRequest("GET", "https://clrz.nl/nonexistent");
+        HttpResponse<String> response = URLLoader.sendUnchecked(request);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode());
+    }
+
+    @Test
+    void appendURL() {
+        String base = "https://example.com";
+        PostData query = PostData.create("a", "2", "b", "3");
+
+        assertEquals("https://example.com?a=2&b=3", URLLoader.appendURL(base, query));
+        assertEquals("https://example.com", URLLoader.appendURL(base, PostData.empty()));
+    }
+
+    @Test
+    void appendQueryParametersToExistingOnes() {
+        String base = "https://example.com?a=2";
+        PostData query = PostData.create("b", "3");
+
+        assertEquals("https://example.com?a=2&b=3", URLLoader.appendURL(base, query));
+    }
+
+    @Test
+    void appendPathComponents() {
+        String base = "https://example.com";
+
+        assertEquals("https://example.com/a/b", URLLoader.appendURL(base, "a", "b"));
+        assertEquals("https://example.com/a/b", URLLoader.appendURL(base + "/", "a", "b"));
+        assertEquals("https://example.com", URLLoader.appendURL(base));
+        assertEquals("https://example.com/", URLLoader.appendURL(base + "/"));
+        assertEquals("https://example.com/a/b%2Fc", URLLoader.appendURL(base, "a", "b/c"));
+    }
+
+    @Test
+    void getHeaders() {
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("a", "2");
+        headers.put("b", "3");
+
+        HttpHeaders headersInstance = URLLoader.toHeaders(headers);
+        TupleList<String, String> tuples = URLLoader.getHeaders(headersInstance);
+
+        assertEquals("[(a, 2), (b, 3)]", tuples.toString());
     }
 }

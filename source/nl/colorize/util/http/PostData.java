@@ -16,6 +16,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,7 @@ import java.util.stream.Stream;
  * "missing" if it is either not present at all, or if the parameter name is
  * specified but its value is empty.
  */
-public class PostData {
+public class PostData implements Iterable<Tuple<String, String>> {
 
     private TupleList<String, String> params;
 
@@ -130,6 +131,15 @@ public class PostData {
             }
         }
         return result;
+    }
+
+    @Override
+    public Iterator<Tuple<String, String>> iterator() {
+        return params.iterator();
+    }
+
+    public Stream<Tuple<String, String>> stream() {
+        return params.stream();
     }
 
     /**
@@ -231,6 +241,14 @@ public class PostData {
         }
 
         return new PostData(params);
+    }
+
+    /**
+     * Creates a {@code PostData} instance from a list of tuples, with each
+     * tuple acting as a name/value pauir.
+     */
+    public static PostData create(TupleList<String, String> data) {
+        return new PostData(data.immutable());
     }
 
     /**

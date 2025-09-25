@@ -84,7 +84,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Miscelleaneous utility and convenience methods for working with Swing. This
+ * Miscellaneous utility and convenience methods for working with Swing. This
  * generally relates to creating component with slightly different graphics
  * and/or behavior.
  */
@@ -1039,7 +1039,7 @@ public final class SwingUtils {
         private static final int ESTIMATED_ROW_HEIGHT = 17;
         
         public StripedList(List<E> elements) {
-            super(new Vector<E>(elements));
+            super(new Vector<>(elements));
             setOpaque(false);
 
             DefaultListCellRenderer delegate = new DefaultListCellRenderer();

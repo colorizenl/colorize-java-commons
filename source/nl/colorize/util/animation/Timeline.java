@@ -104,9 +104,12 @@ public class Timeline implements Animatable {
      * negative value will  move the playhead backwards. The playhead is
      * restricted to the range between zero and the timeline's duration as
      * returned by {@link #getDuration()}.
+     *
+     * @return The new position of this timeline's playhead.
      */
-    public void movePlayhead(float deltaTime) {
+    public float movePlayhead(float deltaTime) {
         setPlayhead(playhead + deltaTime);
+        return playhead;
     }
 
     /**

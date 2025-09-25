@@ -24,7 +24,7 @@ class SubscribableCollectionTest {
     void subscribeAdd() {
         SubscribableCollection<String> elements = SubscribableCollection.wrap(new ArrayList<>());
         Queue<String> queue = new LinkedList<>();
-        elements.getAddedElements().collect(queue);
+        elements.getAddedElements().subscribe(queue::add);
 
         elements.add("a");
         elements.add("b");
@@ -36,7 +36,7 @@ class SubscribableCollectionTest {
     void subscribeRemove() {
         SubscribableCollection<String> elements = SubscribableCollection.wrap(new ArrayList<>());
         Queue<String> queue = new LinkedList<>();
-        elements.getRemovedElements().collect(queue);
+        elements.getRemovedElements().subscribe(queue::add);
 
         elements.add("a");
         elements.remove("a");
@@ -49,7 +49,7 @@ class SubscribableCollectionTest {
     void subscribeClear() {
         SubscribableCollection<String> elements = SubscribableCollection.wrap(new ArrayList<>());
         Queue<String> queue = new LinkedList<>();
-        elements.getRemovedElements().collect(queue);
+        elements.getRemovedElements().subscribe(queue::add);
 
         elements.add("a");
         elements.add("b");
@@ -62,7 +62,7 @@ class SubscribableCollectionTest {
     void removeUsingRetain() {
         SubscribableCollection<String> elements = SubscribableCollection.wrap(new ArrayList<>());
         Queue<String> queue = new LinkedList<>();
-        elements.getRemovedElements().collect(queue);
+        elements.getRemovedElements().subscribe(queue::add);
 
         elements.add("a");
         elements.add("b");
@@ -79,7 +79,7 @@ class SubscribableCollectionTest {
         elements.add("b");
 
         Queue<String> queue = new LinkedList<>();
-        elements.getRemovedElements().collect(queue);
+        elements.getRemovedElements().subscribe(queue::add);
 
         for (String element : elements) {
             if (element.equals("a")) {
@@ -108,7 +108,7 @@ class SubscribableCollectionTest {
     void flush() {
         SubscribableCollection<String> elements = SubscribableCollection.wrap(new ArrayList<>());
         Queue<String> queue = new LinkedList<>();
-        elements.getRemovedElements().collect(queue);
+        elements.getRemovedElements().subscribe(queue::add);
 
         elements.add("a");
         elements.add("b");

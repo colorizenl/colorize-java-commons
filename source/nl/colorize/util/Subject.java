@@ -10,10 +10,10 @@ import com.google.common.base.Preconditions;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
-import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -22,18 +22,17 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * Publishes (possibly asynchronous) events to registered subscribers. This
- * class implements the <a href="https://openjdk.org/jeps/266">Flow API</a>.
+ * class provides an implementation of a publisher in the {@link Flow} API.
  * It can be used on all platforms supported by this library, including
- * <a href="https://teavm.org">TeaVM</a>. The term "subject" originates from
- * the original Gang of Four's description of the
- * <a href="https://en.wikipedia.org/wiki/Observer_pattern">observer pattern</a>.
+ * <a href="https://teavm.org">TeaVM</a>.
  * <p>
- * {@link Subject} instances are thread-safe and can be accessed from different
- * threads. This facilitates workflows where publishers and subscribers operate
- * on different threads.
+ * {@link Subject} instances are thread-safe and can be accessed from
+ * different threads. This facilitates workflows where publishers and
+ * subscribers operate on different threads.
  *
  * @param <T> The type of event that can be subscribed to.
  */
@@ -189,8 +188,9 @@ public final class Subject<T> implements Publisher<T> {
      * The subscriber will log errors, but not explicitly handle them.
      * Returns a {@link Subscription} for the registered subscriber.
      */
-    public Subscription subscribe(Consumer<T> eventCallback) {
-        Subscriber<T> subscriber = createSubscriber(eventCallback);
+    public Subscription subscribe(Consumer<T> onEvent) {
+        Consumer<Throwable> onError = e -> LOGGER.log(Level.SEVERE, "Unhandled subscriber error", e);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
         return registerSubscription(subscriber);
     }
 
@@ -200,8 +200,8 @@ public final class Subject<T> implements Publisher<T> {
      * previously published events and/or errors. Returns a
      * {@link Subscription} for the registered subscriber.
      */
-    public Subscription subscribe(Consumer<T> eventCallback, Consumer<Throwable> errorCallback) {
-        Subscriber<T> subscriber = createSubscriber(eventCallback, errorCallback);
+    public Subscription subscribe(Consumer<T> onEvent, Consumer<Throwable> onError) {
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
         return registerSubscription(subscriber);
     }
 
@@ -212,7 +212,7 @@ public final class Subject<T> implements Publisher<T> {
      */
     public Subscription subscribeErrors(Consumer<Throwable> onError) {
         Consumer<T> onEvent = event -> {};
-        Subscriber<T> subscriber = createSubscriber(onEvent, onError);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
         return registerSubscription(subscriber);
     }
 
@@ -225,40 +225,6 @@ public final class Subject<T> implements Publisher<T> {
      */
     public Subscription subscribe(Subject<T> subscriber) {
         return subscribe(subscriber::next, subscriber::nextError);
-    }
-
-    /**
-     * Creates and registers a {@link Subscriber} that collects received events
-     * into the specified queue. Consumers can then poll this queue to
-     * periodically process events.
-     */
-    public void collect(Queue<T> messageQueue) {
-        Subscriber<T> subscriber = createSubscriber(messageQueue::offer);
-        subscribe(subscriber);
-    }
-
-    /**
-     * Unsubscribes the specified subscription. If the subscriber is not
-     * currently registered with this {@link Subject}, this method does
-     * nothing.
-     *
-     * @deprecated Prefer using {@link Subscription#cancel()} instead.
-     */
-    @Deprecated
-    public void unsubscribe(Subscription subscription) {
-        subscription.cancel();
-    }
-
-    /**
-     * Removes a previously registered subscriber. If the subscriber is not
-     * currently registered with this {@link Subject}, this method does
-     * nothing.
-     *
-     * @deprecated Prefer using {@link Subscription#cancel()} instead.
-     */
-    @Deprecated
-    public void unsubscribe(Subscriber<? super T> subscriber) {
-        subscriptions.removeIf(subscription -> subscription.subscriber.equals(subscriber));
     }
 
     /**
@@ -277,9 +243,10 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Returns a new {@link Subject} that will forward events to its own
-     * subscribers, but first uses the specified mapping function on each event.
-     * Errors will be forwarded as-is.
+     * Returns a {@link Subject} that forwards events to its own subscribers,
+     * first applying the specified mapper function to each event. Intended
+     * as the equivalent of {@link Stream#map(Function)} for asynchronous
+     * events.
      */
     public <S> Subject<S> map(Function<T, S> mapper) {
         Subject<S> mapped = new Subject<>();
@@ -299,9 +266,31 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Returns a new {@link Subject} that will forward events to its own
-     * subscribers, but only if the event matches the specified predicate.
-     * Errors will be forwarded as-is.
+     * Returns a {@link Subject} that forwards events to its own subscribers,
+     * first applying the specified mapper function to each event. Intended
+     * as the equivalent of {@link Stream#flatMap(Function)} for asynchronous
+     * events.
+     */
+    public <S> Subject<S> flatMap(Function<T, Stream<S>> mapper) {
+        Subject<S> mapped = new Subject<>();
+
+        Consumer<T> onEvent = event -> {
+            try {
+                mapper.apply(event).forEach(mapped::next);
+            } catch (Exception e) {
+                mapped.nextError(e);
+            }
+        };
+
+        subscribe(onEvent, mapped::nextError);
+
+        return mapped;
+    }
+
+    /**
+     * Returns a {@link Subject} that forwards events to its own subscribers,
+     * though only events that match the specified predicate. Intended as the
+     * equivalent of {@link Stream#filter(Predicate)} for asynchronous events.
      */
     public Subject<T> filter(Predicate<T> predicate) {
         Subject<T> filtered = new Subject<>();
@@ -318,8 +307,8 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Creates a {@link Subject} that will publish the specified values
-     * to its subscribers.
+     * Creates a {@link Subject} that will immediately publish the specified
+     * values to its subscribers.
      */
     @SafeVarargs
     public static <T> Subject<T> of(T... values) {
@@ -331,8 +320,8 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Creates a {@link Subject} that will publish the specified values
-     * to its subscribers.
+     * Creates a {@link Subject} that will immediately publish the specified
+     * values to its subscribers.
      */
     public static <T> Subject<T> of(Iterable<T> values) {
         Subject<T> subject = new Subject<>();
@@ -343,8 +332,8 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Performs the specified operation and returns a {@link Subject} that
-     * can be used to subscribe to the results.
+     * Performs the specified operation in the current thread, returns a
+     * {@link Subject} that can be used to subscribe to its results.
      */
     public static <T> Subject<T> run(Callable<T> operation) {
         Subject<T> subject = new Subject<>();
@@ -353,40 +342,27 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Performs the specified operation in a new background thread, and
-     * returns a {@link Subject} that can be used to subscribe to
-     * the background operation.
+     * Performs the specified operation in a new thread, returns a
+     * {@link Subject} that can be used to subscribe to its results.
      */
-    public static <T> Subject<T> runBackground(Callable<T> operation) {
+    public static <T> Subject<T> runAsync(Callable<T> operation) {
         Subject<T> subject = new Subject<>();
 
         Thread backgroundThread = new Thread(() -> subject.next(operation),
-            "Subscribable-" + UUID.randomUUID());
+            "Subject-" + UUID.randomUUID());
         backgroundThread.start();
 
         return subject;
     }
 
     /**
-     * Returns an implementation of the {@link Subscriber} interface that
-     * implements {@link Subscriber#onNext(Object)} using a callback method.
-     * Errors will be logged, all other methods use no-op implementations.
+     * Returns a {@link Subject} that is incapable of ever publishing any
+     * events or errors, and therefore acts as a no-op implementation.
      */
-    public static <T> Subscriber<T> createSubscriber(Consumer<T> eventCallback) {
-        return createSubscriber(
-            eventCallback,
-            e -> LOGGER.warning("Unhandled subscriber error: " + e.getMessage())
-        );
-    }
-
-    /**
-     * Returns an implementation of the {@link Subscriber} interface that
-     * implements {@link Subscriber#onNext(Object)} and
-     * {@link Subscriber#onError(Throwable)} using callback methods. The
-     * other methods use no-op implementations.
-     */
-    public static <T> Subscriber<T> createSubscriber(Consumer<T> eventFn, Consumer<Throwable> errorFn) {
-        return new CallbackSubscriber<>(eventFn, errorFn);
+    public static <T> Subject<T> empty() {
+        Subject<T> subject = new Subject<>();
+        subject.complete();
+        return subject;
     }
 
     /**
@@ -400,9 +376,9 @@ public final class Subject<T> implements Publisher<T> {
 
         @Override
         public void request(long n) {
-            // {@link Subject} already informs subscribers
-            // of historic events, so requesting additional
-            // events has no meaning in this implementation.
+            // Subjects already inform subscribers of historic
+            // events, so requesting additional events has no
+            // meaning in this implementation.
             throw new UnsupportedOperationException();
         }
 
