@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
 import nl.colorize.util.stats.CSVRecord;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -87,6 +88,7 @@ public class PropertyDeserializer {
         register(Double.class, Double::parseDouble);
         register(Date.class, DateParser::parse);
         register(File.class, FileUtils::expandUser);
+        register(Path.class, value -> Path.of(FileUtils.expandUser(value).getAbsolutePath()));
         register(UUID.class, UUID::fromString);
         register(LocalDate.class, value -> DateParser.parseLocalDate(value));
         register(LocalDateTime.class, value -> DateParser.parseLocalDateTime(value));
@@ -96,15 +98,10 @@ public class PropertyDeserializer {
     /**
      * Registers the specified function as a type mapper. Once registered, this
      * class will use the type mapper when it encounters properties that match
-     * the specified type.
-     *
-     * @throws IllegalArgumentException if a type mapper has already been
-     *         registered for the same type.
+     * the specified type. If a mapper was already registered for the same
+     * type, it will be replaced.
      */
     public <T> void register(Class<T> type, Function<String, T> typeMapper) {
-        Preconditions.checkArgument(!typeMappers.containsKey(type),
-            "Cannot override type mapper for " + type);
-
         typeMappers.put(type, typeMapper);
     }
 

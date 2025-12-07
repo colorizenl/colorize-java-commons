@@ -8,6 +8,7 @@ package nl.colorize.util.stats;
 
 import com.google.common.base.Preconditions;
 import lombok.Getter;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -34,11 +35,13 @@ public class CSVRecord {
      * information is available, meaning that cells can only be retrieved
      * by index.
      * <p>
-     * {@link CSVRecord} instances are normally by obtained by parsing CSV
-     * files using {@link CSVFormat}. There is normally no need for
-     * applications to use this constructor directly.
+     * {@link CSVRecord} instances can be obtained from a {@link CSVFormat}.
+     *
+     * @throws IllegalArgumentException if column headers are provided, but
+     *         the number of column headers does not match the number of
+     *         cells in this record.
      */
-    protected CSVRecord(List<String> columns, List<String> cells, CSVFormat format) {
+    protected CSVRecord(@Nullable List<String> columns, List<String> cells, CSVFormat format) {
         Preconditions.checkArgument(!cells.isEmpty(), "Empty CSV record");
         Preconditions.checkArgument(columns == null || columns.size() == cells.size(),
             "Invalid number of columns");
@@ -107,8 +110,16 @@ public class CSVRecord {
         return TupleList.combine(columns, cells);
     }
 
+    /**
+     * Returns this record's CSV representation. Using this method produces
+     * results identical to {@link CSVFormat#toCSV(CSVRecord)}.
+     */
+    public String toCSV() {
+        return format.toCSV(this);
+    }
+
     @Override
     public String toString() {
-        return format.toCSV(this);
+        return toCSV();
     }
 }

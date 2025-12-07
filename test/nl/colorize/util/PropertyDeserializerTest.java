@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.lang.annotation.RetentionPolicy;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -128,8 +129,12 @@ class PropertyDeserializerTest {
     void convertFilePaths() {
         PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
         File file = propertyDeserializer.parse("/tmp/a.txt", File.class);
+        Path path = propertyDeserializer.parse("/tmp/a.txt", Path.class);
 
         assertEquals("/tmp/a.txt", file.getAbsolutePath());
+        assertEquals("/tmp/a.txt", path.toString());
+        assertEquals("/tmp/a.txt", path.toFile().getAbsolutePath());
+        assertEquals(file, path.toFile());
     }
 
     @Test
@@ -177,5 +182,13 @@ class PropertyDeserializerTest {
 
         assertEquals(RUNTIME, propertyDeserializer.parse("RUNTIME", RetentionPolicy.class));
         assertEquals(SOURCE, propertyDeserializer.parse("invalid", RetentionPolicy.class, SOURCE));
+    }
+
+    @Test
+    void replaceExistingDeserializer() {
+        PropertyDeserializer propertyDeserializer = new PropertyDeserializer();
+        propertyDeserializer.register(String.class, value -> value + "x");
+
+        assertEquals("2x", propertyDeserializer.parse("2", String.class));
     }
 }

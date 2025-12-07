@@ -99,21 +99,7 @@ public final class LogHelper {
         consoleHandler.setFormatter(new CompactFormatter());
         return consoleHandler;
     }
-    
-    /**
-     * Creates a log handler that will print messages to {@code stderr} and will
-     * not apply any formatting to messages.
-     * @deprecated Use {@link #createConsoleHandler()} in combination with 
-     *             a {@code CompactFormatter} instead.
-     */
-    @Deprecated
-    public static ConsoleHandler createPlainConsoleHandler() {
-        ConsoleHandler consoleHandler = new ConsoleHandler();
-        consoleHandler.setFormatter(new CompactFormatter());
-        consoleHandler.setLevel(Level.INFO);
-        return consoleHandler;
-    }
-    
+
     /**
      * Creates a log handler that will log to the specified file using the
      * platform's default character encoding.

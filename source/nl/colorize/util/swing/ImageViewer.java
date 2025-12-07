@@ -47,7 +47,7 @@ public class ImageViewer extends JPanel {
     }
 
     private void handleKeyEvent(KeyEvent event) {
-        if (event.isMetaDown()) {
+        if (event.isMetaDown() || event.isControlDown()) {
             if (event.getKeyCode() == KeyEvent.VK_PLUS) {
                 changeZoom(zoom + ZOOM_INCREMENT);
             } else if (event.getKeyCode() == KeyEvent.VK_MINUS) {

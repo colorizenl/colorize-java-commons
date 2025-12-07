@@ -11,6 +11,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
@@ -199,8 +200,15 @@ public final class FileUtils {
     /**
      * Shorthand for {@code Files.walk} to iterate over files in a directory,
      * with only files matching the filter being returned.
+     *
+     * @throws FileNotFoundException if the specified directory does not exist.
+     * @throws IOException if an I/O error occurs while walking the directory.
      */
     public static List<File> walkFiles(File dir, Predicate<File> filter) throws IOException {
+        if (!dir.exists()) {
+            throw new FileNotFoundException("Directory does not exist:" + dir.getAbsolutePath());
+        }
+
         if (!dir.isDirectory()) {
             if (filter.test(dir)) {
                 return Collections.singletonList(dir);
@@ -223,7 +231,7 @@ public final class FileUtils {
      *
      * @deprecated Use {@code Path.relativize} instead. This can be used even when
      *             working with APIs still using {@link File} instances:
-     *             {@code base.toPath().relativize(file.toPath)}.
+     *             {@code base.toPath().relativize(file.toPath())}.
      */
     @Deprecated
     public static String getRelativePath(File file, File base) {

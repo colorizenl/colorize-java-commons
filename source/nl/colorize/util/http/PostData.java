@@ -17,7 +17,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -111,26 +110,6 @@ public class PostData implements Iterable<Tuple<String, String>> {
 
     public boolean isEmpty() {
         return params.isEmpty();
-    }
-
-    /**
-     * Creates a map that includes all parameters in this {@link PostData}. If
-     * multiple parameters share the same name, the map will include the first
-     * occurrence.
-     *
-     * @deprecated Using a map does not allow for an explicit iteration order,
-     *             and it also does not allow multiple parameters to use the
-     *             same name.
-     */
-    @Deprecated
-    public Map<String, String> toMap() {
-        Map<String, String> result = new LinkedHashMap<>();
-        for (Tuple<String, String> param : params) {
-            if (!result.containsKey(param.left())) {
-                result.put(param.left(), param.right());
-            }
-        }
-        return result;
     }
 
     @Override

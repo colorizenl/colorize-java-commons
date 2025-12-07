@@ -251,16 +251,6 @@ public enum Platform {
     }
 
     /**
-     * Returns the amount of heap memory that is currently being used by the
-     * Java Virtual Machine, in bytes.
-     */
-    @Deprecated
-    public static long getUsedHeapMemory() {
-        Runtime runtime = Runtime.getRuntime();
-        return runtime.totalMemory() - runtime.freeMemory();
-    }
-
-    /**
      * Returns the native library path, indicated by the system property
      * {@code java.library.path}, as a list of {@link File} objects that
      * represent each directory.

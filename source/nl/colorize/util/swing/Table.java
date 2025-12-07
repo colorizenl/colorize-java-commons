@@ -285,7 +285,7 @@ public class Table<R> extends JPanel implements TableModel {
      * no row is selected.
      *
      * @deprecated Use {@link #getSelectedRowKey()} instead. Using the row
-     *             index is an unreliable way of identifying towsr, as
+     *             index is an unreliable way of identifying rows, as
      *             sorting the table will actually change the row order.
      */
     @Deprecated
@@ -389,21 +389,8 @@ public class Table<R> extends JPanel implements TableModel {
      */
     public Subject<R> onDoubleClick() {
         return doubleClick
-            .map(table -> getSelectedRowKey())
+            .map(Table::getSelectedRowKey)
             .filter(row -> row != null);
-    }
-
-    /**
-     * Returns a {@link Subject} that can be used to subscribe to events
-     * whenever the selected row is double-clicked. The event passed to
-     * subscribers represents the currently selected row key.
-     *
-     * @deprecated Use {@link #onDoubleClick()} instead, which passes the
-     *             double-clicked row as the event.
-     */
-    @Deprecated
-    public Subject<Table<R>> getDoubleClick() {
-        return doubleClick;
     }
 
     /**

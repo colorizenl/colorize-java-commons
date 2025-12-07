@@ -115,10 +115,10 @@ class HistogramTest {
         histogram.count(FEBRUARY, "2");
         histogram.count(FEBRUARY, "2");
 
-        assertEquals("[(2023-01-01 - 2023-02-01, 1), (2023-02-01 - 2023-03-01, 0)]",
+        assertEquals("[(2023-01-01..2023-02-01, 1), (2023-02-01..2023-03-01, 0)]",
             histogram.getSeriesFrequency("1").toString());
 
-        assertEquals("[(2023-01-01 - 2023-02-01, 1), (2023-02-01 - 2023-03-01, 2)]",
+        assertEquals("[(2023-01-01..2023-02-01, 1), (2023-02-01..2023-03-01, 2)]",
             histogram.getSeriesFrequency("2").toString());
     }
 

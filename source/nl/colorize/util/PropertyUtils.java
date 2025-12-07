@@ -10,21 +10,15 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.io.Files;
-import nl.colorize.util.stats.Tuple;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,105 +51,23 @@ public final class PropertyUtils {
     /**
      * Parses the contents of a {@code .properties} file and returns the
      * resulting {@link Properties} object.
-     * <p>
-     * This method will use a different implementation depending on the
-     * platform. On platforms that do not support the standar
-     * {@link Properties#load(Reader)}, such as TeaVM, a custom
-     * implementation is used in order to support UTF-8 property files.
      *
      * @throws ResourceException if an I/O error occurs while reading the file.
+     *
+     * @deprecated This method was created to offer a cross-platform way
+     *             of loading {@code .properties} file with UTF-8 character
+     *             encoding. TeaVM now supports {@link Properties#load(Reader)},
+     *             meaning this method is no longer necessary.
      */
+    @Deprecated
     public static Properties loadProperties(Reader source) {
         try (source) {
-            if (Platform.isTeaVM()) {
-                return emulateLoadProperties(source);
-            } else {
-                return loadPropertiesReflection(source);
-            }
+            Properties properties = new Properties();
+            properties.load(source);
+            return properties;
         } catch (IOException e) {
             throw new ResourceException("I/O error while reading .properties file", e);
         }
-    }
-
-    /**
-     * Loads a {@code .properties} file from a {@link Reader} instead of from
-     * an {@link InputStream} (which only supports ISO-8859-1). This needs to
-     * use reflection, as TeaVM is otherwise unable to transpile this class.
-     */
-    private static Properties loadPropertiesReflection(Reader source) {
-        try {
-            Properties properties = new Properties();
-            Method loadMethod = properties.getClass().getMethod("load", Reader.class);
-            loadMethod.invoke(properties, source);
-            return properties;
-        } catch (NoSuchMethodException e) {
-            throw new UnsupportedOperationException("Properties.load(Reader) not supported", e);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new ResourceException("Error while calling Properties.load(Reader)", e);
-        }
-    }
-
-    /**
-     * Custom implementation for parsing {@code .properties} files. See the
-     * documentation for {@link #loadProperties(Reader)} for more information
-     * on when and why this is used.
-     */
-    protected static Properties emulateLoadProperties(Reader source) throws IOException {
-        Properties properties = new Properties();
-
-        try (BufferedReader buffer = new BufferedReader(source)) {
-            List<String> rawLines = buffer.lines().toList();
-            List<String> processedLines = mergeMultiLineStrings(rawLines);
-
-            processedLines.stream()
-                .map(line -> parsePropertyFileLine(line))
-                .filter(property -> property != null)
-                .forEach(property -> properties.setProperty(property.left(), property.right()));
-        }
-
-        return properties;
-    }
-
-    private static Tuple<String, String> parsePropertyFileLine(String line) {
-        List<String> fields = PROPERTY_LINE_SPLITTER.splitToList(line);
-        if (fields.size() < 2) {
-            LOGGER.warning("Invalid property file line: " + line.trim());
-            return null;
-        }
-        return Tuple.of(fields.get(0), fields.get(1));
-    }
-
-    private static boolean filterPropertyFileLine(String line) {
-        return !line.trim().isEmpty() &&
-            !line.startsWith("#") &&
-            !line.startsWith("!");
-    }
-
-    private static String normalizePropertyFileLine(String line) {
-        return TextUtils.removeTrailing(line.trim(), "\\")
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
-            .replace("\\f", "\f");
-    }
-
-    private static List<String> mergeMultiLineStrings(List<String> raw) {
-        List<String> processed = new ArrayList<>();
-        boolean inMultiLine = false;
-
-        for (String line : raw) {
-            if (filterPropertyFileLine(line)) {
-                if (inMultiLine) {
-                    String lastLine = processed.removeLast();
-                    line = lastLine + line.trim();
-                }
-
-                processed.add(normalizePropertyFileLine(line));
-                inMultiLine = line.trim().endsWith("\\");
-            }
-        }
-
-        return processed;
     }
 
     /**

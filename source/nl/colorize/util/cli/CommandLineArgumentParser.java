@@ -7,7 +7,7 @@
 package nl.colorize.util.cli;
 
 import com.google.common.base.Strings;
-import nl.colorize.util.FileUtils;
+import lombok.Getter;
 import nl.colorize.util.Platform;
 import nl.colorize.util.PropertyDeserializer;
 
@@ -15,7 +15,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -48,7 +47,7 @@ public class CommandLineArgumentParser {
     private boolean exitOnFail;
     private List<String> descriptionLines;
     private boolean colors;
-    private PropertyDeserializer propertyDeserializer;
+    @Getter private PropertyDeserializer propertyDeserializer;
 
     private static final String DEFAULT_VALUE_MARKER = "$$default";
 
@@ -66,17 +65,7 @@ public class CommandLineArgumentParser {
         this.exitOnFail = exitOnFail;
         this.descriptionLines = new ArrayList<>();
         this.colors = Platform.isMac() || Platform.isLinux();
-
-        propertyDeserializer = new PropertyDeserializer();
-        propertyDeserializer.register(Path.class, value -> FileUtils.expandUser(value).toPath());
-    }
-
-    /**
-     * Returns the {@link PropertyDeserializer} that is used to convert command
-     * line arguments, which are always strings, to the correct type.
-     */
-    public PropertyDeserializer getPropertyDeserializer() {
-        return propertyDeserializer;
+        this.propertyDeserializer = new PropertyDeserializer();
     }
 
     /**

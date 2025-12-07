@@ -206,6 +206,14 @@ public final class DateParser {
         return calendar.getTime();
     }
 
+    public static Date min(Date a, Date b) {
+        return a.getTime() <= b.getTime() ? a : b;
+    }
+
+    public static Date max(Date a, Date b) {
+        return a.getTime() >= b.getTime() ? a : b;
+    }
+
     /**
      * Returns the difference between two dates, expressed in the specified
      * time unit. The difference is absolute, so it doesn't matter whether the

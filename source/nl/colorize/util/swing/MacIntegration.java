@@ -163,31 +163,6 @@ public final class MacIntegration {
             LOGGER.log(Level.WARNING, "Sending notification failed", e);
         }
     }
-    
-    /**
-     * Opens the default browser with the specified URL.
-     *
-     * @deprecated Use {@link SwingUtils#openBrowser(String)} instead, which
-     *             provides the same behavior but uses a cross-platform API
-     *             that also supports other operating systems.
-     */
-    @Deprecated
-    public static void openBrowser(String url) {
-        SwingUtils.openBrowser(url);
-    }
-    
-    /**
-     * Opens the default application for the specified file. Returns true
-     * if the file was successfully opened.
-     *
-     * @deprecated Use {@link SwingUtils#openFile(File)} instead, which
-     *             provides the same behavior but uses a cross-platform
-     *             API that also supports other operating systems.
-     */
-    @Deprecated
-    public static boolean openFile(File file) {
-        return SwingUtils.openFile(file);
-    }
 
     /**
      * Reveals the specified file or directory in the Finder. If the provided

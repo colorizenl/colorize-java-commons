@@ -112,4 +112,26 @@ class DateParserTest {
         assertEquals(LocalDateTime.of(2018, 3, 18, 15, 30),
             DateParser.parseLocalDateTime("2018-03-18 15:30"));
     }
+
+    @Test
+    void minMax() {
+        Date jan = parse("2025-01-01");
+        Date feb = parse("2025-02-01");
+        Date mar = parse("2025-03-01");
+
+        assertEquals(jan, DateParser.min(jan, feb));
+        assertEquals(jan, DateParser.min(jan, mar));
+        assertEquals(feb, DateParser.min(feb, mar));
+
+        assertEquals(feb, DateParser.max(jan, feb));
+        assertEquals(mar, DateParser.max(jan, mar));
+        assertEquals(mar, DateParser.max(feb, mar));
+    }
+
+    @Test
+    void forUnspecifiedTime() {
+        Date date = parse("2025-11-16");
+
+        assertEquals("2025-11-16 00:00", DateParser.format(date, "yyyy-MM-dd HH:mm"));
+    }
 }

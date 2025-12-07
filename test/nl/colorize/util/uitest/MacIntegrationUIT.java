@@ -140,7 +140,7 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
     }
     
     private void openURL() {
-        MacIntegration.openBrowser("http://www.colorize.nl");
+        SwingUtils.openBrowser("http://www.colorize.nl");
     }
     
     private void openFile() {
@@ -148,7 +148,7 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
         fileDialog.setTitle("Select a file to open");
         File selectedFile = fileDialog.showOpenDialog(null);
         if (selectedFile != null) {
-            MacIntegration.openFile(selectedFile);
+            SwingUtils.openFile(selectedFile);
         }
     }
 

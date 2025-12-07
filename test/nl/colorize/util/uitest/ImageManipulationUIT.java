@@ -6,7 +6,7 @@
 
 package nl.colorize.util.uitest;
 
-import nl.colorize.util.http.URLLoader;
+import nl.colorize.util.ResourceFile;
 import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.FormPanel;
 import nl.colorize.util.swing.SwingUtils;
@@ -24,17 +24,15 @@ import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Map;
 
 /**
  * Swing application that showcases the graphical effects for Java2D.
+ * It includes multiple tabs, with each tab controlling one type of
+ * image manipulation.
  */
 public class ImageManipulationUIT extends JPanel {
 
@@ -46,12 +44,22 @@ public class ImageManipulationUIT extends JPanel {
     private int shadowSize;
     private int shadowBlur;
     private int shadowAlpha;
+    private int[] shear;
 
-    private static final String TEST_IMAGE_URL = "https://clrz.nl/assets/images/colorize-logo.png";
+    private static final ResourceFile IMAGE_FILE = new ResourceFile("colorize-logo-emblem-180.png");
     private static final int PADDING = 50;
     
     public static void main(String[] args) {
         ImageManipulationUIT test = new ImageManipulationUIT();
+        test.scale = 100;
+        test.blur = 0;
+        test.tintColor = Color.WHITE;
+        test.tintIntensity = 0;
+        test.shadowSize = 0;
+        test.shadowBlur = 0;
+        test.shadowAlpha = 255;
+        test.shear = new int[] {0, 0};
+        test.loadImage();
         test.createWindow();
     }
     
@@ -61,16 +69,6 @@ public class ImageManipulationUIT extends JPanel {
     }
     
     private void createWindow() {
-        loadPhoto();
-
-        scale = 100;
-        blur = 0;
-        tintColor = Color.WHITE;
-        tintIntensity = 0;
-        shadowSize = 0;
-        shadowBlur = 0;
-        shadowAlpha = 255;
-        
         add(createEditPanel(), BorderLayout.SOUTH);
         add(createToggleImagePanel(), BorderLayout.NORTH);
         
@@ -83,19 +81,11 @@ public class ImageManipulationUIT extends JPanel {
         window.add(this, BorderLayout.CENTER);
         window.setVisible(true);
     }
-    
-    private void loadPhoto() {
-        try (HttpClient httpClient = URLLoader.createClient()) {
-            HttpRequest request = URLLoader.buildRequest("GET", TEST_IMAGE_URL, Map.of(), null);
-            HttpResponse<byte[]> response = httpClient.send(request,
-                HttpResponse.BodyHandlers.ofByteArray());
 
-            image = Utils2D.loadImage(new ByteArrayInputStream(response.body()));
-            image = Utils2D.makeImageCompatible(image);
-            image = Utils2D.addPadding(image, PADDING);
-        } catch (IOException | InterruptedException e) {
-            throw new AssertionError(e);
-        }
+    private void loadImage() {
+        image = Utils2D.loadImage(IMAGE_FILE);
+        image = Utils2D.makeImageCompatible(image);
+        image = Utils2D.addPadding(image, PADDING);
     }
 
     private JPanel createToggleImagePanel() {
@@ -131,6 +121,7 @@ public class ImageManipulationUIT extends JPanel {
         tabs.addTab("Blur", createBlurPanel());
         tabs.addTab("Tint", createTintPanel());
         tabs.addTab("Drop Shadow", createDropShadowPanel());
+        tabs.addTab("Transform", createAffineTransformPanel());
         
         JPanel editPanel = new JPanel(new BorderLayout());
         editPanel.add(tabs, BorderLayout.CENTER);
@@ -217,6 +208,27 @@ public class ImageManipulationUIT extends JPanel {
         panel.addRow("Shadow alpha:", shadowAlphaSlider, true);
         return panel;
     }
+
+    private FormPanel createAffineTransformPanel() {
+        JSlider xShearSlider = new JSlider(-100, 100, 0);
+        JSlider yShearSlider = new JSlider(-100, 100, 0);
+
+        ChangeListener shearListener = e -> {
+            shear[0] = xShearSlider.getValue();
+            shear[1] = yShearSlider.getValue();
+            repaint();
+        };
+
+        xShearSlider.addChangeListener(shearListener);
+        yShearSlider.addChangeListener(shearListener);
+
+        FormPanel panel = new FormPanel();
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.addRow("Shear X:", xShearSlider, true);
+        panel.addRow("Shear Y:", yShearSlider, true);
+        return panel;
+    }
     
     @Override
     protected void paintComponent(Graphics g) {
@@ -226,23 +238,27 @@ public class ImageManipulationUIT extends JPanel {
         int targetHeight = Math.round((scale / 100f) * image.getHeight());
         int x = getWidth() / 2 - targetWidth / 2;
         int y = 20;
-        
+        BufferedImage scaledImage = Utils2D.scaleImage(image, targetWidth, targetHeight, true);
         Graphics2D g2 = Utils2D.createGraphics(g, true, true);
-        g2.drawImage(getPhotoToDraw(targetWidth, targetHeight), x, y, null);
-    }
-
-    private BufferedImage getPhotoToDraw(int targetWidth, int targetHeight) {
-        BufferedImage scaledPhoto = Utils2D.scaleImage(image, targetWidth, targetHeight, true);
 
         if (blur > 0) {
-            return Utils2D.applyGaussianBlur(scaledPhoto, blur);
+            g2.drawImage(Utils2D.applyGaussianBlur(scaledImage, blur), x, y, null);
         } else if (tintIntensity > 0) {
-            return Utils2D.applyTint(scaledPhoto, tintColor);
+            g2.drawImage(Utils2D.applyTint(scaledImage, tintColor), x, y, null);
         } else if (shadowSize > 0) {
             Color shadowColor = new Color(0, 0, 0, shadowAlpha);
-            return Utils2D.applyDropShadow(scaledPhoto, shadowColor, shadowSize, shadowBlur);
+            g2.drawImage(Utils2D.applyDropShadow(scaledImage, shadowColor, shadowSize, shadowBlur),
+                x, y, null);
+        } else if (shear[0] != 0 || shear[1] != 0) {
+            AffineTransform transform = new AffineTransform();
+            transform.setToIdentity();
+            transform.translate(x, y);
+            transform.translate(targetWidth / 2.0, targetHeight / 2.0);
+            transform.shear(Math.toRadians(shear[0]), Math.toRadians(shear[1]));
+            transform.translate(-targetWidth / 2.0, -targetHeight / 2.0);
+            g2.drawImage(scaledImage, transform, null);
         } else {
-            return scaledPhoto;
+            g2.drawImage(scaledImage, x, y, null);
         }
     }
 }

@@ -1,9 +1,9 @@
 Colorize Java Commons
 =====================
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/nl.colorize/colorize-java-commons/badge.svg)](
+[![Maven Central](https://img.shields.io/maven-central/v/nl.colorize/colorize-java-commons)](
 https://central.sonatype.com/artifact/nl.colorize/colorize-java-commons)
-[![Documentation](https://img.shields.io/badge/docs-javadoc-blue)](
+[![Documentation](https://img.shields.io/badge/docs-javadoc-yellow)](
 https://api.clrz.nl/colorize-java-commons)
 [![License](https://img.shields.io/badge/license-apache_2.0-purple)](
 https://www.apache.org/licenses/LICENSE-2.0)
@@ -29,17 +29,21 @@ Usage
 The library is available from the Maven Central repository. To use it in a Maven project, add it 
 to the dependencies section in `pom.xml`:
 
-    <dependency>
-        <groupId>nl.colorize</groupId>
-        <artifactId>colorize-java-commons</artifactId>
-        <version>2025.3</version>
-    </dependency>
+```xml
+<dependency>
+    <groupId>nl.colorize</groupId>
+    <artifactId>colorize-java-commons</artifactId>
+    <version>2025.4</version>
+</dependency>
+```
     
 The library can also be used in Gradle projects:
 
-    dependencies {
-        implementation "nl.colorize:colorize-java-commons:2025.3"
-    }
+```groovy
+dependencies {
+    implementation "nl.colorize:colorize-java-commons:2025.4"
+}
+```
     
 Documentation
 -------------
@@ -58,18 +62,20 @@ since 2016.
 
 The following example shows how to define a simple command line interface:
 
-    public class MyApp {
-        @Arg(name = "--input", usage = "Input directory")
-        public File inputDir
+```java
+public class MyApp {
+    @Arg(name = "--input", usage = "Input directory")
+    public File inputDir
 
-        @Arg
-        public boolean overwrite;
+    @Arg
+    public boolean overwrite;
 
-        public static void main(String[] argv) {
-            CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
-            MyApp app = argParser.parse(argv, MyApp.class);
-        }
+    public static void main(String[] argv) {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
+        MyApp app = argParser.parse(argv, MyApp.class);
     }
+}
+```
 
 ### Swing component library
 
@@ -81,30 +87,34 @@ application that shows integration with some Mac system functionality.
 Refer to `InterpolationUIT` for an interactive example. The following example creates a timeline
 that moves the ball across the screen in 0.4 seconds, using easing animation interpolation:
 
-    Timeline anim = new Timeline(Interpolation.EASE)
-        .addKeyFrame(0f, 0f);
-        .addKeyFrame(0.4f, 800f);
+```java
+Timeline anim = new Timeline(Interpolation.EASE)
+    .addKeyFrame(0f, 0f);
+    .addKeyFrame(0.4f, 800f);
+```
 
 The timeline can then be used for animation. The following example shows how to animate a Swing
 component's background color from red to blue:
 
-    SwingAnimator animator = new SwingAnimator();
-    animator.start();
+```java
+SwingAnimator animator = new SwingAnimator();
+animator.start();
 
-    JPanel target = new JPanel();
-    target.setOpaque(true);
-    target.setBackground(Color.RED);
-    target.setPreferredSize(new Dimension(200, 200));
-    
-    JButton animateButton = new JButton("Animate background color");
-    animateButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
-d
+JPanel target = new JPanel();
+target.setOpaque(true);
+target.setBackground(Color.RED);
+target.setPreferredSize(new Dimension(200, 200));
+
+JButton animateButton = new JButton("Animate background color");
+animateButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
+```
+
 Build instructions
 ------------------
 
 Building the library requires the following:
 
-- [Java JDK](http://java.oracle.com) 21+
+- [Java JDK](http://java.oracle.com) 25+
 - [Gradle](http://gradle.org)
 
 The following Gradle build tasks are available:

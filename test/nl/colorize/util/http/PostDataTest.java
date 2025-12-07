@@ -7,6 +7,7 @@
 package nl.colorize.util.http;
 
 import nl.colorize.util.stats.Tuple;
+import nl.colorize.util.stats.TupleList;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -23,14 +24,14 @@ public class PostDataTest {
 
     @Test
     public void testParse() {
-        assertEquals(Map.of(), PostData.parse("", UTF_8).toMap());
-        assertEquals(Map.of("a", "2"), PostData.parse("a=2", UTF_8).toMap());
-        assertEquals(Map.of("a", "", "b", "4"), PostData.parse("a=&b=4", UTF_8).toMap());
-        assertEquals(Map.of("a", "3>4"), PostData.parse("a=3%3E4", UTF_8).toMap());
-        assertEquals(Map.of(), PostData.parse("?", UTF_8).toMap());
-        assertEquals(Map.of("a", "7"), PostData.parse("?a=7", UTF_8).toMap());
-        assertEquals(Map.of("a", ""), PostData.parse("a=", UTF_8).toMap());
-        assertEquals(Map.of("a", ""), PostData.parse("a", UTF_8).toMap());
+        assertEquals(TupleList.empty(), PostData.parse("", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", "2"), PostData.parse("a=2", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", "", "b", "4"), PostData.parse("a=&b=4", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", "3>4"), PostData.parse("a=3%3E4", UTF_8).stream().toList());
+        assertEquals(TupleList.empty(), PostData.parse("?", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", "7"), PostData.parse("?a=7", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", ""), PostData.parse("a=", UTF_8).stream().toList());
+        assertEquals(TupleList.of("a", ""), PostData.parse("a", UTF_8).stream().toList());
     }
 
     @Test
@@ -72,7 +73,7 @@ public class PostDataTest {
         Map<String, String> map = new HashMap<>();
         map.put("a", null);
 
-        assertEquals(Map.of("a", ""), PostData.create(map).toMap());
+        assertEquals(TupleList.of("a", ""), PostData.create(map).stream().toList());
     }
 
     @Test
@@ -98,7 +99,7 @@ public class PostDataTest {
         PostData b = PostData.create("b", "3");
         PostData merged = a.merge(b);
 
-        assertEquals(Map.of("a", "2", "b", "3"), merged.toMap());
+        assertEquals(TupleList.of("a", "2", "b", "3"), merged.stream().toList());
     }
 
     @Test
