@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
 package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import nl.colorize.util.stats.CSVRecord;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -37,18 +36,19 @@ import java.util.logging.Logger;
  * By default, this class provides deserialization for the following types:
  * <p>
  * <ul>
- *   <li>int/Integer</li>
- *   <li>long/Long</li>
- *   <li>float/Float</li>
- *   <li>double/Double</li>
- *   <li>boolean/Boolean</li>
+ *   <li>int / Integer</li>
+ *   <li>long / Long</li>
+ *   <li>float / Float</li>
+ *   <li>double / Double</li>
+ *   <li>boolean / Boolean</li>
  *   <li>String</li>
- *   <li>Date (date format detection based on {@link DateParser})</li>
- *   <li>LocalDate (date format detection based on {@link DateParser})</li>
- *   <li>LocalDateTime (date format detection based on {@link DateParser})</li>
- *   <li>File</li>
- *   <li>UUID</li>
- *   <li>Version</li>
+ *   <li>{@link java.util.Date} (date format detection based on {@link DateParser})</li>
+ *   <li>{@link java.time.LocalDate} (date format detection based on {@link DateParser})</li>
+ *   <li>{@link java.time.LocalDateTime} (date format detection based on {@link DateParser})</li>
+ *   <li>{@link java.io.File}</li>
+ *   <li>{@link java.nio.file.Path}</li>
+ *   <li>{@link java.util.UUID}</li>
+ *   <li>{@link nl.colorize.util.Version}</li>
  * </ul>
  * <p>
  * Support for additional types can be added by defining custom deserialization

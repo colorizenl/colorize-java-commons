@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ public class EventQueue<T> implements Subscriber<T> {
     @Override
     public void onComplete() {
         subscription = null;
-        received.clear();;
+        received.clear();
     }
 
     /**
@@ -61,6 +61,7 @@ public class EventQueue<T> implements Subscriber<T> {
      * event queue was flushed. Events and errors are processed in the order
      * they were received.
      */
+    @SuppressWarnings("unchecked")
     public void flush(Consumer<T> onEvent, Consumer<Exception> onError) {
         List<Object> snapshot = List.copyOf(received);
         received.clear();

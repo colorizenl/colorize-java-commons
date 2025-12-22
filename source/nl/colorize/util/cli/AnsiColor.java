@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -32,8 +32,8 @@ public enum AnsiColor {
     MAGENTA_BOLD("\u001B[1m\u001B[35m"),
     CYAN_BOLD("\u001B[1m\u001B[36m");
 
-    private String prefix;
-    private String suffix;
+    private final String prefix;
+    private final String suffix;
 
     private static final Pattern ANSI_ESCAPE_CODE_PATTERN = Pattern.compile("\u001B\\[[\\d;]+m");
 

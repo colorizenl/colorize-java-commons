@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
@@ -75,6 +75,17 @@ public class CSVFormat {
      */
     public CSVRecord of(List<String> columns, String... cells) {
         return new CSVRecord(columns, List.of(cells), this);
+    }
+
+    /**
+     * Returns a {@link CSVRecord} based on this CSV format and consisting of
+     * the specified cells. The record will not have any column header
+     * information.
+     *
+     * @throws IllegalArgumentException if there are no cells.
+     */
+    public CSVRecord of(List<String> cells) {
+        return new CSVRecord(null, cells, this);
     }
 
     /**

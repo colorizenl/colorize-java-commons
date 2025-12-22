@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -222,7 +222,7 @@ public final class DateParser {
      */
     public static long delta(Date a, Date b, ChronoUnit unit) {
         long milliseconds = Math.abs(a.getTime() - b.getTime());
-        return Math.round((milliseconds / 1000.0) / unit.getDuration().getSeconds());
+        return Math.round((milliseconds / 1000.0) / unit.getDuration().toSeconds());
     }
 
     /**
@@ -238,7 +238,7 @@ public final class DateParser {
         long deltaInSeconds = Math.abs(date.getTime() - reference.getTime()) / 1000L;
 
         for (ChronoUnit chronoUnit : CALENDAR_FIELD_MAPPING.keySet()) {
-            long secondsInUnit = chronoUnit.getDuration().getSeconds();
+            long secondsInUnit = chronoUnit.getDuration().toSeconds();
             long deltaInUnit = deltaInSeconds / secondsInUnit;
 
             if (deltaInSeconds >= 2L * secondsInUnit) {
@@ -263,12 +263,29 @@ public final class DateParser {
     }
 
     /**
-     * Returns the translations that are used by this class for display names.
-     * By default, only English is supported, but this can be extended by
-     * adding additional translations.
+     * Returns a {@link LocalDate} based on the specified value, in the
+     * default time zone as specified by
+     * {@link Platform#getDefaultTimeZoneId()}.
      */
-    public static TranslationBundle getTranslationBundle() {
-        return BUNDLE;
+    public static LocalDate toLocalDate(Date date) {
+        // Cannot use Date.toInstant(), because that method
+        // is not yet available in TeaVM.
+        return Instant.ofEpochMilli(date.getTime())
+            .atZone(Platform.getDefaultTimeZoneId())
+            .toLocalDate();
+    }
+
+    /**
+     * Returns a {@link LocalDateTime} based on the specified value, in the
+     * default time zone as specified by
+     * {@link Platform#getDefaultTimeZoneId()}.
+     */
+    public static LocalDateTime toLocalDateTime(Date date) {
+        // Cannot use Date.toInstant(), because that method
+        // is not yet available in TeaVM.
+        return Instant.ofEpochMilli(date.getTime())
+            .atZone(Platform.getDefaultTimeZoneId())
+            .toLocalDateTime();
     }
 
     /**

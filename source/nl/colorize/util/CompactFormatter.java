@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ public class CompactFormatter extends Formatter {
         if (includeClassName) {
             log.append(record.getSourceClassName());
             log.append(System.lineSeparator());
-            log.append(Strings.repeat(" ", 30));
+            log.append(" ".repeat(30));
         }
         log.append(record.getMessage());
         log.append(System.lineSeparator());

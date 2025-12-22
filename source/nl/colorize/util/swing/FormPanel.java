@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -15,8 +15,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
@@ -147,12 +145,8 @@ public class FormPanel extends JPanel implements LayoutManager {
             final JLabel valueLabel = new JLabel(String.valueOf(slider.getValue()));
             valueLabel.setOpaque(false);
             rightColumn.add(valueLabel, BorderLayout.EAST);
-            
-            slider.addChangeListener(new ChangeListener() {
-                public void stateChanged(ChangeEvent e) {
-                    valueLabel.setText(String.valueOf(slider.getValue()));
-                }
-            });
+
+            slider.addChangeListener(e -> valueLabel.setText(String.valueOf(slider.getValue())));
         }
         
         addSplitWidthRow(new JLabel(label), rightColumn);
@@ -481,7 +475,10 @@ public class FormPanel extends JPanel implements LayoutManager {
     }
     
     private boolean hasClientProperty(Component component, String property, String value) {
-        return component instanceof JComponent && 
-                value.equals(((JComponent) component).getClientProperty(property));
+        if (component instanceof JComponent j) {
+            return value.equals(j.getClientProperty(property));
+        } else {
+            return false;
+        }
     }
 }

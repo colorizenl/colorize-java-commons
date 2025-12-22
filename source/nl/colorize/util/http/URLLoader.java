@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -12,8 +12,8 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.net.UrlEscapers;
 import nl.colorize.util.Subject;
-import nl.colorize.util.stats.Tuple;
-import nl.colorize.util.stats.TupleList;
+import nl.colorize.util.Tuple;
+import nl.colorize.util.TupleList;
 import org.jspecify.annotations.Nullable;
 
 import javax.net.ssl.SSLSession;
@@ -30,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -57,8 +56,6 @@ public final class URLLoader {
         "HEAD",
         "OPTIONS"
     );
-
-    private static final BiPredicate<String, String> ALL_HEADERS = (name, value) -> true;
 
     private URLLoader() {
     }
@@ -334,7 +331,7 @@ public final class URLLoader {
             }
         }
 
-        return HttpHeaders.of(headerMap, ALL_HEADERS);
+        return HttpHeaders.of(headerMap, (_, _) -> true);
     }
 
     /**
@@ -348,7 +345,7 @@ public final class URLLoader {
             headerMap.put(entry.left(), entry.right());
         }
 
-        return HttpHeaders.of(Multimaps.asMap(headerMap), ALL_HEADERS);
+        return HttpHeaders.of(Multimaps.asMap(headerMap), (_, _) -> true);
     }
 
     /**

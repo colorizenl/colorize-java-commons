@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +53,7 @@ class CacheTest {
         Cache<String, Integer> cache = Cache.from(values::get);
         cache.precompute(List.of("a", "c"));
 
-        assertEquals("Cache [2]\n    a=2\n    c=null", cache.toString());
+        assertEquals("Cache [1]\n    a=2", cache.toString());
     }
 
     @Test

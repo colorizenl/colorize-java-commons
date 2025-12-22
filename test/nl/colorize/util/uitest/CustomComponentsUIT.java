@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,11 +8,13 @@ package nl.colorize.util.uitest;
 
 import com.google.common.collect.ImmutableMap;
 import nl.colorize.util.LogHelper;
+import nl.colorize.util.ResourceFile;
 import nl.colorize.util.cli.AnsiColor;
 import nl.colorize.util.swing.AccordionPanel;
 import nl.colorize.util.swing.CircularLoader;
 import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.FormPanel;
+import nl.colorize.util.swing.ImageViewer;
 import nl.colorize.util.swing.MultiLabel;
 import nl.colorize.util.swing.Popups;
 import nl.colorize.util.swing.PropertyEditor;
@@ -52,6 +54,7 @@ public class CustomComponentsUIT {
     private JFrame frame;
     private SwingAnimator animator;
 
+    private static final ResourceFile LOGO_FILE = new ResourceFile("colorize-logo-emblem-180.png");
     private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
@@ -74,6 +77,7 @@ public class CustomComponentsUIT {
         tabs.addTab("PropertyEditor", createPropertyEditorTab());
         tabs.addTab("StripedList", createStripedListTab());
         tabs.addTab("Animation", createAnimationTab());
+        tabs.addTab("ImageViewer", createImageViewerTab());
         tabs.setSelectedIndex(1);
         
         JPanel contentPanel = new JPanel(new BorderLayout());
@@ -81,7 +85,7 @@ public class CustomComponentsUIT {
         contentPanel.add(tabs, BorderLayout.CENTER);
         
         frame = new JFrame("Test Custom Components");
-        frame.setSize(1000, 500);
+        frame.setSize(1100, 500);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(0, 20));
@@ -224,6 +228,15 @@ public class CustomComponentsUIT {
         tab.add(animateWidthButton);
         tab.add(animateHeightButton);
         tab.add(target);
+        return tab;
+    }
+
+    private JPanel createImageViewerTab() {
+        ImageViewer imageViewer = new ImageViewer();
+        imageViewer.display(Utils2D.loadImage(LOGO_FILE));
+
+        JPanel tab = new JPanel(new BorderLayout(0, 0));
+        tab.add(imageViewer);
         return tab;
     }
     

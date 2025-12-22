@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ public class CommandLineArgumentParser {
     private static final String DEFAULT_VALUE_MARKER = "$$default";
 
     public CommandLineArgumentParser(String applicationName) {
-        this(applicationName, new PrintWriter(System.out), true);
+        this(applicationName, new PrintWriter(System.out, true, System.out.charset()), true);
     }
 
     public CommandLineArgumentParser(Class<?> applicationName) {

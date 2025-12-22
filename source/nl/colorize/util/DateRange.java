@@ -1,14 +1,12 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
-import nl.colorize.util.DateParser;
-import nl.colorize.util.Platform;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,11 +62,9 @@ public record DateRange(Date start, Date end) implements Predicate<Date>, Compar
 
     /**
      * Splits this date range into weekly intervals. This might include partial
-     * weeks, depending on the start and end date of this date range.
-     *
-     * @deprecated Prefer using {@link #weekly(Date, Date)} instead.
+     * weeks, depending on the start and end date of this date range. Using
+     * this method is equivalent to {@code DateRange.weekly(start, end)}.
      */
-    @Deprecated
     public List<DateRange> splitWeeks() {
         return weekly(start, end);
     }
@@ -76,10 +72,8 @@ public record DateRange(Date start, Date end) implements Predicate<Date>, Compar
     /**
      * Splits this date range into monthly intervals. This might include
      * partial months, depending on the start and end date of this date range.
-     *
-     * @deprecated Prefer using {@link #monthly(Date, Date)} instead.
+     * Using this method is equivalent to {@code DateRange.monthly(start, end)}.
      */
-    @Deprecated
     public List<DateRange> splitMonths() {
         return monthly(start, end);
     }
@@ -87,10 +81,8 @@ public record DateRange(Date start, Date end) implements Predicate<Date>, Compar
     /**
      * Splits this date range into yearly intervals. This might include
      * partial years, depending on the start and end date of this date range.
-     *
-     * @deprecated Prefer using {@link #yearly(Date, Date)} instead.
+     * Using this method is equivalent to {@code DateRange.yearly(start, end)}.
      */
-    @Deprecated
     public List<DateRange> splitYears() {
         return yearly(start, end);
     }

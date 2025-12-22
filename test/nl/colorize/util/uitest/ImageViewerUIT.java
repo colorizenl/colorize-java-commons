@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -9,8 +9,7 @@ package nl.colorize.util.uitest;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.FileUtils;
 import nl.colorize.util.Platform;
-import nl.colorize.util.TranslationBundle;
-import nl.colorize.util.stats.Cache;
+import nl.colorize.util.Cache;
 import nl.colorize.util.swing.ComboFileDialog;
 import nl.colorize.util.swing.ImageViewer;
 import nl.colorize.util.swing.MacIntegration;
@@ -58,7 +57,7 @@ public class ImageViewerUIT {
         this.imageCache = Cache.from(this::loadImage, IMAGE_CACHE_SIZE);
         this.history = new ArrayList<>();
 
-        imageViewer = new ImageViewer(true);
+        imageViewer = new ImageViewer(false, true);
         createImageList();
         createKeyboardListener();
 
@@ -94,11 +93,7 @@ public class ImageViewerUIT {
     }
 
     private void createImageList() {
-        TranslationBundle bundle = SwingUtils.getCustomComponentsBundle();
-        imageList = new Table<>(
-            bundle.getString("ImageViewer.imageFile"),
-            bundle.getString("ImageViewer.imageFileSize")
-        );
+        imageList = new Table<>("File", "Size");
         imageList.setColumnWidth(1, 80);
         imageList.onDoubleClick().subscribe(this::selectImage);
         SwingUtils.setPreferredWidth(imageList, 300);

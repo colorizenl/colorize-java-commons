@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -25,14 +25,12 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * Utility class for loading data from and saving data to files. Unless stated
  * otherwise, all methods in this class will throw an {@code IOException} if
  * an I/O error occurs while interacting with the file.
- * <p>
- * When using Java 7 or newer, some of the convenience methods in this class
- * are no longer needed and can be replaced with {@link java.nio.file.Files}.
  */
 public final class FileUtils {
 
@@ -154,12 +152,12 @@ public final class FileUtils {
         Preconditions.checkState(!target.exists(),
             "Target directory already exists: " + target.getAbsolutePath());
 
-        List<Path> contents = Files.walk(source.toPath()).toList();
-
-        for (Path childPath : contents) {
-            Path relativePath = source.toPath().relativize(childPath);
-            Path targetPath = target.toPath().resolve(relativePath);
-            Files.copy(childPath, targetPath, StandardCopyOption.COPY_ATTRIBUTES);
+        try (Stream<Path> stream = Files.walk(source.toPath())) {
+            for (Path childPath : stream.toList()) {
+                Path relativePath = source.toPath().relativize(childPath);
+                Path targetPath = target.toPath().resolve(relativePath);
+                Files.copy(childPath, targetPath, StandardCopyOption.COPY_ATTRIBUTES);
+            }
         }
     }
 
@@ -217,11 +215,12 @@ public final class FileUtils {
             }
         }
 
-        return Files.walk(dir.toPath())
-            .map(Path::toFile)
-            .filter(file -> !file.isDirectory() && filter.test(file))
-            .sorted(Comparator.comparing(File::getAbsolutePath))
-            .toList();
+        try (Stream<Path> stream = Files.walk(dir.toPath())) {
+            return stream.map(Path::toFile)
+                .filter(file -> !file.isDirectory() && filter.test(file))
+                .sorted(Comparator.comparing(File::getAbsolutePath))
+                .toList();
+        }
     }
 
     /**
@@ -271,9 +270,7 @@ public final class FileUtils {
         Preconditions.checkArgument(dir.exists() && dir.isDirectory(),
             "No such directory: " + dir.getAbsolutePath());
 
-        return Files.walk(dir.toPath())
-            .map(Path::toFile)
-            .filter(file -> !file.isDirectory())
+        return walkFiles(dir, _ -> true).stream()
             .mapToLong(File::length)
             .sum();
     }

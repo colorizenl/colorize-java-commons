@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -21,6 +21,7 @@ import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import javax.swing.table.TableStringConverter;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -56,6 +57,11 @@ public class Table<R> extends JPanel implements TableModel {
     private List<TableModelListener> modelListeners;
     private Subject<Table<R>> doubleClick;
 
+    //TODO The striped table/list/tree appearance is duplicated
+    //     with other components in SwingUtils.
+    private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
+    private static final Color ALT_ROW_COLOR = new Color(245, 245, 245);
+    private static final Color ROW_BORDER_COLOR = new Color(220, 220, 220);
     private static final Logger LOGGER = LogHelper.getLogger(Table.class);
 
     public Table(List<String> columns) {
@@ -160,7 +166,7 @@ public class Table<R> extends JPanel implements TableModel {
 
         List<Object> rowCells = rows.get(rowIndex).cells;
         rowCells.set(columnIndex, value.toString());
-        fireTableEvent(rowIndex, columnIndex, TableModelEvent.UPDATE);
+        fireTableEvent(TableModelEvent.UPDATE, rowIndex, columnIndex);
     }
     
     private void fireTableEvent(int type, int rowIndex, int columnIndex) {
@@ -215,7 +221,6 @@ public class Table<R> extends JPanel implements TableModel {
         for (Object otherCell : otherCells) {
             cells.add(otherCell);
         }
-
         addRow(key, cells);
     }
     
@@ -224,7 +229,7 @@ public class Table<R> extends JPanel implements TableModel {
             case null -> "";
             case String textCell -> textCell;
             case Number numericalCall -> numericalCall;
-            case Boolean booleanCell -> booleanCell ? "\u2713" : "";
+            case Boolean booleanCell -> booleanCell ? "✓" : "";
             default -> cell.toString();
         };
     }
@@ -424,7 +429,7 @@ public class Table<R> extends JPanel implements TableModel {
 
             int row = getRowCount();
             for (int y = startY; y <= getHeight(); y += getRowHeight()) {
-                g2.setColor(SwingUtils.getStripedRowColor(row));
+                g2.setColor(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
                 g2.fillRect(0, y, getWidth(), getRowHeight());
                 row++;
             }
@@ -432,7 +437,7 @@ public class Table<R> extends JPanel implements TableModel {
         
         private void paintColumnLines(Graphics2D g2) {
             int x = 0;
-            g2.setColor(SwingUtils.getStripedRowBorderColor());
+            g2.setColor(ROW_BORDER_COLOR);
             for (int i = 0; i < getColumnModel().getColumnCount(); i++) {
                 x += getColumnModel().getColumn(i).getWidth();
                 g2.drawLine(x - 1, 0, x - 1, getHeight() - 1);
@@ -442,9 +447,9 @@ public class Table<R> extends JPanel implements TableModel {
         @Override
         public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
             Component cell = super.prepareRenderer(renderer, row, column);
-            if (cell instanceof JComponent && !isRowSelected(row)) {
-                ((JComponent) cell).setOpaque(true);
-                cell.setBackground(SwingUtils.getStripedRowColor(row));
+            if (cell instanceof JComponent jCell && !isRowSelected(row)) {
+                jCell.setOpaque(true);
+                jCell.setBackground(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
             }
             return cell;
         }

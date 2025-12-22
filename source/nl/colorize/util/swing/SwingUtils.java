@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,12 +8,15 @@ package nl.colorize.util.swing;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
+import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
+import nl.colorize.util.ResourceException;
 import nl.colorize.util.ResourceFile;
+import nl.colorize.util.Subject;
 import nl.colorize.util.TranslationBundle;
+import nl.colorize.util.Tuple;
 
 import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
@@ -32,16 +35,13 @@ import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import javax.swing.border.Border;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.Graphics;
@@ -51,11 +51,10 @@ import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
@@ -77,29 +76,38 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Miscellaneous utility and convenience methods for working with Swing. This
- * generally relates to creating component with slightly different graphics
+ * generally relates to creating components with slightly different graphics
  * and/or behavior.
+ * <p>
+ * Swing applications using the functionality provided by this library should
+ * call {@link #initializeSwing()} before the first Swing component is created.
+ * This is typically done from the Swing application's {@code main} method.
+ * The initialization method will apply the platform's native look-and-feel,
+ * and will also configure some other aspects to make Swing applications feel
+ * more native on various desktop platforms.
  */
 public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
-    private static final ResourceFile BUNDLE_FILE = new ResourceFile("custom-swing-components.properties");
-    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE = TranslationBundle.from(BUNDLE_FILE);
+    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE = TranslationBundle.from(
+        new ResourceFile("custom-swing-components.properties"));
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color ALT_ROW_COLOR = new Color(245, 245, 245);
-    private static final Color ROW_BORDER_COLOR = new Color(220, 220, 220);
     private static final int TOOLBAR_ICON_SIZE = 30;
-    
+    private static final Logger LOGGER = LogHelper.getLogger(SwingUtils.class);
+
     private SwingUtils() {
     }
     
@@ -127,8 +135,8 @@ public final class SwingUtils {
      * platform. On macOS this method also changes system properties so that
      * menus appear at the top of the screen, instead of inside the window.
      * <p>
-     * This method must be called before the first window is shown. 
-     * @throws RuntimeException if changing the look-and-feel fails.
+     * This method must be called before the first Swing window or component
+     * is shown, typically from a Swing application's {@code main} method.
      */
     public static void initializeSwing() {
         if (isSwingInitialized.get()) {
@@ -140,17 +148,8 @@ public final class SwingUtils {
             MacIntegration.enableApplicationMenuBar();
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            throw new RuntimeException("Cannot initialize Swing look-and-feel", e);
+            LOGGER.log(Level.WARNING, "Failed toinitialize Swing", e);
         }
-    }
-
-    /**
-     * Returns the resource bundle containing the user interface text for all
-     * custom Swing components provided by this library. This bundle can be
-     * used to change and/or translate the text.
-     */
-    public static TranslationBundle getCustomComponentsBundle() {
-        return CUSTOM_COMPONENTS_BUNDLE;
     }
 
     /**
@@ -210,25 +209,26 @@ public final class SwingUtils {
      */
     public static Font loadFont(InputStream input, int style, float size) 
             throws IOException, FontFormatException {
-        Font font = null;
         try {
-            font = Font.createFont(Font.TRUETYPE_FONT, input);
+            Font font = Font.createFont(Font.TRUETYPE_FONT, input);
+            return font.deriveFont(style, size);
         } finally {
             Closeables.close(input, true);
         }
-        return font.deriveFont(style, size);
     }
 
     /**
      * Loads a TrueType font and returns it as an AWT font.
      *
-     * @throws IOException if the font could not be loaded from the file.
-     * @throws FontFormatException if the file is not a valid TrueType font.
+     * @throws ResourceException if the font cannot be loaded, either because
+     *         the file does not exist or because the font uses an unsupported
+     *         format.
      */
-    public static Font loadFont(ResourceFile file, int style, float size)
-        throws IOException, FontFormatException {
+    public static Font loadFont(ResourceFile file, int style, float size) {
         try (InputStream stream = file.openStream()) {
             return loadFont(stream, style, size);
+        } catch (IOException | FontFormatException e) {
+            throw new ResourceException("Cannot load font", e);
         }
     }
     
@@ -283,7 +283,7 @@ public final class SwingUtils {
      * @param keycode One of the {@code KeyEvent.VK_X} fields, or -1 for none.
      */
     public static KeyStroke getKeyStroke(int keycode, boolean shift) {
-        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
         if (shift) {
             mask += KeyEvent.SHIFT_DOWN_MASK;
         }
@@ -364,12 +364,10 @@ public final class SwingUtils {
      * Performs {@code task} in a background thread, and when done calls 
      * {@code swingCallback} on the Swing thread.  
      */
-    public static void doInBackground(final Runnable task, final Runnable swingCallback) {
-        Thread backgroundThread = new Thread(new Runnable() {
-            public void run() {
-                task.run();
-                SwingUtilities.invokeLater(swingCallback);
-            }
+    public static void doInBackground(Runnable task, Runnable swingCallback) {
+        Thread backgroundThread = new Thread(() -> {
+            task.run();
+            SwingUtilities.invokeLater(swingCallback);
         });
         backgroundThread.start();
     }
@@ -420,7 +418,7 @@ public final class SwingUtils {
      * @param width Preferred width, or -1 for default.
      * @param height Preferred height, or -1 for default.
      */
-    public static JPanel createSpacerPanel(int width, int height, final Color backgroundColor) {
+    public static JPanel createSpacerPanel(int width, int height, Color backgroundColor) {
         JPanel spacer = createCustomGraphicsPanel((g2, bounds) -> {
             if (backgroundColor != null) {
                 g2.setColor(backgroundColor);
@@ -480,14 +478,15 @@ public final class SwingUtils {
                 child.setFont(font);
             }
             
-            if (child instanceof JPanel) {
-                setFont((JPanel) child, font);
+            if (child instanceof JPanel childPanel) {
+                setFont(childPanel, font);
             }
         }
     }
     
     public static WindowListener toCloseDelegate(final Runnable action) {
         return new WindowAdapter() {
+            @Override
             public void windowClosing(WindowEvent e) {
                 action.run();
             }
@@ -582,48 +581,19 @@ public final class SwingUtils {
      * to be available by Swing) is returned.
      */
     public static String findAvailableFontFamily(String... requestedFontFamilies) {
-        String[] systemFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                getAvailableFontFamilyNames();
-        for (String requestedFontFamily : requestedFontFamilies) {
-            for (String fontFamily : systemFonts) {
-                if (fontFamily.equalsIgnoreCase(requestedFontFamily)) {
-                    return fontFamily;
-                }
-            }
-        }
-        return "SansSerif";
+        GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        String[] systemFonts = environment.getAvailableFontFamilyNames();
+
+        return Arrays.stream(requestedFontFamilies)
+            .flatMap(requested -> findFontFamily(systemFonts, requested).stream())
+            .findFirst()
+            .orElse("SansSerif");
     }
-    
-    /**
-     * Attaches a {@code MouseListener} to a Swing component and forwards "click"
-     * events to a {@code ActionListener}. This can be used to make non-button
-     * components still behave like buttons.
-     */
-    public static void attachPseudoActionListener(JComponent component, ActionListener listener) {
-        component.addMouseListener(new MouseAdapter() {
-            public void mouseReleased(MouseEvent e) {
-                listener.actionPerformed(new ActionEvent(e.getSource(), e.getID(), ""));
-            }
-        });
-    }
-    
-    /**
-     * Returns an {@link java.awt.event.ActionListener} that will invoke the
-     * specified callback function.
-     *
-     * @param arg The argument that will be passed to the callback function.
-     */
-    public static <T> ActionListener toActionListener(Consumer<T> callback, T arg) {
-        return e -> callback.accept(arg);
-    }
-    
-    /**
-     * Returns an {@link java.awt.event.ActionListener} that will invoke the
-     * specified callback function. The argument to the callback function is
-     * provided by {@code arg} supplier every time an action is performed. 
-     */
-    public static <T> ActionListener toActionListener(Consumer<T> callback, Supplier<T> arg) {
-        return e -> callback.accept(arg.get());
+
+    private static Optional<String> findFontFamily(String[] systemFonts, String requested) {
+        return Arrays.stream(systemFonts)
+            .filter(font -> font.equalsIgnoreCase(requested))
+            .findFirst();
     }
 
     /**
@@ -653,59 +623,33 @@ public final class SwingUtils {
     }
 
     /**
-     * Creates a component that consists of a list of items, plus buttons to
-     * add and/or remove items. Changes made using those buttons are
-     * immediately reflected in the list of items. After using one of the
-     * buttons the list is automatically updated.
-     *
-     * @param itemSupplier Used to populate the list of items, both initially
-     *                     and after updates.
-     * @param addButtonAction Performed when the add button is used.
-     * @param removeButtonAction Performed when the remove button is used.
-     *
-     * @deprecated Use {@link PropertyEditor} instead.
+     * Registers listeners to make the component track drag-and-drop gestures,
+     * and returns a {@link Subject} to subscribe to drag-and-drop events.
+     * The events will be fired <em>during</em> dragging, not just at the end.
      */
-    @Deprecated
-    public static JPanel createAddRemoveItemsPanel(Supplier<List<String>> itemSupplier, String header,
-            Consumer<String> addButtonAction, Consumer<String> removeButtonAction) {
-        Table<String> table = new Table<>(header);
-        populateTable(table, itemSupplier);
-        
-        JButton addButton = new JButton("+");
-        addButton.addActionListener(createInvokeCallbackAndPopulateTableAction(addButtonAction,
-                table, itemSupplier));
-        
-        JButton removeButton = new JButton("-");
-        removeButton.addActionListener(createInvokeCallbackAndPopulateTableAction(removeButtonAction,
-                table, itemSupplier));
-        
-        JPanel buttonSubPanel = new JPanel(new BorderLayout(5, 0));
-        buttonSubPanel.add(addButton, BorderLayout.WEST);
-        buttonSubPanel.add(removeButton, BorderLayout.CENTER);
-        
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        buttonPanel.add(buttonSubPanel);
-        
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.add(table, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-    
-    private static void populateTable(Table<String> table, Supplier<List<String>> itemSupplier) {
-        table.removeAllRows();
-        for (String item : itemSupplier.get()) {
-            table.addRow(item, item);
-        }
-    }
+    public static Subject<Tuple<Point, Point>> trackDrag(JComponent component) {
+        Subject<Tuple<Point, Point>> subject = new Subject<>();
+        AtomicReference<Point> start = new AtomicReference<>();
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static ActionListener createInvokeCallbackAndPopulateTableAction(
-            Consumer callback, Table<String> table, Supplier<List<String>> itemSupplier) {
-        return e -> {
-            callback.accept(table.getSelectedRowKey());
-            populateTable(table, itemSupplier);
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                start.set(e.getPoint());
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                Point current = e.getPoint();
+                if (start.get() != null && !start.get().equals(current)) {
+                    subject.next(Tuple.of(start.get(), current));
+                    start.set(current);
+                }
+            }
         };
+
+        component.addMouseListener(mouseAdapter);
+        component.addMouseMotionListener(mouseAdapter);
+        return subject;
     }
 
     /**
@@ -740,6 +684,15 @@ public final class SwingUtils {
         button.setFont(button.getFont().deriveFont(11f));
         removeLookAndFeel(button, true);
         return button;
+    }
+
+    /**
+     * Creates a button suitable for usage in a toolbar. The size of the button
+     * and the size of the icon will depend on the platform's user interface
+     * conventions.
+     */
+    public static JButton createToolBarButton(String label, BufferedImage icon) {
+        return createToolBarButton(label, new ImageIcon(icon));
     }
 
     /**
@@ -783,15 +736,6 @@ public final class SwingUtils {
     }
 
     /**
-     * Creates a button suitable for usage in a toolbar. The size of the button
-     * and the size of the icon will depend on the platform's user interface
-     * conventions.
-     */
-    public static JButton createToolBarButton(String label, BufferedImage icon) {
-        return createToolBarButton(label, new ImageIcon(icon));
-    }
-    
-    /**
      * Creates a button that does not follow the platform's UI conventions and
      * changes foreground color on hover. 
      */
@@ -814,36 +758,6 @@ public final class SwingUtils {
         });
 
         return button;
-    }
-    
-    /**
-     * Creates a button that does not follow the platform's UI conventions, but
-     * only consists of a text label and an outline. 
-     */
-    public static JButton createOutlineButton(String label, final Color normalColor, 
-            final Color hoverColor) {
-        final Border normalBorder = BorderFactory.createLineBorder(normalColor, 1);
-        final Border hoverBorder = BorderFactory.createLineBorder(hoverColor, 1);
-        
-        final JButton outlineButton = new JButton(label);
-        removeLookAndFeel(outlineButton, true);
-        outlineButton.setBorder(normalBorder);
-        outlineButton.setBorderPainted(true);
-        outlineButton.setForeground(normalColor);
-        outlineButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                outlineButton.setForeground(hoverColor);
-                outlineButton.setBorder(hoverBorder);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                outlineButton.setForeground(normalColor);
-                outlineButton.setBorder(normalBorder);
-            }
-        });
-        return outlineButton;
     }
 
     /**
@@ -874,7 +788,10 @@ public final class SwingUtils {
      * Produces a {@link MouseListener} that performs the specified actions when
      * the mouse enters or exits the component.
      */
-    public static MouseListener toHoverListener(Consumer<MouseEvent> enter, Consumer<MouseEvent> exit) {
+    public static MouseListener toHoverListener(
+        Consumer<MouseEvent> enter,
+        Consumer<MouseEvent> exit
+    ) {
         return new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -964,24 +881,6 @@ public final class SwingUtils {
     }
 
     /**
-     * Creates a new panel with contents consisting of the specified image. The
-     * image will be drawn at its original size, and the panel's dimensions will
-     * be set accordingly.
-     */
-    public static JPanel createImagePanel(BufferedImage image) {
-        JPanel imagePanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = Utils2D.createGraphics(g, true, true);
-                g2.drawImage(image, 0, 0, null);
-            }
-        };
-        imagePanel.setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
-        return imagePanel;
-    }
-
-    /**
      * Returns the platform's user interface scale factor. On Mac, this always
      * returns 1.0 because Mac OS applies a consistent scale factor to the
      * entire desktop. On Windows, desktop resolution/scale factor and UI scale
@@ -1004,23 +903,11 @@ public final class SwingUtils {
             .getScaleX();
     }
 
-    /**
-     * Returns the appropriate row background color for components with a
-     * striped appearance, such as tables, lists, and trees.
-     */
-    public static Color getStripedRowColor(int rowIndex) {
-        return rowIndex % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR;
-    }
-    
-    protected static Color getStripedRowBorderColor() {
-        return ROW_BORDER_COLOR;
-    }
-    
     private static void paintStripedRows(Graphics2D g2, JComponent component, int rowHeight) {
         int row = 0;
 
         for (int y = 0; y <= component.getHeight(); y += rowHeight) {
-            g2.setColor(getStripedRowColor(row));
+            g2.setColor(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
             g2.fillRect(0, y, component.getWidth(), rowHeight);
             row++;
         }
@@ -1037,9 +924,10 @@ public final class SwingUtils {
     private static class StripedList<E> extends JList<E> {
         
         private static final int ESTIMATED_ROW_HEIGHT = 17;
-        
+
+        @SuppressWarnings("unchecked")
         public StripedList(List<E> elements) {
-            super(new Vector<>(elements));
+            super((E[]) elements.toArray(new Object[0]));
             setOpaque(false);
 
             DefaultListCellRenderer delegate = new DefaultListCellRenderer();
@@ -1048,7 +936,7 @@ public final class SwingUtils {
                 JComponent cell = (JComponent) delegate.getListCellRendererComponent(
                     list, value, index, selected, focus);
                 if (!selected) {
-                    cell.setBackground(getStripedRowColor(index));
+                    cell.setBackground(index % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
                 }
                 return cell;
             });
@@ -1085,10 +973,10 @@ public final class SwingUtils {
                 Component cell = delegate.getTreeCellRendererComponent(tree, value, selected,
                     expanded, leaf, row, focus);
 
-                if (cell instanceof JComponent && !selected) {
-                    Color color = getStripedRowColor(row);
-                    ((JComponent) cell).setOpaque(false);
-                    cell.setBackground(color);
+                if (cell instanceof JComponent jCell && !selected) {
+                    Color color = row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR;
+                    jCell.setOpaque(false);
+                    jCell.setBackground(color);
                     delegate.setBackgroundNonSelectionColor(color);
                 }
 
@@ -1102,5 +990,14 @@ public final class SwingUtils {
             paintStripedRows(g2, this, getRowHeight());
             super.paintComponent(g);
         }
+    }
+
+    /**
+     * Returns the resource bundle containing the user interface text for all
+     * custom Swing components provided by this library. This bundle can be
+     * used to change and/or translate the text.
+     */
+    static TranslationBundle getCustomComponentsBundle() {
+        return CUSTOM_COMPONENTS_BUNDLE;
     }
 }

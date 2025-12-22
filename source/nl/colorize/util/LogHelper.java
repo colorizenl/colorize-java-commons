@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -151,6 +151,7 @@ public final class LogHelper {
      */
     public static Handler createStringHandler(final StringWriter stringWriter, Formatter formatter) {
         Handler handler = new AbstractLogHandler() {
+            @Override
             public void publish(LogRecord record) {
                 stringWriter.write(getFormatter().format(record));
             }

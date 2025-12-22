@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
@@ -264,7 +264,7 @@ public class Histogram<B extends Comparable<B>> {
 
         Map<String, Float> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : original.entrySet()) {
-            float percentage = Aggregate.percentage(entry.getValue(), total);
+            float percentage = FloatStats.percentage(entry.getValue(), total);
             normalized.put(entry.getKey(), percentage);
         }
         return normalized;

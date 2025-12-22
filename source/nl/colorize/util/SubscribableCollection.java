@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -47,6 +47,7 @@ public class SubscribableCollection<E> extends ForwardingCollection<E> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean remove(Object element) {
         boolean result = elements.remove(element);
         if (result) {
@@ -56,6 +57,7 @@ public class SubscribableCollection<E> extends ForwardingCollection<E> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean removeAll(Collection<?> toRemove) {
         boolean result = elements.removeAll(toRemove);
         for (Object element : toRemove) { {

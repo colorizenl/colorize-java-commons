@@ -1,0 +1,51 @@
+//-----------------------------------------------------------------------------
+// Colorize Java Commons
+// Copyright 2007-2026 Colorize
+// Apache license (http://www.apache.org/licenses/LICENSE-2.0)
+//-----------------------------------------------------------------------------
+
+package nl.colorize.util;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
+/**
+ * Wraps a computationally expensive operation, so that the result is only
+ * calculated on the first call, and the cached result is returned for
+ * subsequent calls. Evaluation is lazy, the operation is not actually
+ * performed until {@link #get()} is called for the first time.
+ *
+ * @param <T> The type of value that is returned by the operation.
+ */
+public final class Memoized<T> implements Supplier<T> {
+
+    private Supplier<T> operation;
+    private AtomicBoolean called;
+    private T result;
+
+    private Memoized(Supplier<T> operation) {
+        this.operation = operation;
+        this.called = new AtomicBoolean(false);
+    }
+
+    @Override
+    public T get() {
+        if (!called.get()) {
+            result = operation.get();
+            called.set(true);
+        }
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        if (!called.get()) {
+            return "<lazy>";
+        }
+        return String.valueOf(result);
+    }
+
+    public static <T> Memoized<T> compute(Supplier<T> operation) {
+        return new Memoized<>(operation);
+    }
+}

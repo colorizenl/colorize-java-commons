@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -478,7 +478,7 @@ public final class Utils2D {
         for (int i = -amount; i <= amount; i++) {
             float distance = i * i;
             int index = i + amount;
-            data[index] = (float) Math.exp(-distance / (sigmaTwoSquared) / sigmaRoot);
+            data[index] = (float) Math.exp(-distance / sigmaTwoSquared / sigmaRoot);
             total += data[index];
         }
         

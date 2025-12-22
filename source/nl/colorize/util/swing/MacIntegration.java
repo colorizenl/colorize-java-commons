@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -47,7 +47,6 @@ public final class MacIntegration {
 
     // Apple-specific system properties
     private static final String SYSTEM_PROPERTY_MENUBAR = "apple.laf.useScreenMenuBar";
-    private static final String SYSTEM_PROPERTY_METAL = "sun.java2d.metal";
 
     // Apple-specific Swing client properties
     public static final String AQUA_SIZE = "JComponent.sizeVariant";
@@ -98,7 +97,7 @@ public final class MacIntegration {
      * This method is called by {@link SwingUtils#initializeSwing()}, meaning
      * there is normally no reason for calling this method from application code.
      */
-    protected static void enableApplicationMenuBar() {
+    public static void enableApplicationMenuBar() {
         if (Platform.isMac()) {
             System.setProperty(MacIntegration.SYSTEM_PROPERTY_MENUBAR, "true");
         }

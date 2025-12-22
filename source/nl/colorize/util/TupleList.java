@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ForwardingList;
@@ -154,11 +154,15 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
     }
 
     /**
-     * Factory method that creates a mutable {@link TupleList} from an
-     * existing list of tuples.
+     * Factory method that creates a mutable {@link TupleList} from a number
+     * of existing tuples.
      */
-    public static <L, R> TupleList<L, R> copyOf(List<Tuple<L, R>> entries) {
-        return new TupleList<>(entries);
+    public static <L, R> TupleList<L, R> copyOf(Iterable<Tuple<L, R>> entries) {
+        TupleList<L, R> result = new TupleList<>();
+        for (Tuple<L, R> entry : entries) {
+            result.add(entry);
+        }
+        return result;
     }
 
     /**

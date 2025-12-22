@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -8,7 +8,6 @@ package nl.colorize.util;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.io.Files;
 
 import java.io.File;
@@ -23,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -37,13 +35,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public final class PropertyUtils {
 
-    private static final Splitter PROPERTY_LINE_SPLITTER = Splitter.on(CharMatcher.anyOf("=:"))
-        .trimResults()
-        .omitEmptyStrings()
-        .limit(2);
-
     private static final CharMatcher PROPERTY_SPECIAL_CHARS = CharMatcher.anyOf("=:\n\\");
-    private static final Logger LOGGER = LogHelper.getLogger(PropertyUtils.class);
 
     private PropertyUtils() {
     }

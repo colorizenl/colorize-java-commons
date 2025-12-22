@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -133,5 +134,16 @@ class DateParserTest {
         Date date = parse("2025-11-16");
 
         assertEquals("2025-11-16 00:00", DateParser.format(date, "yyyy-MM-dd HH:mm"));
+    }
+
+    @Test
+    void convertDate() {
+        Date date = new Date(1765113265577L);
+        DateTimeFormatter format1 = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter format2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        assertEquals("2025-12-07 14:14", DateParser.format(date, "yyyy-MM-dd HH:mm"));
+        assertEquals("2025-12-07", format1.format(DateParser.toLocalDate(date)));
+        assertEquals("2025-12-07 14:14", format2.format(DateParser.toLocalDateTime(date)));
     }
 }

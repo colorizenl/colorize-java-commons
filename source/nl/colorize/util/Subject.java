@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -173,6 +173,7 @@ public final class Subject<T> implements Publisher<T> {
         return subscription;
     }
 
+    @SuppressWarnings("unchecked")
     private void sendHistoryEvents(Subscriber<? super T> subscriber) {
         for (Object historicEvent : history) {
             if (historicEvent instanceof Exception error) {
@@ -211,7 +212,7 @@ public final class Subject<T> implements Publisher<T> {
      * Returns a {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribeErrors(Consumer<Throwable> onError) {
-        Consumer<T> onEvent = event -> {};
+        Consumer<T> onEvent = _ -> {};
         Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
         return registerSubscription(subscriber);
     }

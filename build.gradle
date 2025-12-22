@@ -2,13 +2,14 @@ plugins {
     id "io.freefair.lombok" version "9.1.0"
     id "com.vanniktech.maven.publish" version "0.35.0"
     id "com.github.ben-manes.versions" version "0.53.0"
+    id "net.ltgt.errorprone" version "4.3.0"
 }
 
 apply plugin: "java-library"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2025.4"
+version = "2026.1"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -28,6 +29,7 @@ dependencies {
     api "com.google.guava:guava:33.5.0-jre"
     testImplementation "org.junit.jupiter:junit-jupiter:6.0.1"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    errorprone "com.google.errorprone:error_prone_core:2.45.0"
 }
 
 test {
@@ -49,6 +51,16 @@ task coverage(dependsOn: ["test", "jacocoTestReport"]) {
         println "-" * 40
         println "Test coverage: " + coverage[0][1]
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone.allErrorsAsWarnings = true
+    options.errorprone.disable("EffectivelyPrivate")
+    options.errorprone.disable("FormatStringShouldUsePlaceholders")
+    options.errorprone.disable("InlineMeSuggester")
+    options.errorprone.disable("JavaUtilDate")
+    options.errorprone.disable("JdkObsolete")
+    options.errorprone.disable("StringCaseLocaleUsage")
 }
 
 mavenPublishing {

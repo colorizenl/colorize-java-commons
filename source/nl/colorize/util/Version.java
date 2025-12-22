@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ public final class Version implements Comparable<Version> {
      * Returns the digit at the specified position. If no digit exists at that
      * position this will return 0.
      */
-    protected int getDigit(int position) {
+    private int getDigit(int position) {
         if (position >= digits.size()) {
             return 0;
         }
@@ -90,11 +90,11 @@ public final class Version implements Comparable<Version> {
     }
     
     public boolean isNewerThan(Version other) {
-        return compareTo(other) >= 1;
+        return compareTo(other) > 0;
     }
     
     public boolean isOlderThan(Version other) {
-        return compareTo(other) <= -1;
+        return compareTo(other) < 0;
     }
     
     /**

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -22,10 +22,6 @@ public class VersionTest {
     @Test
     public void testParseVersionString() { 
         Version v = Version.parse("1.6.0_31");
-        assertEquals(1, v.getDigit(0));
-        assertEquals(6, v.getDigit(1));
-        assertEquals(0, v.getDigit(2));
-        assertEquals(0, v.getDigit(3));
         assertEquals("1.6.0_31", v.toString());
         
         assertEquals("10.5.0", Version.parse("10.5.0").toString());

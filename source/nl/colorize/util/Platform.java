@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import javax.swing.filechooser.FileSystemView;
 import java.io.File;
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -55,8 +56,8 @@ public enum Platform {
     TEAVM("TeaVM", "teavm"),
     UNKNOWN("Unknown", "unknown");
 
-    private String displayName;
-    private String osName;
+    private final String displayName;
+    private final String osName;
 
     private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
@@ -467,9 +468,9 @@ public enum Platform {
     /**
      * Returns the default timezone. By default, this will return the
      * {@code Europe/Amsterdam} time zone. The default time zone can be set
-     * explicitly using the environment variable "COLORIZE_TIMEZONE". If the
-     * requested time zone is not available on the current platform, the GMT
-     * time zone is used instead.
+     * explicitly using the environment variable {@code COLORIZE_TIMEZONE}.
+     * If the requested time zone is not available on the current platform,
+     * the GMT time zone is used instead.
      */
     public static TimeZone getDefaultTimeZone() {
         String requestedTimeZone = System.getenv(COLORIZE_TIMEZONE_ENV);
@@ -477,5 +478,18 @@ public enum Platform {
             requestedTimeZone = AMSTERDAM_TIME_ZONE;
         }
         return TimeZone.getTimeZone(requestedTimeZone);
+    }
+
+    /**
+     * Returns the {@link ZoneId} for the default time zone as returned by
+     * {@link #getDefaultTimeZone()}. The default time zone can be changed
+     * using the environment variable {@code COLORIZE_TIMEZONE_ENV}. If the
+     * requested time zone is not available on the current platform, the
+     * GMT time zone is used instead.
+     */
+    public static ZoneId getDefaultTimeZoneId() {
+        // Cannot use TimeZone.toZoneId(), because that method
+        // is not yet available in TeaVM.
+        return ZoneId.of(getDefaultTimeZone().getID());
     }
 }

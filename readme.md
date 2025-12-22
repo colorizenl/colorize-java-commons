@@ -13,15 +13,14 @@ applications and libraries developed by [Colorize](http://www.colorize.nl), wher
 in use since 2007.
 
 The library focuses on portability, and supports a wide variety of platforms and environments.
-It can be used in back-end applications, in cloud environments, in desktop applications on 
-Windows/Mac/Linux, in mobile apps on Android and iOS, and in the browser (via
-[TeaVM](http://teavm.org)).
+It can be used in back-end applications, in cloud environments, in desktop applications
+on  Windows/Mac/Linux, in mobile apps on Android and iOS, and in the browser
+via [TeaVM](http://teavm.org)).
 
 The reason for this large variety of environments is that the library started out as a foundation 
 for cross-platform desktop applications. It was later adopted for back-end applications, and
-now supports both scenarios.
-
-![Colorize Java Commons outline](_development/outline.svg)
+now supports both scenarios. See the [portability](#portability) section for more information
+on using this library across different platforms.
 
 Usage
 -----
@@ -33,7 +32,7 @@ to the dependencies section in `pom.xml`:
 <dependency>
     <groupId>nl.colorize</groupId>
     <artifactId>colorize-java-commons</artifactId>
-    <version>2025.4</version>
+    <version>2026.1</version>
 </dependency>
 ```
     
@@ -41,7 +40,7 @@ The library can also be used in Gradle projects:
 
 ```groovy
 dependencies {
-    implementation "nl.colorize:colorize-java-commons:2025.4"
+    implementation "nl.colorize:colorize-java-commons:2026.1"
 }
 ```
     
@@ -50,36 +49,87 @@ Documentation
 
 - [JavaDoc](http://api.clrz.nl/colorize-java-commons/)
 
+Portability
+-----------
+
+This library was created with portability in mind, as explained in the introduction. However, that
+does not mean that every single class is available on every single platform. The package structure
+is used to indicate which classes are supported on which platforms:
+
+| Package                      | Back-end? | Desktop? | Mobile? | Browser/TeaVM? |
+|------------------------------|-----------|----------|---------|----------------|
+| `nl.colorize.util`           | ✅         | ✅        | ✅       | ✅              |
+| `nl.colorize.util.animation` | ✅         | ✅        | ✅       | ✅              |
+| `nl.colorize.util.cli`       | ✅         | ✅        | ❌       | ❌              |
+| `nl.colorize.util.http`      | ✅         | ✅        | ❌       | ❌              |
+| `nl.colorize.util.swing`     | ❌         | ✅        | ❌       | ❌              |              
+
+In the table above, "back-end" refers to any type of headless back-end application or service. 
+Deployment can range from [Docker](https://www.docker.com) containers to cloud-native 
+environments like [Google App Engine](https://cloud.google.com/appengine?hl=en).
+
 Examples
 --------
 
-### Command line interface
+Refer to the [documentation](#documentation) for a full overview of available utility classes.
+This section shows a few code examples for commonly used utilities.
 
-The `CommandLineArgumentParser` can be used to define and parse arguments for command line
-applications. It is quite similar to the annotation-based approach used by
-[Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
-since 2016.
+### Working with asynchronous events in client-side applications
 
-The following example shows how to define a simple command line interface:
+In client-side applications (desktop, mobile, browser), you can't just block the user interface
+thread while waiting for an expensive operation or network call to finish. Such long-running
+tasks are typically performed in the background. These background tasks then communicate events
+back to the user interface thread, so that the application can display the results. If the
+background task fails, the error *also* needs to be communicated back to the user interface
+thread.
+
+The library contains a number of small "primitives" to facilitate this type of workflow. 
+All of these primitives can be used cross-platform, including in the browser via TeaVM.
 
 ```java
-public class MyApp {
-    @Arg(name = "--input", usage = "Input directory")
-    public File inputDir
+// Allows for a publisher/subscriber workflow. Asynchronous events
+// (and errors) are published to subscribers.
+Subject<Response> task = Subject.runAsync(() -> externalService.someCall());
+task.subscribe(this::processResponse);
+task.subsctibeErrors(this::showError);
 
-    @Arg
-    public boolean overwrite;
+// Wraps a property so that subscribers can be notified whenever
+// the value changes.
+Signal<String> name = Signal.of("john");
+name.getChanges().subscribe(this::updateUI);
+name.set("jim");
 
-    public static void main(String[] argv) {
-        CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
-        MyApp app = argParser.parse(argv, MyApp.class);
-    }
-}
+// Wraps a collection so that subscribers can be notified when
+// elements are added or removed.
+SubscribableCollection<String> names = SubscribableCollection.wrap(new ArrayList<>());
+names.getAddedElements().subscribe(this::updateUI);
+
+// Caches a single value so that the operation is only performed
+// once, and subsequent calls return the cached value. Uses lazy
+// evaluation.
+Memoized<Result> result = Memoized.compute(this::expensiveOperation);
+
+// Caches multiple values based on a key, so they are only
+// calculated once. Also uses lazy evaluation.
+Cache<String, Result> responseCache = Cache.from(key -> expensiveOperation(key));
 ```
 
 ### Swing component library
 
-Refer to `CustomComponentsUIT` for an example application. `MacIntegrationUIT` contains an example
+Refer to `CustomComponentsUIT` for an example application. This example uses the following
+components:
+
+- `Accordion`: Consists of different sections which can be expanded or collapsed.
+- `CircularLoader`: A "spinner" that indicates the application is loading.
+- `FormPanel`: A form builder that makes it easy to add name/field pairs with a common form layout.
+- `ImageViewer`: Easily display an image in a Swing component with pan and zoom controls.
+- `MultiLabel`: An extension of `JLabel` that automatically word-wraps long lines.
+- `Popups`: Shows various pop-up and modal dialog windows.
+- `PropertyEditor`: UI for adding, removing, or changing name/value properties.
+- `SimpleTable`: A simplified version of `JTable` that is easier to work with.
+- `SuggestingComboBox`: Combination of a text field and a `JComboBox` that matches suggestions. 
+
+In addition to the cross-platform component library, `MacIntegrationUIT` contains an example
 application that shows integration with some Mac system functionality.
 
 ### Animation framework
@@ -109,6 +159,35 @@ JButton animateButton = new JButton("Animate background color");
 animateButton.addActionListener(e -> animator.animateBackgroundColor(target, Color.BLUE, 1f));
 ```
 
+### Image manipulation
+
+The library includes `Utils2D` for working with and manipulating images. The sample application
+`ImageManipulationUIT` includes an interactive showcase for the various image effects.
+
+### Command line interface
+
+The `CommandLineArgumentParser` can be used to define and parse arguments for command line
+applications. It is quite similar to the annotation-based approach used by
+[Args4j](https://github.com/kohsuke/args4j), which is excellent but has not been updated
+since 2016.
+
+The following example shows how to define a simple command line interface:
+
+```java
+public class MyApp {
+    @Arg(name = "--input", usage = "Input directory")
+    public File inputDir
+
+    @Arg
+    public boolean overwrite;
+
+    public static void main(String[] argv) {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
+        MyApp app = argParser.parse(argv, MyApp.class);
+    }
+}
+```
+
 Build instructions
 ------------------
 
@@ -119,19 +198,19 @@ Building the library requires the following:
 
 The following Gradle build tasks are available:
 
-- `gradle clean` cleans the build directory
-- `gradle assemble` creates the JAR file for distribution
-- `gradle test` runs all unit tests
-- `gradle coverage` runs all unit tests and reports on test coverage
-- `gradle javadoc` generates the JavaDoc API documentation
-- `gradle dependencyUpdates` checks for and reports on library updates
+- `gradle clean` cleans the build directory.
+- `gradle assemble` creates the JAR file for distribution.
+- `gradle test` runs all unit tests.
+- `gradle coverage` runs all unit tests and reports on test coverage.
+- `gradle javadoc` generates the JavaDoc API documentation.
+- `gradle dependencyUpdates` checks for and reports on library updates.
 - `gradle publishToMavenCentral` publishes the library to Maven Central.
   Requires [credentials](https://vanniktech.github.io/gradle-maven-publish-plugin/central/#secrets).
 
 License
 -------
 
-Copyright 2007-2025 Colorize
+Copyright 2007-2026 Colorize
 
 > Licensed under the Apache License, Version 2.0 (the "License");
 > you may not use this file except in compliance with the License.

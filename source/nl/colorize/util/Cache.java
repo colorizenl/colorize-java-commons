@@ -1,15 +1,16 @@
 //-----------------------------------------------------------------------------
 // Colorize Java Commons
-// Copyright 2007-2025 Colorize
+// Copyright 2007-2026 Colorize
 // Apache license (http://www.apache.org/licenses/LICENSE-2.0)
 //-----------------------------------------------------------------------------
 
-package nl.colorize.util.stats;
+package nl.colorize.util;
 
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 /**
@@ -18,18 +19,21 @@ import java.util.function.Function;
  * when first requested. If the cache capacity has been exceeded, the oldest
  * values are removed. Note that "oldest" means the values that were least
  * recently *calculated*, not the values that were least recently *accessed*.
+ * <p>
+ * Instances of this class are thread-safe, it is safe to access the cache from
+ * different threads.
  */
 public class Cache<K, V> {
 
     private Function<K, V> computeFunction;
     private Map<K, V> contents;
-    private Deque<K> keyOrder;
+    private List<K> keyOrder;
     private int capacity;
 
     private Cache(Function<K, V> computeFunction, int capacity) {
         this.computeFunction = computeFunction;
-        this.contents = new HashMap<>();
-        this.keyOrder = new LinkedList<>();
+        this.contents = Platform.isTeaVM() ? new HashMap<>() : new ConcurrentHashMap<>();
+        this.keyOrder = new CopyOnWriteArrayList<>();
         this.capacity = capacity;
     }
 
@@ -42,17 +46,23 @@ public class Cache<K, V> {
     public V get(K key) {
         if (contents.containsKey(key)) {
             return contents.get(key);
-        } else {
-            V value = computeFunction.apply(key);
+        }
+
+        V value = computeFunction.apply(key);
+
+        if (value != null) {
             contents.put(key, value);
             keyOrder.add(key);
+            protectCapacity();
+        }
 
-            if (keyOrder.size() > capacity) {
-                K evicted = keyOrder.removeFirst();
-                contents.remove(evicted);
-            }
+        return value;
+    }
 
-            return value;
+    private void protectCapacity() {
+        if (keyOrder.size() > capacity) {
+            K evicted = keyOrder.removeFirst();
+            contents.remove(evicted);
         }
     }
 
