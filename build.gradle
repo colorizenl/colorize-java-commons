@@ -1,15 +1,15 @@
 plugins {
-    id "io.freefair.lombok" version "9.1.0"
-    id "com.vanniktech.maven.publish" version "0.35.0"
+    id "io.freefair.lombok" version "9.2.0"
+    id "com.vanniktech.maven.publish" version "0.36.0"
     id "com.github.ben-manes.versions" version "0.53.0"
-    id "net.ltgt.errorprone" version "4.3.0"
+    id "net.ltgt.errorprone" version "5.0.0"
 }
 
 apply plugin: "java-library"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2026.1"
+version = "2026.2"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -27,9 +27,9 @@ repositories {
 dependencies {
     api "org.jspecify:jspecify:1.0.0"
     api "com.google.guava:guava:33.5.0-jre"
-    testImplementation "org.junit.jupiter:junit-jupiter:6.0.1"
+    testImplementation "org.junit.jupiter:junit-jupiter:6.0.3"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-    errorprone "com.google.errorprone:error_prone_core:2.45.0"
+    errorprone "com.google.errorprone:error_prone_core:2.47.0"
 }
 
 test {

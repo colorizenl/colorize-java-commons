@@ -54,10 +54,12 @@ public class CustomComponentsUIT {
     private JFrame frame;
     private SwingAnimator animator;
 
-    private static final ResourceFile LOGO_FILE = new ResourceFile("colorize-logo-emblem-180.png");
+    private static final ResourceFile LOGO_FILE = new ResourceFile("colorize-emblem-180.png");
     private static final Logger LOGGER = LogHelper.getLogger(CustomComponentsUIT.class);
 
     public static void main(String[] args) {
+        SwingUtils.initializeSwing();
+
         LOGGER.info("---------------------");
         LOGGER.info(AnsiColor.RED_BOLD.format("Colorize Java Commons"));
         LOGGER.info("---------------------");

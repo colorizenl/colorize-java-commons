@@ -70,24 +70,25 @@ public final class DateParser {
      * a constant instead of a "real" {@code .properties} file in order to
      * preserve compatibility with TeaVM.
      */
-    private static final TranslationBundle BUNDLE = TranslationBundle.fromPropertiesFile("""
-        future=the future
-        now=just now
-        second=just now
-        seconds=seconds ago
-        minute=1 minute ago
-        minutes={0} minutes ago
-        hour=1 hour ago
-        hours={0} hours ago
-        day=yesterday
-        days={0} days ago
-        week=last week
-        weeks={0} weeks ago
-        month=1 month ago
-        months={0} months ago
-        year=1 year ago
-        years={0} years ago
-    """);
+    private static final TranslationBundle BUNDLE = TranslationBundle.from(
+        PropertyUtils.loadProperties("""
+            future=the future
+            now=just now
+            second=just now
+            seconds=seconds ago
+            minute=1 minute ago
+            minutes={0} minutes ago
+            hour=1 hour ago
+            hours={0} hours ago
+            day=yesterday
+            days={0} days ago
+            week=last week
+            weeks={0} weeks ago
+            month=1 month ago
+            months={0} months ago
+            year=1 year ago
+            years={0} years ago
+        """));
 
     private DateParser() {
     }

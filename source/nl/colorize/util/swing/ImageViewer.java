@@ -11,12 +11,14 @@ import org.jspecify.annotations.Nullable;
 
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
 import static java.awt.event.KeyEvent.VK_0;
 import static java.awt.event.KeyEvent.VK_EQUALS;
@@ -43,11 +45,15 @@ public class ImageViewer extends JPanel {
     private int cameraX;
     private int cameraY;
     private float cameraZoom;
+    private Consumer<Graphics2D> backgroundRenderer;
+    private Color outlineColor;
 
     private static final float ZOOM_KEY_INCREMENT = 0.25f;
     private static final float ZOOM_SCROLL_INCREMENT = 0.02f;
     private static final float PAN_INCREMENT = 1f;
     private static final float MIN_ZOOM_LEVEL = 0.001f;
+    private static final Color CHECKERBOARD_GRAY = new Color(240, 240, 240);
+    private static final int CHECKERBOARD_BLOCK = 20;
 
     /**
      * Creates a new {@link ImageViewer} component with the specified controls.
@@ -57,6 +63,9 @@ public class ImageViewer extends JPanel {
         super(new BorderLayout());
         setOpaque(true);
         addComponentListener(SwingUtils.createResizeListener(this::zoomToFit));
+
+        backgroundRenderer = _ -> {};
+        outlineColor = null;
 
         if (allowPan) {
             setFocusable(true);
@@ -104,13 +113,21 @@ public class ImageViewer extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        Graphics2D g2 = Utils2D.createGraphics(g, true, true);
+
+        backgroundRenderer.accept(g2);
+
         if (displayedImage != null) {
-            Graphics2D g2 = Utils2D.createGraphics(g, true, true);
             int width = Math.round(displayedImage.getWidth() * cameraZoom);
             int height = Math.round(displayedImage.getHeight() * cameraZoom);
             int x = getWidth() / 2 - width / 2 - cameraX;
             int y = getHeight() / 2 - height / 2 - cameraY;
             g2.drawImage(displayedImage, x, y, width, height, null);
+
+            if (outlineColor != null) {
+                g2.setColor(outlineColor);
+                g2.drawRect(x, y, width, height);
+            }
         }
     }
 
@@ -121,8 +138,18 @@ public class ImageViewer extends JPanel {
      * graphics.
      */
     public void display(@Nullable BufferedImage image) {
+        display(image, true);
+    }
+
+    /**
+     * Lets this component display the specified image. If {@code resetCamera}
+     * is false, this will retain the current camera pan and zoom.
+     */
+    public void display(@Nullable BufferedImage image, boolean resetCamera) {
         displayedImage = image;
-        zoomToFit();
+        if (resetCamera) {
+            zoomToFit();
+        }
         repaint();
     }
 
@@ -130,7 +157,7 @@ public class ImageViewer extends JPanel {
      * Changes the zoom level so that the displayed image fits exactly within
      * the current bounds of this component.
      */
-    private void zoomToFit() {
+    public void zoomToFit() {
         cameraX = 0;
         cameraY = 0;
 
@@ -158,8 +185,59 @@ public class ImageViewer extends JPanel {
      * Changes the zoom level to the specified value. 1.0 means the image is
      * displayed at its native size.
      */
-    private void changeZoom(float zoom) {
+    public void changeZoom(float zoom) {
         cameraZoom = Math.max(zoom, MIN_ZOOM_LEVEL);
+        repaint();
+    }
+
+    /**
+     * Configures this image viewer's background so that it does not draw a
+     * background color at all. The color shown behind the image will depend
+     * on the platform's look-and-feel.
+     */
+    public void useEmptyBackground() {
+        backgroundRenderer = _ -> {};
+        repaint();
+    }
+
+    /**
+     * Configures this image viewer's background so that it draws blocks in a
+     * checkerboard pattern, in a style common to image editors.
+     */
+    public void useCheckerboardBackground() {
+        backgroundRenderer = g2 -> {
+            g2.setColor(Color.WHITE);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.setColor(CHECKERBOARD_GRAY);
+
+            for (int x = 0; x < getWidth(); x += CHECKERBOARD_BLOCK * 2) {
+                for (int y = 0; y < getHeight(); y += CHECKERBOARD_BLOCK * 2) {
+                    g2.fillRect(x, y, CHECKERBOARD_BLOCK, CHECKERBOARD_BLOCK);
+                }
+            }
+
+            for (int x = CHECKERBOARD_BLOCK; x < getWidth(); x += CHECKERBOARD_BLOCK * 2) {
+                for (int y = CHECKERBOARD_BLOCK; y < getHeight(); y += CHECKERBOARD_BLOCK * 2) {
+                    g2.fillRect(x, y, CHECKERBOARD_BLOCK, CHECKERBOARD_BLOCK);
+                }
+            }
+        };
+
+        repaint();
+    }
+
+    /**
+     * Configures this image viewer's background to use the specified callback
+     * function. The callback will be used every time this component is
+     * rendered.
+     */
+    public void useCustomBackground(Consumer<Graphics2D> callback) {
+        backgroundRenderer = callback;
+        repaint();
+    }
+
+    public void setOutlineColor(Color color) {
+        outlineColor = color;
         repaint();
     }
 }

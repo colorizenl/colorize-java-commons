@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TranslationBundleTest {
 
+    private static final Locale NL = Locale.of("nl");
+    private static final Locale IT = Locale.of("it");
+
     @Test
     void formatPlaceholders() {
         Map<String, String> text = Map.of(
@@ -29,7 +32,7 @@ class TranslationBundleTest {
             "key.c", "this is {0}'s MessageFormat"
         );
 
-        TranslationBundle bundle = TranslationBundle.fromMap(text);
+        TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(text));
 
         assertEquals("value", bundle.getText("key.a"));
         assertEquals("this is 1 parameter", bundle.getText("key.b", "1"));
@@ -40,7 +43,7 @@ class TranslationBundleTest {
     @Test
     void fromUTF8() {
         Map<String, String> text = Map.of("key.e", "привет{0}");
-        TranslationBundle bundle = TranslationBundle.fromMap(text);
+        TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(text));
 
         assertEquals("привет!", bundle.getText("key.e", "!"));
     }
@@ -58,13 +61,12 @@ class TranslationBundleTest {
             "key.b", "dit is {0} parameter"
         );
 
-        TranslationBundle bundle = TranslationBundle.fromMap(textEN);
-        bundle = bundle.withTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
+        TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(textEN))
+            .link(TranslationBundle.from(NL, PropertyUtils.toProperties(textNL)));
 
-        assertEquals("waarde", bundle.getText(new Locale("nl"), "key.a"));
-        assertEquals("dit is 1 parameter", bundle.getText(new Locale("nl"), "key.b", "1"));
-        assertEquals("this is not translated", bundle.getText(new Locale("nl"), "key.c"));
-        assertEquals("key.d", bundle.getText(new Locale("nl"), "key.d"));
+        assertEquals("waarde", bundle.select(NL).getText("key.a"));
+        assertEquals("dit is 1 parameter", bundle.select(NL).getText("key.b", "1"));
+        assertEquals("key.d", bundle.select(NL).getText("key.d"));
     }
 
     @Test
@@ -80,12 +82,12 @@ class TranslationBundleTest {
             "key.c", "dit is iets anders"
         );
 
-        TranslationBundle bundle = TranslationBundle.fromMap(textEN);
-        bundle = bundle.withTranslation(new Locale("nl"), TranslationBundle.fromMap(textNL));
+        TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(textEN))
+            .link(TranslationBundle.from(NL, PropertyUtils.toProperties(textNL)));
 
-        assertEquals(Set.of("key.a", "key.b", "key.c"), bundle.getKeys(new Locale("nl")));
-        assertEquals(Set.of("key.a", "key.b"), bundle.getKeys());
-        assertEquals(Set.of("key.a", "key.b"), bundle.getKeys(new Locale("it")));
+        assertEquals(Set.of("key.a", "key.b", "key.c"), bundle.select(NL).keySet());
+        assertEquals(Set.of("key.a", "key.b"), bundle.keySet());
+        assertEquals(Set.of("key.a", "key.b"), bundle.select(IT).keySet());
     }
 
     @Test
@@ -112,8 +114,33 @@ class TranslationBundleTest {
     @Test
     void formatEntryWithLineBreak() {
         Map<String, String> text = Map.of("key.a", "first\nsecond {0}\nthird");
-        TranslationBundle bundle = TranslationBundle.fromMap(text);
+        TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(text));
 
         assertEquals("first\nsecond 2\nthird", bundle.getText("key.a", "2"));
+    }
+
+    @Test
+    void preferCountryMatch() {
+        Properties us = PropertyUtils.loadProperties("a=speedster");
+        Properties uk = PropertyUtils.loadProperties("a=pace merchant");
+        Properties nl = PropertyUtils.loadProperties("a=snelheidsduivel");
+
+        TranslationBundle bundle = TranslationBundle.from(Locale.US, us)
+            .link(TranslationBundle.from(Locale.UK, uk))
+            .link(TranslationBundle.from(NL, nl));
+
+        assertEquals("speedster", bundle.select(Locale.US).getText("a"));
+        assertEquals("pace merchant", bundle.select(Locale.UK).getText("a"));
+        assertEquals("speedster", bundle.select(Locale.ENGLISH).getText("a"));
+        assertEquals("snelheidsduivel", bundle.select(NL).getText("a"));
+    }
+
+    @Test
+    void returnKeyIfNoTranslationIsAvailable() {
+        TranslationBundle bundle = TranslationBundle.from(new Properties());
+
+        assertEquals("test", bundle.handleGetObject("test"));
+        assertEquals("test", bundle.getObject("test"));
+        assertEquals("test", bundle.getString("test"));
     }
 }

@@ -47,6 +47,8 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
             throw new UnsupportedOperationException("Test must run on macOS");
         }
 
+        SwingUtils.initializeSwing();
+
         MacIntegrationUIT test = new MacIntegrationUIT();
         test.createWindow();
     }

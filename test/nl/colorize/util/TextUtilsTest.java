@@ -154,4 +154,10 @@ public class TextUtilsTest {
         assertEquals("1:02.000", TextUtils.timeFormat(62_000L, true));
         assertEquals("1:00:00.000", TextUtils.timeFormat(3600_000L, true));
     }
+
+    @Test
+    void limit() {
+        assertEquals("text", TextUtils.limit("text", 4));
+        assertEquals("long...", TextUtils.limit("long text", 4));
+    }
 }

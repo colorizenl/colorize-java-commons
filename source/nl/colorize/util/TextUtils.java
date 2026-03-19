@@ -273,6 +273,18 @@ public final class TextUtils {
     }
 
     /**
+     * Limits the length of a string to the specified value, using
+     * ellipses ({@code ...}) to indicate the string has been shortened.
+     */
+    public static String limit(String str, int maxLength) {
+        Preconditions.checkArgument(maxLength >= 1, "Invalid maximum length: " + maxLength);
+        if (str.length() <= maxLength) {
+            return str;
+        }
+        return str.substring(0, maxLength) + "...";
+    }
+
+    /**
      * Formats a floating point number with the specified number of decimals.
      * This method is a convenience version for {@link NumberFormat}. It uses
      * the {@code en_US} locale, meaning that it will use the format "1,000.5".

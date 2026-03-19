@@ -10,86 +10,115 @@ import com.google.common.base.Preconditions;
 
 import java.text.MessageFormat;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Used to access text with different translations for different locale. Each
- * text string is identified by a key rather than the actual text. The bundle
- * will then return the matching text for the requested locale, with a fallback
- * to the bundle's default translation if no specific translation is available
- * for the requested locale. The text can contain placeholders that follow the
- * {@link MessageFormat} notation.
+ * Translation mechanism for applications that is more flexible than the
+ * standard {@link ResourceBundle} implementation(s).
  * <p>
- * The purpose of this class is similar to {@link java.util.ResourceBundle}.
- * Older versions of this library used to contain a direct ResourceBundle
- * subclass, but ResourceBundle is very old and contains a lot of obscure
- * functionality. This class provides a similar API to ResourceBundle, and
- * supports loading text from {@code properties} files. However, it is more
- * flexible and allows to load text from various other sources. It also allows
- * custom file names and locations, instead of the predefined naming convention
- * required by {@link java.util.ResourceBundle}.
+ * A {@link TranslationBundle} instance contains the translation data for
+ * a specific locale. Translations can be defined programmatically, or
+ * loaded from a {@code .properties} file. Translations are not limited to
+ * static text, they may contain {@link MessageFormat} notation.
+ * <p>
+ * Multiple {@link TranslationBundle}s can be linked, to indicate the
+ * instances contain translations of the same content but for different
+ * locales. Applications can then use {@link #select(Locale)} to retrieve
+ * the translation most suitable for the requested locale.
+ * <p>
+ * Instances of this class are thread-safe and can be accessed from multiple
+ * threads.
  */
-public final class TranslationBundle {
+public final class TranslationBundle extends ResourceBundle {
 
-    private Map<String, String> defaultTranslation;
-    private Map<Locale, TranslationBundle> translations;
+    private Locale locale;
+    private Map<String, String> contents;
+    private List<TranslationBundle> translations;
 
     /**
-     * Creates a {@link TranslationBundle} based on the specified default
-     * translation. Additional translations can be added afterward.
-     * <p>
-     * In most cases, translation data will be stored in {@code .properties}
-     * files. Use the {@link #from(Properties)} or {@link #from(ResourceFile)}
-     * factory methods to create a {@link TranslationBundle} instance from the
-     * contents of such a file.
+     * Creates a new {@link TranslationBundle} that contains a translation for
+     * the specified locale. This is an internal constructor, applications
+     * should use one of the static factory methods.
      */
-    private TranslationBundle(Map<String, String> defaultTranslation,
-                              Map<Locale, TranslationBundle> translations) {
-        this.defaultTranslation = Map.copyOf(defaultTranslation);
-        this.translations = Map.copyOf(translations);
+    private TranslationBundle(Locale locale, Map<String, String> contents) {
+        this.locale = locale;
+        this.contents = Map.copyOf(contents);
+
+        translations = new CopyOnWriteArrayList<>();
+        translations.add(this);
     }
 
     /**
-     * Returns a new {@link TranslationBundle} that adds the specified
-     * translation. This {@link TranslationBundle}'s default translation
-     * will act as a fallback for any keys that are not included in the
-     * translation.
+     * Links two {@link TranslationBundle}s to indicate they represent
+     * different translations of the same content. This does not immediately
+     * change the behavior of either instance, but it makes them discoverable
+     * via {@link #select(Locale)}.
      *
-     * @throws IllegalArgumentException if this {@link TranslationBundle}
-     *         already includes a translation for the same locale.
+     * @return This instance, for method chaining.
+     * @throws IllegalArgumentException if {@code translation} does not
+     *         explicitly define a locale.
      */
-    public TranslationBundle withTranslation(Locale locale, TranslationBundle translation) {
-        Preconditions.checkArgument(!translations.containsKey(locale),
-            "Translation for locale already exists: " + locale);
+    public TranslationBundle link(TranslationBundle translation) {
+        Preconditions.checkArgument(translation.locale != null, "Missing locale for translation");
 
-        Map<Locale, TranslationBundle> newTranslations = new HashMap<>();
-        newTranslations.putAll(translations);
-        newTranslations.put(locale, translation);
-
-        return new TranslationBundle(defaultTranslation, newTranslations);
+        translations.add(translation);
+        translation.translations = translations;
+        return this;
     }
 
     /**
-     * Returns the text string with the specified key, for the requested locale.
-     * If no suitable translation exists, the default translation is used as a
-     * fallback. If the default translation is also not available, the key is
-     * returned as a last resort.
+     * Returns the {@link TranslationBundle} that is considered the best match
+     * for the requested locale. Possible options include the current instance
+     * plus all instances linked using {@link #link(TranslationBundle)}.
      */
-    public String getText(Locale locale, String key, Object... params) {
-        String text = null;
+    public TranslationBundle select(Locale locale) {
+        Optional<TranslationBundle> matchCountry = translations.stream()
+            .filter(translation -> translation.locale != null)
+            .filter(translation -> translation.locale.getLanguage().equals(locale.getLanguage()))
+            .filter(translation -> translation.locale.getCountry().equals(locale.getCountry()))
+            .findFirst();
 
-        if (locale != null && translations.containsKey(locale)) {
-            text = translations.get(locale).defaultTranslation.get(key);
-        }
+        Optional<TranslationBundle> matchLanguage = translations.stream()
+            .filter(translation -> translation.locale != null)
+            .filter(translation -> translation.locale.getLanguage().equals(locale.getLanguage()))
+            .findFirst();
 
-        if (text == null) {
-            text = defaultTranslation.getOrDefault(key, key);
-        }
+        TranslationBundle defaultTranslation = translations.getFirst();
+
+        return matchCountry.orElse(matchLanguage.orElse(defaultTranslation));
+    }
+
+    @Override
+    protected Object handleGetObject(String key) {
+        return contents.getOrDefault(key, key);
+    }
+
+    /**
+     * Returns the text string with the specified key. If the text string uses
+     * {@link MessageFormat} notation, placeholders are replaced using the
+     * values from {@code params}. If no value is available, the key itself is
+     * returned instead.
+     */
+    public String getString(String key, Object... params) {
+        return getText(key, params);
+    }
+
+    /**
+     * Returns the text string with the specified key. If the text string uses
+     * {@link MessageFormat} notation, placeholders are replaced using the
+     * values from {@code params}. If no value is available, the key itself is
+     * returned instead.
+     */
+    public String getText(String key, Object... params) {
+        String text = contents.getOrDefault(key, key);
 
         if (params.length == 0) {
             return text;
@@ -99,95 +128,61 @@ public final class TranslationBundle {
         // quotes ('') if you want to have a quote in your text. People tend
         // to forget this, so make an attempt to auto-correct.
         if (text.contains("'") && !text.contains("''")) {
-            text = text.replaceAll("'", "''");
+            text = text.replace("'", "''");
         }
 
         return MessageFormat.format(text, params);
     }
 
-    /**
-     * Returns the text string with the specified key for the default translation.
-     * If no translation is also available, the key is returned as a fallback.
-     */
-    public String getText(String key, Object... params) {
-        return getText(null, key, params);
+    @Override
+    public Enumeration<String> getKeys() {
+        return Collections.enumeration(contents.keySet());
+    }
+
+    @Override
+    public Set<String> keySet() {
+        return contents.keySet();
     }
 
     /**
-     * Provided for API compatibility with {@code ResourceBundle} and the
-     * {@code DynamicResourceBundle} subclass that used to be included in
-     * previous versions of this library. This method will redirect to
-     * {@link #getText(Locale, String, Object...)} and will use the default
-     * translation.
+     * Returns a {@link TranslationBundle} that contains a translation for
+     * the specified locale.
      */
-    public String getString(String key, Object... params) {
-        return getText(null, key, params);
+    public static TranslationBundle from(Locale locale, Properties contents) {
+        return new TranslationBundle(locale, PropertyUtils.toMap(contents));
     }
 
     /**
-     * Returns all translation keys that exist for the translation for the
-     * specified locale, using the default translation as a fallback where
-     * necessary. The keys will be returned in random order.
+     * Returns a {@link TranslationBundle} based on the specified properties.
+     * The default locale is assumed to be {@link Locale#US}.
      */
-    public Set<String> getKeys(Locale locale) {
-        Set<String> keys = new HashSet<>();
-        keys.addAll(defaultTranslation.keySet());
-        if (translations.containsKey(locale)) {
-            keys.addAll(translations.get(locale).defaultTranslation.keySet());
-        }
-        return keys;
+    public static TranslationBundle from(Properties contents) {
+        return from(Locale.US, contents);
     }
 
     /**
-     * Returns all translation keys that exist for the default translation.
-     * The keys will be returned in random order.
+     * Returns a {@link TranslationBundle} that loads a {@code .properties}
+     * and uses its contents to provide a translation for the specified locale.
+     * <p>
+     * {@link PropertyUtils#loadProperties(ResourceFile)} is used to load the
+     * file. Refer to the documentation of that method for more information on
+     * supported character encodings for different platforms.
      */
-    public Set<String> getKeys() {
-        return defaultTranslation.keySet();
+    public static TranslationBundle from(Locale locale, ResourceFile propertiesFile) {
+        Properties properties = PropertyUtils.loadProperties(propertiesFile);
+        return new TranslationBundle(locale, PropertyUtils.toMap(properties));
     }
 
     /**
-     * Returns a {@link TranslationBundle} that will use the specified
-     * {@link Properties} as its default translation. Additional translations
-     * can be added afterward.
-     */
-    public static TranslationBundle from(Properties defaultTranslation) {
-        return new TranslationBundle(PropertyUtils.toMap(defaultTranslation),
-            Collections.emptyMap());
-    }
-
-    /**
-     * Loads the specified {@code .properties} file, then uses the resulting
-     * properties as the default translation for a {@link TranslationBundle}.
-     * Additional translations can be added afterward.
+     * Returns a {@link TranslationBundle} that loads a {@code .properties}
+     * and uses its contents to provide a translation. The default locale is
+     * assumed to be {@link Locale#US}.
      * <p>
      * {@link PropertyUtils#loadProperties(ResourceFile)} is used to load the
      * file. Refer to the documentation of that method for more information on
      * supported character encodings for different platforms.
      */
     public static TranslationBundle from(ResourceFile propertiesFile) {
-        return from(PropertyUtils.loadProperties(propertiesFile));
-    }
-
-    /**
-     * Returns a {@link TranslationBundle} that loads the <em>contents</em> of
-     * a {@code .properties} file, then uses the resulting properties as the
-     * default translation. Additional translations can be added afterward.
-     * <p>
-     * {@link PropertyUtils#loadProperties(String)} is used to load the file.
-     * Refer to the documentation of that method for more information on
-     * supported character encodings for different platforms.
-     */
-    public static TranslationBundle fromPropertiesFile(String propertiesFileContents) {
-        return from(PropertyUtils.loadProperties(propertiesFileContents));
-    }
-
-    /**
-     * Returns a {@link TranslationBundle} that will use the key/value
-     * properties in the specified map as its default translation. Additional
-     * translations can be added afterward.
-     */
-    public static TranslationBundle fromMap(Map<String, String> defaultTranslation) {
-        return new TranslationBundle(defaultTranslation, Collections.emptyMap());
+        return from(Locale.US, propertiesFile);
     }
 }

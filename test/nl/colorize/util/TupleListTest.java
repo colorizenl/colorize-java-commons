@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TupleListTest {
 
@@ -149,5 +151,20 @@ class TupleListTest {
         assertEquals("[(1, 2)]", TupleList.of("1", "2").toString());
         assertEquals("[(1, 2), (3, 4)]", TupleList.of("1", "2", "3", "4").toString());
         assertEquals("[(1, 2), (3, 4), (5, 6)]", TupleList.of("1", "2", "3", "4", "5", "6").toString());
+    }
+
+    @Test
+    void contains() {
+        TupleList<String, String> list = TupleList.create();
+        list.append("a", "b");
+        list.append("b", "c");
+
+        assertTrue(list.containsLeft("a"));
+        assertTrue(list.containsLeft("b"));
+        assertFalse(list.containsLeft("c"));
+
+        assertFalse(list.containsRight("a"));
+        assertTrue(list.containsRight("b"));
+        assertTrue(list.containsRight("c"));
     }
 }

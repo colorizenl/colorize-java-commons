@@ -6,15 +6,21 @@
 
 package nl.colorize.util.swing;
 
+import lombok.Getter;
+import lombok.Setter;
 import nl.colorize.util.Platform;
+import nl.colorize.util.Signal;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
+import javax.swing.JTextField;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
@@ -29,18 +35,24 @@ import java.util.function.Supplier;
 
 /**
  * Panel that arranges components in a 2 x N grid. This layout is similar to how 
- * most web pages arrange their forms, and provides a good template layout for 
+ * most web pages arrange their forms and provides a good template layout for
  * creating property panels and such. Some aspects of the form's appearance depend
  * on the platform's user interface conventions.
  * <p>
  * Cells in the label column will get a certain percentage of the total available 
  * width, with all components in the value column sharing the remaining space.
- * Components that are not marked as being a row (i.e. that were not added using 
+ * Components that are not marked as being a row, i.e. that were not added using
  * one of the {@code addRow(...)} methods, will take up the entire row.
+ * <p>
+ * Methods named {@code add...Row} can be used to manually add components to the
+ * form. Methods named {@code add...Field} return a {@link Signal} that can be
+ * used to track the value of the created form field.
  * <p>
  * This class uses a custom {@code LayoutManager} to achieve the desired effect,
  * changing the layout manager will mean these capabilities are lost.
  */
+@Getter
+@Setter
 public class FormPanel extends JPanel implements LayoutManager {
     
     private int horizontalMargin;
@@ -71,7 +83,8 @@ public class FormPanel extends JPanel implements LayoutManager {
     }
     
     /**
-     * Adds an empty row.
+     * Adds an empty row that does not contain any components.
+     *
      * @deprecated Use the more clearly named {@link #addEmptyRow()} instead.
      */
     @Deprecated
@@ -133,10 +146,11 @@ public class FormPanel extends JPanel implements LayoutManager {
     
     /**
      * Adds a row that consists of a text label and a slider.
+     *
      * @param addValueLabel When true, show the (numerical) slider value in a
      *        label displayed behind the slider. 
      */
-    public void addRow(String label, final JSlider slider, boolean addValueLabel) {
+    public void addRow(String label, JSlider slider, boolean addValueLabel) {
         JPanel rightColumn = new JPanel(new BorderLayout(getHorizontalMargin(), 0));
         rightColumn.setOpaque(false);
         rightColumn.add(slider, BorderLayout.CENTER);
@@ -262,7 +276,17 @@ public class FormPanel extends JPanel implements LayoutManager {
         label.setFont(label.getFont().deriveFont(Font.BOLD));
         addRow(label);
     }
-    
+
+    /**
+     * Adds a row that consists only of a button that spans the entire row,
+     * without a text label.
+     */
+    public void addButtonRow(String label, Runnable action) {
+        JButton button = new JButton(label);
+        button.addActionListener(e -> action.run());
+        addRow(button);
+    }
+
     /**
      * Adds an empty row that takes vertical space, but does not have any
      * components in it.
@@ -286,6 +310,76 @@ public class FormPanel extends JPanel implements LayoutManager {
     private void addFullWidthRow(JComponent component) {
         add(component);
         packFormHeight();
+    }
+
+    public Signal<String> addStringField(String label, String initialValue) {
+        Signal<String> signal = Signal.of(initialValue);
+        JTextField field = new JTextField(initialValue);
+        field.addActionListener(_ -> signal.set(field.getText()));
+        addRow(label, field);
+        return signal;
+    }
+
+    public Signal<String> addStringField(String label, List<String> choices, String initial) {
+        Signal<String> signal = Signal.of(initial);
+        JComboBox<String> combobox = SwingUtils.createComboBox(choices, initial);
+        combobox.addActionListener(_ -> signal.set((String) combobox.getSelectedItem()));
+        addRow(label, combobox);
+        return signal;
+    }
+
+    public Signal<Integer> addIntField(String label, int initialValue) {
+        Signal<Integer> signal = Signal.of(initialValue);
+        JTextField field = new JTextField(String.valueOf(initialValue));
+        field.addActionListener(_ -> {
+            try {
+                signal.set(Integer.parseInt(field.getText()));
+            } catch (NumberFormatException e) {
+                signal.set(initialValue);
+            }
+        });
+        addRow(label, field);
+        return signal;
+    }
+
+    public Signal<Integer> addIntField(String label, int initialValue, int min, int max) {
+        JLabel indicator = new JLabel(String.valueOf(initialValue));
+
+        Signal<Integer> signal = Signal.of(initialValue);
+        JSlider slider = new JSlider(min, max, initialValue);
+        slider.addChangeListener(_ -> {
+            int value = slider.getValue();
+            indicator.setText(String.valueOf(value));
+            signal.set(value);
+        });
+
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        panel.add(slider, BorderLayout.CENTER);
+        panel.add(indicator, BorderLayout.EAST);
+        addRow(label, panel);
+        return signal;
+    }
+
+    public Signal<Float> addFloatField(String label, float initialValue) {
+        Signal<Float> signal = Signal.of(initialValue);
+        JTextField field = new JTextField(String.valueOf(initialValue));
+        field.addActionListener(_ -> {
+            try {
+                signal.set(Float.parseFloat(field.getText()));
+            } catch (NumberFormatException e) {
+                signal.set(initialValue);
+            }
+        });
+        addRow(label, field);
+        return signal;
+    }
+
+    public Signal<Boolean> addBooleanField(String label, boolean selected) {
+        Signal<Boolean> signal = Signal.of(selected);
+        JCheckBox checkbox = new JCheckBox(label, selected);
+        checkbox.addActionListener(_ -> signal.set(checkbox.isSelected()));
+        addRow(checkbox);
+        return signal;
     }
     
     private void addSplitWidthRow(JComponent... components) {
@@ -322,27 +416,22 @@ public class FormPanel extends JPanel implements LayoutManager {
         Dimension preferredFormSize = getLayout().preferredLayoutSize(this);
         SwingUtils.setPreferredHeight(this, preferredFormSize.height);
     }
-    
-    public void setHorizontalMargin(int horizontalMargin) {
-        this.horizontalMargin = horizontalMargin;
-    }
-    
-    private int getHorizontalMargin() {
-        return horizontalMargin;
-    }
-    
-    public void setVerticalMargin(int verticalMargin) {
-        this.verticalMargin = verticalMargin;
-    }
-    
-    public int getVerticalMargin() {
-        return verticalMargin;
+
+    /**
+     * Wraps this form in a dialog window with the specified title. The dialog
+     * contains generic "save" and "cancel" buttons.
+     *
+     * @return True if the dialog window was closed with the "save" button,
+     *         false if it was closed with the "cancel" button or the
+     *         platform's native window close button.
+     */
+    public boolean showDialog(JFrame window, String title) {
+        packFormHeight();
+        String saveLabel = SwingUtils.getCustomComponentsBundle().getString("FormPanel.save");
+        String cancelLabel = SwingUtils.getCustomComponentsBundle().getString("FormPanel.cancel");
+        return Popups.message(window, title, this, saveLabel, cancelLabel) == 0;
     }
 
-    public void setRightAlignLabels(boolean rightAlignLabels) {
-        this.rightAlignLabels = rightAlignLabels;
-    }
-    
     @Override
     public void addLayoutComponent(String name, Component component) { 
     }
@@ -399,7 +488,7 @@ public class FormPanel extends JPanel implements LayoutManager {
      */
     private List<List<Component>> calculateRows(Container parent) {
         int pos = 0;
-        List<List<Component>> rows = new ArrayList<List<Component>>();
+        List<List<Component>> rows = new ArrayList<>();
         
         while (pos < parent.getComponentCount()) {
             List<Component> componentsInRow = eatComponentsInRow(parent, pos);
@@ -414,7 +503,7 @@ public class FormPanel extends JPanel implements LayoutManager {
         List<Component> inRow = new ArrayList<>();
         for (int i = pos; i < parent.getComponentCount(); i++) {
             Component component = parent.getComponent(i);
-            if (inRow.size() >= 1 && (isLabelCell(component) || isFullWidthCell(component))) {
+            if (!inRow.isEmpty() && (isLabelCell(component) || isFullWidthCell(component))) {
                 return inRow;
             }
             inRow.add(component);

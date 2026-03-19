@@ -74,6 +74,14 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
             .toList();
     }
 
+    public boolean containsLeft(L element) {
+        return tuples.stream().anyMatch(tuple -> tuple.left().equals(element));
+    }
+
+    public boolean containsRight(R element) {
+        return tuples.stream().anyMatch(tuple -> tuple.right().equals(element));
+    }
+
     public void forEach(BiConsumer<L, R> callback) {
         for (Tuple<L, R> entry : tuples) {
             callback.accept(entry.left(), entry.right());

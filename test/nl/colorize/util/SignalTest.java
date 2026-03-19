@@ -9,6 +9,7 @@ package nl.colorize.util;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,6 +25,16 @@ class SignalTest {
 
         assertEquals("2", signal.get());
         assertEquals("2", signal.toString());
-        assertEquals(List.of("1", "2"), events);
+        assertEquals(List.of("2"), events);
+    }
+
+    @Test
+    void emit() {
+        Signal<String> signal = Signal.of("1");
+        List<String> events = new ArrayList<>();
+        signal.getChanges().subscribe(events::add);
+
+        assertEquals("1", signal.get());
+        assertEquals(Collections.emptyList(), events);
     }
 }

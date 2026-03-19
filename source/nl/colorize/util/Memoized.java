@@ -14,6 +14,11 @@ import java.util.function.Supplier;
  * calculated on the first call, and the cached result is returned for
  * subsequent calls. Evaluation is lazy, the operation is not actually
  * performed until {@link #get()} is called for the first time.
+ * <p>
+ * Instances of this class are <strong>not</strong> thread-safe. This class
+ * is not intended for situations where the expensive operation is performed
+ * by one thread, and the result is processed by a different thread. In those
+ * situations, use {@link Subject} or a similar asynchronous mechanism.
  *
  * @param <T> The type of value that is returned by the operation.
  */
