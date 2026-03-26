@@ -29,7 +29,7 @@ public record DateRange(Date start, Date end) implements Predicate<Date>, Compar
 
     public DateRange {
         Preconditions.checkArgument(start.getTime() < end.getTime(),
-            "Invalid date range (start date " + start + ", end date " + end + ")");
+            "Invalid date range (start date %s, end date %s)", start, end);
     }
 
     /**

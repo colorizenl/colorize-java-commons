@@ -35,6 +35,8 @@ import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import java.awt.Color;
@@ -803,6 +805,30 @@ public final class SwingUtils {
                 exit.accept(e);
             }
         };
+    }
+
+    /**
+     * Attaches a {@link DocumentListener} to the specified text field, and
+     * invokes the callback function with the current value whenever the
+     * underlying document is changed.
+     */
+    public static void wrapDocumentListener(JTextField field, Consumer<String> callback) {
+        field.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                callback.accept(field.getText());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                callback.accept(field.getText());
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                callback.accept(field.getText());
+            }
+        });
     }
 
     public static <T> JComboBox<String> createComboBox(Collection<T> items, T selected) {

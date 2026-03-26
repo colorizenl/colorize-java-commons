@@ -28,6 +28,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.LayoutManager;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -81,17 +83,7 @@ public class FormPanel extends JPanel implements LayoutManager {
         // The component needs to have some initial default size.
         setPreferredSize(new Dimension(400, 400));
     }
-    
-    /**
-     * Adds an empty row that does not contain any components.
-     *
-     * @deprecated Use the more clearly named {@link #addEmptyRow()} instead.
-     */
-    @Deprecated
-    public void addRow() {
-        addEmptyRow();
-    }
-    
+
     /**
      * Adds a row that contains a single component that will use the entire
      * available width.
@@ -288,7 +280,7 @@ public class FormPanel extends JPanel implements LayoutManager {
     }
 
     /**
-     * Adds an empty row that takes vertical space, but does not have any
+     * Adds an empty row that takes vertical space but does not have any
      * components in it.
      */
     public void addEmptyRow() {
@@ -312,14 +304,49 @@ public class FormPanel extends JPanel implements LayoutManager {
         packFormHeight();
     }
 
+    /**
+     * Dynamically adds a text field and returns a {@link Signal} that can be
+     * used to process or subscribe to results.
+     */
     public Signal<String> addStringField(String label, String initialValue) {
         Signal<String> signal = Signal.of(initialValue);
         JTextField field = new JTextField(initialValue);
         field.addActionListener(_ -> signal.set(field.getText()));
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                signal.set(field.getText());
+            }
+        });
         addRow(label, field);
         return signal;
     }
 
+    /**
+     * Dynamically adds a text field and returns a {@link Signal} that can be
+     * used to process or subscribe to results. This method is different from
+     * the "regular" {@link #addStringField(String, String)} in that it will
+     * change its value whenever the user is typing in the text field.
+     */
+    public Signal<String> addDynamicStringField(String label, String initialValue) {
+        Signal<String> signal = Signal.of(initialValue);
+        JTextField field = new JTextField(initialValue);
+        field.addActionListener(_ -> signal.set(field.getText()));
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                signal.set(field.getText());
+            }
+        });
+        SwingUtils.wrapDocumentListener(field, signal::set);
+        addRow(label, field);
+        return signal;
+    }
+
+    /**
+     * Dynamically adds a combo-box field and returns a {@link Signal} that
+     * can be used to process or subscribe to results.
+     */
     public Signal<String> addStringField(String label, List<String> choices, String initial) {
         Signal<String> signal = Signal.of(initial);
         JComboBox<String> combobox = SwingUtils.createComboBox(choices, initial);
@@ -328,6 +355,10 @@ public class FormPanel extends JPanel implements LayoutManager {
         return signal;
     }
 
+    /**
+     * Dynamically adds a text field that only accepts integers and returns
+     * a {@link Signal} that can be used to process or subscribe to results.
+     */
     public Signal<Integer> addIntField(String label, int initialValue) {
         Signal<Integer> signal = Signal.of(initialValue);
         JTextField field = new JTextField(String.valueOf(initialValue));
@@ -342,6 +373,10 @@ public class FormPanel extends JPanel implements LayoutManager {
         return signal;
     }
 
+    /**
+     * Dynamically adds a slider and returns a {@link Signal} that can be
+     * used to process or subscribe to results.
+     */
     public Signal<Integer> addIntField(String label, int initialValue, int min, int max) {
         JLabel indicator = new JLabel(String.valueOf(initialValue));
 
@@ -360,6 +395,11 @@ public class FormPanel extends JPanel implements LayoutManager {
         return signal;
     }
 
+    /**
+     * Dynamically adds a text field that only accepts float values and
+     * returns a {@link Signal} that can be used to process or subscribe
+     * to results.
+     */
     public Signal<Float> addFloatField(String label, float initialValue) {
         Signal<Float> signal = Signal.of(initialValue);
         JTextField field = new JTextField(String.valueOf(initialValue));
@@ -374,6 +414,10 @@ public class FormPanel extends JPanel implements LayoutManager {
         return signal;
     }
 
+    /**
+     * Dynamically adds a checkbox and returns a {@link Signal} that can be
+     * used to process or subscribe to results.
+     */
     public Signal<Boolean> addBooleanField(String label, boolean selected) {
         Signal<Boolean> signal = Signal.of(selected);
         JCheckBox checkbox = new JCheckBox(label, selected);

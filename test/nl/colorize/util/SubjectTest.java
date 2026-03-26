@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Preconditions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -139,27 +138,23 @@ class SubjectTest {
     void map() {
         List<String> received = new ArrayList<>();
 
-        Subject<String> originalSubject = Subject.of("a", "b");
-        originalSubject.subscribe(received::add);
-        Subject<String> mappedSubject = originalSubject.map(x -> x + "2");
-        mappedSubject.subscribe(received::add);
+        Subject.of("a", "b")
+            .map(x -> x + "2")
+            .subscribe(received::add);
 
-        assertEquals("[a, b, a2, b2]", received.toString());
+        assertEquals("[a2, b2]", received.toString());
     }
 
     @Test
     void mapException() {
         List<Integer> received = new ArrayList<>();
-        List<Throwable> originalErrors = new ArrayList<>();
         List<Throwable> mappedErrors = new ArrayList<>();
 
         Subject<Integer> originalSubject = Subject.of(1, 2);
-        originalSubject.subscribeErrors(originalErrors::add);
         Subject<Integer> mappedSubject = originalSubject.map(x -> x / 0);
         mappedSubject.subscribe(received::add, mappedErrors::add);
 
         assertEquals(0, received.size());
-        assertEquals(0, originalErrors.size());
         assertEquals(2, mappedErrors.size());
     }
 
@@ -167,12 +162,11 @@ class SubjectTest {
     void flatMap() {
         List<String> received = new ArrayList<>();
 
-        Subject<String> originalSubject = Subject.of("a", "b");
-        originalSubject.subscribe(received::add);
-        Subject<String> mappedSubject = originalSubject.flatMap(x -> Stream.of(x + "1", x + "2"));
-        mappedSubject.subscribe(received::add);
+        Subject.of("a", "b")
+            .flatMap(x -> Stream.of(x + "1", x + "2"))
+            .subscribe(received::add);
 
-        assertEquals("[a, b, a1, a2, b1, b2]", received.toString());
+        assertEquals("[a1, a2, b1, b2]", received.toString());
     }
 
     @Test
@@ -191,71 +185,11 @@ class SubjectTest {
         List<String> received = new ArrayList<>();
 
         Subject<String> first = Subject.of("a", "b");
-        first.subscribe(received::add);
-
         Subject<String> second = new Subject<>();
         second.subscribe(event -> received.add(event + "2"));
         first.subscribe(second);
 
-        assertEquals("[a, b, a2, b2]", received.toString());
-    }
-
-    @Test
-    void retry() {
-        List<Integer> result = new ArrayList<>();
-        List<Integer> invocations = new ArrayList<>();
-
-        Subject<Integer> subject = new Subject<>();
-        subject.subscribe(result::add);
-        subject.retry(() -> {
-            int n = invocations.size() + 1;
-            invocations.add(n);
-            Preconditions.checkArgument(n >= 2, "Fail!");
-            return n;
-        }, 3);
-
-        assertEquals(1, result.size());
-        assertEquals(2, result.getFirst());
-    }
-
-    @Test
-    void throwLastExceptionIfRetryFailed() {
-        List<Integer> result = new ArrayList<>();
-        List<Throwable> errors = new ArrayList<>();
-        List<Integer> invocations = new ArrayList<>();
-
-        Subject<Integer> subject = new Subject<>();
-        subject.subscribe(result::add);
-        subject.subscribeErrors(errors::add);
-        subject.retry(() -> {
-            int n = invocations.size() + 1;
-            invocations.add(n);
-            Preconditions.checkArgument(n >= 5, "Fail!");
-            return n;
-        }, 3);
-
-        assertEquals(0, result.size());
-        assertEquals(1, errors.size());
-    }
-
-    @Test
-    void retryWithDelay() {
-        List<Integer> result = new ArrayList<>();
-        List<Throwable> errors = new ArrayList<>();
-        List<Integer> invocations = new ArrayList<>();
-
-        Subject<Integer> subject = new Subject<>();
-        subject.subscribe(result::add);
-        subject.subscribeErrors(errors::add);
-        subject.retry(() -> {
-            int n = invocations.size() + 1;
-            invocations.add(n);
-            Preconditions.checkArgument(n >= 2, "Fail!");
-            return n;
-        }, 3, 500L);
-
-        assertEquals(1, result.size());
-        assertEquals(0, errors.size());
+        assertEquals("[a2, b2]", received.toString());
     }
 
     @Test

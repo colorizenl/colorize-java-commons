@@ -20,84 +20,166 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Utility class for working with pop-up windows. This class can be used instead
- * of calling {@link javax.swing.JOptionPane} directly. It makes sure that dialogs
- * look native on each platform, automatically word-wraps long messages, and
- * provides a number of convenience methods. Like {@code JOptionPane}, pop-up
- * windows can specify a parent window or pass {@code null} to be considered as
- * global for the entire application.
+ * Utility class for working with pop-up modal dialog windows in Swing
+ * applications.
  * <p>
- * It's recommended to not rely on generic button labels such as "OK" or "cancel",
- * since they can be confusing depending on the action performed by the pop-up
- * window. Instead, try to use button labels that convey the action that is going
- * to be performed, such as "save" or "download file".
+ * There are two ways to create pop-up windows: By using {@link #builder()}
+ * and its methods to configure and show the pop-up window, or by using one
+ * of the "pre-baked" static methods that create a pop-up dialog in one go.
+ * <p>
+ * Both approaches wrap the underlying {@link JOptionPane}. It makes sure
+ * that pop-up windows look native on each platform, automatically word-wraps
+ * long messages, and provides a number of convenience methods.
+ * <p>
+ * It's recommended to not rely on generic button labels such as "OK" or
+ * "cancel", since they can be confusing depending on the action performed by
+ * the pop-up window. Instead, try to use button labels that convey the action
+ * that is going to be performed, such as "save" or "download file".
  */
 public final class Popups {
+
+    private String title;
+    private JComponent panel;
+    private List<String> buttonLabels;
+    private int iconType;
     
     public static final int MESSAGE_WIDTH = 350;
+
     private static final TranslationBundle BUNDLE = SwingUtils.getCustomComponentsBundle();
     private static final String DEFAULT_OK = BUNDLE.getString("Popups.ok");
     private static final String DEFAULT_CANCEL = BUNDLE.getString("Popups.cancel");
 
     private Popups() {
+        this.title = "";
+        this.panel = new MultiLabel("", MESSAGE_WIDTH);
+        this.buttonLabels = List.of(DEFAULT_OK);
+        this.iconType = JOptionPane.INFORMATION_MESSAGE;
     }
-    
+
+    public Popups withTitle(String title) {
+        this.title = title;
+        return this;
+    }
+
+    public Popups withButtons(List<String> buttonLabels) {
+        Preconditions.checkArgument(!buttonLabels.isEmpty(), "Pop-up window must have buttons");
+        this.buttonLabels = List.copyOf(buttonLabels);
+        return this;
+    }
+
+    public Popups withButtons(String... buttonLabels) {
+        return withButtons(List.of(buttonLabels));
+    }
+
+    public Popups withConfirmButtons() {
+        return withButtons(List.of(DEFAULT_OK, DEFAULT_CANCEL));
+    }
+
+    public Popups withPanel(JComponent panel) {
+        this.panel = panel;
+        return this;
+    }
+
+    public Popups withMessage(String message) {
+        return withPanel(new MultiLabel(message, MESSAGE_WIDTH));
+    }
+
+    public Popups withWarningIcon() {
+        this.iconType = JOptionPane.WARNING_MESSAGE;
+        return this;
+    }
+
+    public Popups withErrorIcon() {
+        this.iconType = JOptionPane.ERROR_MESSAGE;
+        return this;
+    }
+
     /**
-     * Shows a pop-up window that consists of the specified component and a number
-     * of buttons. The first button in the list is considered the "primary" button. 
-     * This method will block until either one of the buttons is clicked or the 
-     * dialog was cancelled. 
-     * @return The index of the button that was clicked. For example, if the first
-     *         button from {@code buttons} was clicked this will return 0. 
-     * @throws IllegalArgumentException if no buttons were supplied.
+     * Displays a pop-up window based on the configuration in this builder.
+     * The pop-up window will be modal for the specified parent window.
+     *
+     * @return The index of the button that was clicked. Returns -1 if the
+     *         pop-up window was disposed of without explicitly clicking one
+     *         of its buttons.
      */
-    public static int message(JFrame parent, String title, JComponent panel, List<String> buttons) {
-        Preconditions.checkArgument(!buttons.isEmpty(), "Missing buttons");
-        
-        // Wrap the panel inside another panel so that it will be displayed
-        // at its intended size.
-        JPanel componentContainer = new JPanel(new BorderLayout());
-        componentContainer.add(panel, BorderLayout.NORTH);
-        componentContainer.add(new JLabel(""), BorderLayout.CENTER);
-                                
-        JOptionPane pane = new JOptionPane(componentContainer, JOptionPane.INFORMATION_MESSAGE);
-        pane.setOptions(buttons.toArray(new String[0]));
-        pane.setInitialValue(buttons.get(0));
-        
-        JDialog dialog = pane.createDialog(parent, title); 
+    public int show(JFrame parentWindow) {
+        JPanel container = new JPanel(new BorderLayout());
+        container.add(panel, BorderLayout.NORTH);
+        container.add(new JLabel(""), BorderLayout.CENTER);
+
+        JOptionPane popup = new JOptionPane(container, iconType);
+        popup.setOptions(buttonLabels.toArray(new String[0]));
+        popup.setInitialValue(buttonLabels.getFirst());
+
+        JDialog dialog = popup.createDialog(parentWindow, title);
         dialog.pack();
         dialog.setVisible(true);
         dialog.dispose();
-        
-        return getSelectedPopupButton(pane, buttons);
+
+        return getSelectedButtonIndex(popup);
     }
 
-    private static int getSelectedPopupButton(JOptionPane pane, List<String> buttons) {
-        Object value = pane.getValue();
-        for (int i = 0; i < buttons.size(); i++) {
-            if (buttons.get(i).equals(value)) {
+    /**
+     * Displays a pop-up window based on the configuration in this builder.
+     * The pop-up window will be modal for the entire application.
+     *
+     * @return The index of the button that was clicked. Returns -1 if the
+     *         pop-up window was disposed of without explicitly clicking one
+     *         of its buttons.
+     */
+    public int show() {
+        return show(null);
+    }
+
+    private int getSelectedButtonIndex(JOptionPane popup) {
+        for (int i = 0; i < buttonLabels.size(); i++) {
+            if (buttonLabels.get(i).equals(popup.getValue())) {
                 return i;
             }
         }
-        
-        // On most platforms the pop-up window can be cancelled without
-        // clicking a button (for example by clicking the window's "X"
-        // button or by using a keyboard shortcut. This usually has the
-        // effect of "cancelling" the action.
-        // This assumes that on a pop-window with 2 buttons the
-        // non-primary button cancels the dialog. This behavior seems
-        // reasonable for most cases, but should be documented 
-        // explicitly when creating the pop-up window. 
-        return buttons.size() == 2 ? 1 : 0;
+
+        // On most platforms the pop-up window can be canceled without
+        // clicking a button, usually by clicking the window's close
+        // button in the title bar.
+        return -1;
     }
-    
+
+    /**
+     * Starts building a new pop-up window. The initial state will have no title,
+     * an empty message, and a single default "OK" button.
+     */
+    public static Popups builder() {
+        return new Popups();
+    }
+
     /**
      * Shows a pop-up window that consists of the specified component and a number
      * of buttons. The first button in the list is considered the "primary" button. 
      * This method will block until either one of the buttons is clicked or the 
-     * dialog was cancelled. 
+     * dialog was cancelled.
+     *
      * @return The index of the button that was clicked. For example, if the first
      *         button from {@code buttons} was clicked this will return 0. 
+     *
+     * @throws IllegalArgumentException if no buttons were supplied.
+     */
+    public static int message(JFrame parent, String title, JComponent panel, List<String> buttons) {
+        return builder()
+            .withTitle(title)
+            .withPanel(panel)
+            .withButtons(buttons)
+            .show(parent);
+    }
+
+    /**
+     * Shows a pop-up window that consists of the specified component and a number
+     * of buttons. The first button in the list is considered the "primary" button. 
+     * This method will block until either one of the buttons is clicked or the 
+     * dialog was cancelled.
+     *
+     * @return The index of the button that was clicked. For example, if the first
+     *         button from {@code buttons} was clicked this will return 0. 
+     *
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, JComponent panel, String... buttons) {
@@ -108,22 +190,27 @@ public final class Popups {
      * Shows a pop-up window that consists of the specified component and a number
      * of buttons. The first button in the list is considered the "primary" button. 
      * This method will block until either one of the buttons is clicked or the 
-     * dialog was cancelled. 
+     * dialog was cancelled.
+     *
      * @return The index of the button that was clicked. For example, if the first
      *         button from {@code buttons} was clicked this will return 0. 
+     *
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, String message, List<String> buttons) {
-        return message(parent, title, new MultiLabel(message, MESSAGE_WIDTH), buttons);
+        MultiLabel panel = new MultiLabel(message, MESSAGE_WIDTH);
+        return message(parent, title, panel, buttons);
     }
     
     /**
      * Shows a pop-up window that consists of the specified component and a number
      * of buttons. The first button in the list is considered the "primary" button. 
      * This method will block until either one of the buttons is clicked or the 
-     * dialog was cancelled. 
+     * dialog was cancelled.
+     *
      * @return The index of the button that was clicked. For example, if the first
      *         button from {@code buttons} was clicked this will return 0. 
+     *
      * @throws IllegalArgumentException if no buttons were supplied.
      */
     public static int message(JFrame parent, String title, String message, String... buttons) {
@@ -135,7 +222,7 @@ public final class Popups {
      * default "OK" button.
      */
     public static void message(JFrame parent, String title, JComponent message) {
-        List<String> buttons = Arrays.asList(DEFAULT_OK);
+        List<String> buttons = List.of(DEFAULT_OK);
         message(parent, title, message, buttons);
     }
     
@@ -144,7 +231,7 @@ public final class Popups {
      * default "OK" button.
      */
     public static void message(JFrame parent, String title, String message) {
-        List<String> buttons = Arrays.asList(DEFAULT_OK);
+        List<String> buttons = List.of(DEFAULT_OK);
         message(parent, title, message, buttons);
     }
     
@@ -153,26 +240,19 @@ public final class Popups {
      * default "OK" button.
      */
     public static void message(JFrame parent, String message) {
-        List<String> buttons = Arrays.asList(DEFAULT_OK);
+        List<String> buttons = List.of(DEFAULT_OK);
         message(parent, "", message, buttons);
     }
-    
+
     /**
-     * Shows a simple pop-up window that displays a text message and contains
-     * default "OK" and "cancel" buttons.
-     * @return True when OK, false when cancelled.
+     * Shows a simple pop-up window that displays an error message with a
+     * generic "Error" title and a single "OK" button.
      */
-    public static boolean confirmMessage(JFrame parent, String title, JComponent message) {
-        List<String> buttons = Arrays.asList(DEFAULT_OK, DEFAULT_CANCEL);
-        return message(parent, title, message, buttons) == 0;
-    }
-    
-    /**
-     * Shows a simple pop-up window that displays a text message and contains
-     * default "OK" and "cancel" buttons.
-     * @return True when OK, false when cancelled.
-     */
-    public static boolean confirmMessage(JFrame parent, String message) {
-        return confirmMessage(parent, "", new MultiLabel(message, MESSAGE_WIDTH));
+    public static void errorMessage(JFrame parent, String message) {
+        Popups.builder()
+            .withTitle(BUNDLE.getString("Popups.error"))
+            .withMessage(message)
+            .withErrorIcon()
+            .show(parent);
     }
 }

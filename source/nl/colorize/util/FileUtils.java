@@ -145,10 +145,15 @@ public final class FileUtils {
     /**
      * Copies a directory to the specified location.
      *
+     * @throws IllegalArgumentException if the source directory does not
+     *         exist or is not a directory.
      * @throws IllegalStateException if the target directory already exists.
      * @throws IOException if an I/O error occurs while copying the files.
      */
     public static void copyDirectory(File source, File target) throws IOException {
+        Preconditions.checkArgument(source.exists(),
+            "Source directory does not exist: " + source.getAbsolutePath());
+
         Preconditions.checkState(!target.exists(),
             "Target directory already exists: " + target.getAbsolutePath());
 
@@ -163,7 +168,7 @@ public final class FileUtils {
 
     /**
      * Deletes a directory and all of its contents. If the directory does not
-     * exist this method does nothing.
+     * exist, this method does nothing.
      *
      * @throws IOException if an I/O error occurs while deleting.
      * @throws IllegalArgumentException if the argument is not a directory.
@@ -172,13 +177,15 @@ public final class FileUtils {
         Preconditions.checkArgument(!dir.isFile(),
             dir.getAbsolutePath() + " is not a directory");
 
-        // Always log when deleting directories, for traceability
-        // reasons.
         LOGGER.info("Deleting directory " + dir.getAbsolutePath());
 
+        deleteRecursive(dir);
+    }
+
+    private static void deleteRecursive(File dir) throws IOException {
         for (File child : getDirectoryContents(dir)) {
             if (child.isDirectory()) {
-                deleteDirectory(child);
+                deleteRecursive(child);
             } else {
                 delete(child);
             }

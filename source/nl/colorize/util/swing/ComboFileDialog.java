@@ -166,7 +166,11 @@ public class ComboFileDialog {
     }
     
     private File showOverrideFileDialog(JFrame parent, File selected) {
-        if (Popups.confirmMessage(parent, bundle.getString("ComboFileDialog.overwrite", selected.getName()))) {
+        String yesButton = bundle.getString("ComboFileDialog.overwriteYes");
+        String noButton = bundle.getString("ComboFileDialog.overwriteNo");
+        String message = bundle.getString("ComboFileDialog.overwrite", selected.getName());
+
+        if (Popups.message(parent, "", message, List.of(yesButton, noButton)) == 0) {
             return selected;
         } else {
             return null;

@@ -38,7 +38,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -112,7 +111,10 @@ public class CustomComponentsUIT {
 
         List<String> labels = new ArrayList<>();
         labels.add("text label");
-        
+
+        JLabel changeLabel = new JLabel("(listens for change events)");
+        JLabel typingLabel = new JLabel("(listens for typing events)");
+
         FormPanel form = new FormPanel();
         form.addRow("Row with textfield:", new JTextField());
         form.addRow("Row with other component:", new JButton("Button"));
@@ -122,6 +124,11 @@ public class CustomComponentsUIT {
         form.addRow(new JCheckBox("Row with checkbox"));
         form.addRow(new JCheckBox("Another checkbox with a very long label that doesn't fit"));
         form.addEllipsesRow(labels::getFirst, () -> labels.set(0, "something else"));
+        form.addEmptyRow();
+        form.addStringField("Listen changes:", "").getChanges().subscribe(changeLabel::setText);
+        form.addRow(changeLabel);
+        form.addDynamicStringField("Listen typing:", "").getChanges().subscribe(typingLabel::setText);
+        form.addRow(typingLabel);
         return form;
     }
 
@@ -161,11 +168,12 @@ public class CustomComponentsUIT {
         
         JButton fileDialogButton = new JButton("Show File Dialog");
         fileDialogButton.addActionListener(e -> showFileDialogs());
-        
-        JPanel tab = new JPanel(new GridLayout(3, 1, 0, 5));
-        tab.add(popupButton);
-        tab.add(fileDialogButton);
-        return tab;
+
+        FormPanel form = new FormPanel();
+        form.addRow(popupButton);
+        form.addRow(fileDialogButton);
+        form.addEmptyRow();
+        return form;
     }
     
     private JPanel createAccordionTab() {
@@ -249,6 +257,8 @@ public class CustomComponentsUIT {
         LOGGER.info("Selected button: " + button);
 
         Popups.message(frame, "Simple message with default button.");
+
+        Popups.errorMessage(frame, "This is an error message.");
     }
     
     public void showFileDialogs() {

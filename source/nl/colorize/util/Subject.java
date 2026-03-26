@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 public final class Subject<T> implements Publisher<T> {
 
     private List<SubjectSubscription> subscriptions;
-    private List<Object> history;
+    private List<Object> undelivered;
     private boolean completed;
 
     private static final Logger LOGGER = LogHelper.getLogger(Subject.class);
@@ -47,7 +47,7 @@ public final class Subject<T> implements Publisher<T> {
     public Subject() {
         this.completed = false;
         this.subscriptions = new CopyOnWriteArrayList<>();
-        this.history = new CopyOnWriteArrayList<>();
+        this.undelivered = new CopyOnWriteArrayList<>();
     }
 
     /**
@@ -56,12 +56,17 @@ public final class Subject<T> implements Publisher<T> {
      * completed.
      */
     public void next(T event) {
-        if (!completed) {
-            for (SubjectSubscription subscription : subscriptions) {
-                subscription.subscriber.onNext(event);
-            }
+        if (completed) {
+            return;
+        }
 
-            history.add(event);
+        if (subscriptions.isEmpty()) {
+            undelivered.add(event);
+            return;
+        }
+
+        for (SubjectSubscription subscription : subscriptions) {
+            subscription.subscriber.onNext(event);
         }
     }
 
@@ -73,12 +78,17 @@ public final class Subject<T> implements Publisher<T> {
      * marked as completed.
      */
     public void nextError(Throwable error) {
-        if (!completed) {
-            for (SubjectSubscription subscription : subscriptions) {
-                subscription.subscriber.onError(error);
-            }
+        if (completed) {
+            return;
+        }
 
-            history.add(error);
+        if (subscriptions.isEmpty()) {
+            undelivered.add(error);
+            return;
+        }
+
+        for (SubjectSubscription subscription : subscriptions) {
+            subscription.subscriber.onError(error);
         }
     }
 
@@ -91,72 +101,22 @@ public final class Subject<T> implements Publisher<T> {
      * completed.
      */
     public void next(Callable<T> operation) {
-        if (!completed) {
-            try {
-                T event = operation.call();
-                next(event);
-            } catch (Exception e) {
-                nextError(e);
-            }
-        }
-    }
-
-    /**
-     * Attempts to perform an operation for the specified number of attempts,
-     * automatically retrying the operation if the initial attempt(s) failed.
-     * Note {@code attempts} includes the original attempt, so the number of
-     * retries is basically {@code attempts - 1}.
-     * <p>
-     * If the operation is not successful, an error is sent to subscribers
-     * based on the last failed attempt.
-     */
-    public void retry(Callable<T> operation, int attempts) {
-        retry(operation, attempts, 0L);
-    }
-
-    /**
-     * Attempts to perform an operation for the specified number of attempts,
-     * automatically retrying the operation if the initial attempt(s) failed.
-     * The specified time delay (in milliseconds) is applied in between
-     * attempts. Note {@code attempts} includes the original attempt, so the
-     * number of retries is basically {@code attempts - 1}.
-     * <p>
-     * If the operation is not successful, an error is sent to subscribers
-     * based on the last failed attempt.
-     */
-    public void retry(Callable<T> operation, int attempts, long delay) {
-        Preconditions.checkArgument(attempts >= 1, "Invalid number of attempts: " + attempts);
-        Preconditions.checkArgument(delay >= 0L, "Invalid delay: " + delay);
-
-        Exception thrown = null;
-
-        for (int i = 0; i < attempts; i++) {
-            try {
-                T event = operation.call();
-                next(event);
-                return;
-            } catch (Exception e) {
-                thrown = e;
-                LOGGER.log(Level.WARNING, "Operation failed, retrying");
-            }
-
-            if (delay > 0L) {
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                    LOGGER.warning("Retry delay interrupted");
-                }
-            }
+        if (completed) {
+            return;
         }
 
-        LOGGER.warning("Operation failed after " + attempts + " attempts");
-        nextError(thrown);
+        try {
+            T event = operation.call();
+            next(event);
+        } catch (Exception e) {
+            nextError(e);
+        }
     }
 
     /**
      * Registers the specified subscriber to receive published events and
-     * errors. The subscriber will immediately be notified of previously
-     * published events.
+     * errors. If there are currently undelivered events or errors, the new
+     * subscriber will immediately be notified of them.
      */
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
@@ -169,19 +129,21 @@ public final class Subject<T> implements Publisher<T> {
         SubjectSubscription subscription = new SubjectSubscription(subscriber);
         subscriptions.add(subscription);
         subscriber.onSubscribe(subscription);
-        sendHistoryEvents(subscriber);
+        sendUndelivered(subscriber);
         return subscription;
     }
 
     @SuppressWarnings("unchecked")
-    private void sendHistoryEvents(Subscriber<? super T> subscriber) {
-        for (Object historicEvent : history) {
-            if (historicEvent instanceof Exception error) {
+    private void sendUndelivered(Subscriber<? super T> subscriber) {
+        for (Object undeliveredEvent : undelivered) {
+            if (undeliveredEvent instanceof Exception error) {
                 subscriber.onError(error);
             } else {
-                subscriber.onNext((T) historicEvent);
+                subscriber.onNext((T) undeliveredEvent);
             }
         }
+
+        undelivered.clear();
     }
 
     /**
@@ -197,9 +159,10 @@ public final class Subject<T> implements Publisher<T> {
 
     /**
      * Registers the specified callback functions as event and error
-     * subscribers. The subscribers will immediately be notified of
-     * previously published events and/or errors. Returns a
-     * {@link Subscription} for the registered subscriber.
+     * subscribers. If there are currently undelivered events or errors,
+     * the new subscriber will immediately be notified of them.
+     *
+     * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribe(Consumer<T> onEvent, Consumer<Throwable> onError) {
         Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
@@ -207,9 +170,11 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Registers the specified callback function as an error subscriber. The
-     * subscriber will immediately be notified of previously published errors.
-     * Returns a {@link Subscription} for the registered subscriber.
+     * Registers the specified callback function as an error subscriber. If
+     * there are currently undelivered events or errors, the new subscriber
+     * will immediately be notified of them.
+     *
+     * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribeErrors(Consumer<Throwable> onError) {
         Consumer<T> onEvent = _ -> {};
@@ -230,8 +195,7 @@ public final class Subject<T> implements Publisher<T> {
 
     /**
      * Marks this {@link Subject} as completed, meaning that no new events
-     * or errors will be published to subscribers. However, <em>old</em> events
-     * might still be published when additional subscribers are registered.
+     * or errors will be published to subscribers.
      */
     public void complete() {
         if (!completed) {
@@ -353,16 +317,6 @@ public final class Subject<T> implements Publisher<T> {
             "Subject-" + UUID.randomUUID());
         backgroundThread.start();
 
-        return subject;
-    }
-
-    /**
-     * Returns a {@link Subject} that is incapable of ever publishing any
-     * events or errors, and therefore acts as a no-op implementation.
-     */
-    public static <T> Subject<T> empty() {
-        Subject<T> subject = new Subject<>();
-        subject.complete();
         return subject;
     }
 

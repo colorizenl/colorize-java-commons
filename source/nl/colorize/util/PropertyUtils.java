@@ -145,7 +145,7 @@ public final class PropertyUtils {
      * @throws IOException if an I/O error occurs while writing the file.
      */
     public static void saveProperties(Properties data, File dest, Charset charset) throws IOException {
-        PrintWriter writer = new PrintWriter(dest, charset.displayName());
+        PrintWriter writer = new PrintWriter(dest, charset);
         saveProperties(data, writer);
     }
 

@@ -2,7 +2,7 @@ plugins {
     id "io.freefair.lombok" version "9.2.0"
     id "com.vanniktech.maven.publish" version "0.36.0"
     id "com.github.ben-manes.versions" version "0.53.0"
-    id "net.ltgt.errorprone" version "5.0.0"
+    id "net.ltgt.errorprone" version "5.1.0"
 }
 
 apply plugin: "java-library"
@@ -29,7 +29,7 @@ dependencies {
     api "com.google.guava:guava:33.5.0-jre"
     testImplementation "org.junit.jupiter:junit-jupiter:6.0.3"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-    errorprone "com.google.errorprone:error_prone_core:2.47.0"
+    errorprone "com.google.errorprone:error_prone_core:2.48.0"
 }
 
 test {
@@ -57,9 +57,8 @@ tasks.withType(JavaCompile).configureEach {
     options.errorprone.allErrorsAsWarnings = true
     options.errorprone.disable("EffectivelyPrivate")
     options.errorprone.disable("FormatStringShouldUsePlaceholders")
-    options.errorprone.disable("InlineMeSuggester")
     options.errorprone.disable("JavaUtilDate")
-    options.errorprone.disable("JdkObsolete")
+    options.errorprone.disable("InlineMeSuggester")
     options.errorprone.disable("StringCaseLocaleUsage")
 }
 

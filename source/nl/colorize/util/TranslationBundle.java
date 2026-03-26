@@ -141,6 +141,8 @@ public final class TranslationBundle extends ResourceBundle {
 
     @Override
     public Set<String> keySet() {
+        // This overrides the parent class implementation because
+        // this method would otherwise not be available in TeaVM.
         return contents.keySet();
     }
 
