@@ -264,10 +264,7 @@ public class ImageManipulationUIT {
 
     private void openImages() {
         ComboFileDialog fileDialog = new ComboFileDialog();
-        fileDialog.setTitle("Select file or directory");
-        File selected = fileDialog.showOpenDialog(null);
-
-        if (selected != null) {
+        fileDialog.showOpenDialog(null).ifPresent(selected -> {
             images.clear();
 
             try {
@@ -279,7 +276,7 @@ public class ImageManipulationUIT {
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load image", e);
             }
-        }
+        });
     }
 
     private boolean isImageFile(File file) {

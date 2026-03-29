@@ -26,7 +26,6 @@ import java.awt.FlowLayout;
 import java.awt.Graphics2D;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.logging.Logger;
 
 /**
@@ -146,12 +145,8 @@ public class MacIntegrationUIT implements ApplicationMenuListener {
     }
     
     private void openFile() {
-        ComboFileDialog fileDialog = new ComboFileDialog();
-        fileDialog.setTitle("Select a file to open");
-        File selectedFile = fileDialog.showOpenDialog(null);
-        if (selectedFile != null) {
-            SwingUtils.openFile(selectedFile);
-        }
+        ComboFileDialog fileDialog = new ComboFileDialog(null);
+        fileDialog.showOpenDialog(null).ifPresent(SwingUtils::openFile);
     }
 
     private void goFullScreen() {

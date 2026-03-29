@@ -38,9 +38,11 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import static java.awt.Color.BLUE;
 
@@ -98,27 +100,26 @@ public class CustomComponentsUIT {
     }
     
     private JPanel createCircularLoaderTab() {
+        CircularLoader loader = new CircularLoader();
+        loader.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+
         JPanel tab = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        tab.add(new CircularLoader(40));
+        tab.add(loader);
         tab.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
         return tab;
     }
 
     private JPanel createFormPanelTab() {
-        JPanel customHeightLabel = new JPanel();
-        customHeightLabel.setBackground(new Color(255, 200, 200));
-        SwingUtils.setPreferredHeight(customHeightLabel, 50);
-
         List<String> labels = new ArrayList<>();
         labels.add("text label");
 
         JLabel changeLabel = new JLabel("(listens for change events)");
         JLabel typingLabel = new JLabel("(listens for typing events)");
+        JLabel validLabel = new JLabel("(listens for validation events)");
 
         FormPanel form = new FormPanel();
         form.addRow("Row with textfield:", new JTextField());
         form.addRow("Row with other component:", new JButton("Button"));
-        form.addRow("Custom height:", customHeightLabel);
         form.addRow("Radio buttons:", new JRadioButton("First"), new JRadioButton("Second"));
         form.addEmptyRow();
         form.addRow(new JCheckBox("Row with checkbox"));
@@ -129,6 +130,9 @@ public class CustomComponentsUIT {
         form.addRow(changeLabel);
         form.addDynamicStringField("Listen typing:", "").getChanges().subscribe(typingLabel::setText);
         form.addRow(typingLabel);
+        form.addStringField("Validation:", "#FF0000", Pattern.compile("#?[a-zA-Z0-9]{6}"))
+            .getChanges().subscribe(validLabel::setText);
+        form.addRow(validLabel);
         return form;
     }
 
@@ -262,11 +266,12 @@ public class CustomComponentsUIT {
     }
     
     public void showFileDialogs() {
-        ComboFileDialog dialog = new ComboFileDialog();
-        dialog.setFilter("XML Files", "xml");
+        ComboFileDialog dialog = new ComboFileDialog(List.of("xml"));
         Popups.message(frame, "Open file dialog");
-        LOGGER.info("Selected file: " + dialog.showOpenDialog(frame));
+        String openedFile = dialog.showOpenDialog(frame).map(File::getAbsolutePath).orElse("");
+        LOGGER.info("Selected file: " + openedFile);
         Popups.message(frame, "Save file dialog");
-        LOGGER.info("Selected file: " + dialog.showSaveDialog(frame, "txt"));
+        String savedFile = dialog.showSaveDialog(frame).map(File::getAbsolutePath).orElse("");
+        LOGGER.info("Selected file: " + savedFile);
     }
 }

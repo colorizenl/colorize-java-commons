@@ -10,10 +10,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
- * Wraps a computationally expensive operation, so that the result is only
+ * Wraps a computationally expensive operation so that the result is only
  * calculated on the first call, and the cached result is returned for
  * subsequent calls. Evaluation is lazy, the operation is not actually
  * performed until {@link #get()} is called for the first time.
+ * <p>
+ * This class is intended for caching single values. Use {@link Cache} for
+ * caching multiple values based on a cache key.
  * <p>
  * Instances of this class are <strong>not</strong> thread-safe. This class
  * is not intended for situations where the expensive operation is performed

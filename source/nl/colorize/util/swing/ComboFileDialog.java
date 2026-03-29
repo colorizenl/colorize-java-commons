@@ -6,12 +6,12 @@
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.Joiner;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
-import com.google.common.primitives.Chars;
-import lombok.Getter;
 import nl.colorize.util.Platform;
 import nl.colorize.util.TranslationBundle;
+import org.jspecify.annotations.Nullable;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -20,8 +20,8 @@ import java.awt.FileDialog;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A wrapper around both AWT's {@link java.awt.FileDialog} and Swing's
@@ -31,119 +31,182 @@ import java.util.List;
  * This class will therefore make the tradeoff which file dialog is best for the
  * current platform. 
  */
-@Getter
 public class ComboFileDialog {
 
     private String title;
     private File startDirectory;
-    private FileExtFilter filter;
-    
+    private FileFilter filter;
+
     protected TranslationBundle bundle;
     
     private static final Charset FILENAME_CHARSET = StandardCharsets.US_ASCII;
-    private static final List<Character> ILLEGAL_CHARS = Chars.asList('\\', '/', ':', ';', '*', '|', '<', '>');
-    private static final List<String> SYSTEM_FILES = List.of("desktop.ini");
-    
+    private static final CharMatcher INVALID_CHARS = CharMatcher.anyOf("\\/:;*|<>");
+    private static final List<String> SYSTEM_FILES = List.of("desktop.ini", ".DS_Store");
+
     /**
-     * Creates a file dialog with the specified title and start directory.
-     * @param title The dialog window's title.
-     * @param start The directory where the dialog will start.
+     * Creates a new file dialog that will start in the specified location
+     * and will only accept files that match the file filter.
      */
-    public ComboFileDialog(String title, File start) {
-        setTitle(title);
-        setStartDirectory(start);
-        filter = null;
-        
-        bundle = SwingUtils.getCustomComponentsBundle();
+    public ComboFileDialog(@Nullable String title, @Nullable File start, FileFilter filter) {
+        this.title = title;
+        this.filter = filter;
+        this.bundle = SwingUtils.getCustomComponentsBundle();
+
+        if (start == null) {
+            startDirectory = Platform.getUserDataDirectory();
+        } else if (start.isDirectory()) {
+            startDirectory = start;
+        } else {
+            startDirectory = start.getParentFile();
+        }
     }
-    
+
     /**
-     * Creates a file dialog with the platform's default dialog title and start
-     * directory.
+     * Creates a new file dialog that will start in the specified location
+     * and will only accept files with one of the specified file extensions.
      */
+    public ComboFileDialog(@Nullable String title, @Nullable File start, List<String> extensions) {
+        this(title, start, new FileExtFilter(extensions));
+    }
+
+    /**
+     * Creates a new file dialog that will start in the platform's default
+     * user data location and will only accept files with one of the
+     * specified file extensions.
+     */
+    public ComboFileDialog(List<String> extensions) {
+        this(null, null, extensions);
+    }
+
+    /**
+     * Creates a new file dialog that will start in the specified location
+     * and does not have any restrictions in terms of which files it will
+     * or will not accept.
+     *
+     * @deprecated It's pretty uncommon to have a file dialog in applications
+     *             without <em>any</em> form of restrictions. It's generally
+     *             recommended to be specific within the file dialog itself
+     *             on which types of files you want users to be able to select.
+     */
+    @Deprecated
     public ComboFileDialog() {
-        this(null, new File(""));
+        this(null, null, new AcceptAllFilter());
     }
 
     /**
      * Returns whether file dialogs are created using Swing (if this returns true)
      * or AWT (if this returns false). 
      */
-    public boolean usesSwingDialogs() {
+    private boolean usesSwingDialogs() {
         return !Platform.isMac();
     }
     
     /**
-     * Shows an 'open file' dialog and returns the selected file. Returns
-     * {@code null} if the dialog was cancelled.
-     * @param parent The parent window for the dialog.
+     * Shows an "open file" dialog and returns the selected file. Does not
+     * return a file if the user canceled the dialog window.
+     *
+     * @param parent The parent window for the file dialog. A value of
+     *               {@code null} means the file dialog is considered global
+     *               for the entire (Swing) application.
      */
-    public File showOpenDialog(JFrame parent) {
+    public Optional<File> showOpenDialog(@Nullable JFrame parent) {
         File selected = usesSwingDialogs() ? showSwingOpenDialog(parent) : showAWTOpenDialog(parent);
         
         if (selected == null || !selected.exists()) {
-            return null;
+            return Optional.empty();
         }
         
-        if (!hasValidExtension(selected)) {
-            Popups.message(parent, bundle.getString("ComboFileDialog.invalidExt",
-                    filter.extensions.toString().replaceAll("\\[(.+)\\]", "$1")));
+        if (!hasValidFileExtension(selected)) {
+            Popups.builder()
+                .withWarningIcon()
+                .withMessage(bundle.getString("ComboFileDialog.invalidExt", filter.getDescription()))
+                .show(parent);
+
             return showOpenDialog(parent);
         }
         
-        return selected;
+        return Optional.of(selected);
+    }
+
+    /**
+     * Shows an "open file" dialog and returns the selected file. Does not
+     * return a file if the user canceled the dialog window.
+     */
+    public Optional<File> showOpenDialog() {
+        return showOpenDialog(null);
     }
     
     private File showAWTOpenDialog(JFrame parent) {
         FileDialog fileDialog = createAWTFileDialog(parent, false);
         fileDialog.setVisible(true);
-        if (fileDialog.getDirectory() != null && fileDialog.getFile() != null) {
-            return new File(fileDialog.getDirectory(), fileDialog.getFile());
-        } else {
+        if (fileDialog.getDirectory() == null || fileDialog.getFile() == null) {
             return null;
         }
+        return new File(fileDialog.getDirectory(), fileDialog.getFile());
     }
 
     private File showSwingOpenDialog(JFrame parent) {
         JFileChooser fileDialog = createSwingFileDialog(false);
-        if (fileDialog.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
-            return fileDialog.getSelectedFile();
-        } else {
+        if (fileDialog.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) {
             return null;
         }
+        return fileDialog.getSelectedFile();
     }
     
     /**
-     * Shows a 'save file' dialog, and returns the selected file. If the selected
-     * file already exists, an extra confirmation dialog is shown to make sure the
-     * user wants to overwrite the file. Returns {@code null} if the dialog was
-     * cancelled.
-     * @param parent The parent window for the dialog.
-     * @param extension File extension to use if none is entered.
+     * Shows a "save file" dialog and returns the selected file. Does not
+     * return a file if the user canceled the dialog window. If the selected
+     * file already exists, an extra confirmation dialog is shown to make
+     * sure the user wants to overwrite the file.
+     * <p>
+     * If this file dialog was created with a filter on file extension, and
+     * the entered file name does not have a file extension, it will be
+     * automatically added based on the filter.
+     *
+     * @param parent The parent window for the file dialog. A value of
+     *               {@code null} means the file dialog is considered global
+     *               for the entire (Swing) application.
      */
-    public File showSaveDialog(JFrame parent, String extension) {
+    public Optional<File> showSaveDialog(@Nullable JFrame parent) {
         File selected = usesSwingDialogs() ? showSwingSaveDialog(parent) : showAWTSaveDialog(parent);
         
         if (selected == null) {
-            return null;
+            return Optional.empty();
         }
         
         if (!hasValidFileName(selected)) {
             Popups.message(null, bundle.getString("ComboFileDialog.illegalChars"));
-            return showSaveDialog(parent, extension);
+            return showSaveDialog(parent);
         }
         
         if (selected.exists()) {
-            return showOverrideFileDialog(parent, selected);
+            return Optional.ofNullable(showOverrideFileDialog(parent, selected));
         }
-        
-        if (!hasValidExtension(selected, extension) && !Platform.isMacAppStore()) {
+
+        if (!hasValidFileExtension(selected) && !Platform.isMacAppStore()) {
             // Use the default file extension if none was entered. Note that this
             // is not allowed when running in the Mac App Store sandbox.
-            selected = new File(selected.getParentFile(), selected.getName() + "." + extension);
+            String defaultExt = getDefaultFileExtension();
+            if (defaultExt != null) {
+                selected = new File(selected.getParentFile(), selected.getName() + "." + defaultExt);
+            }
         }
         
-        return selected;
+        return Optional.of(selected);
+    }
+
+    /**
+     * Shows a "save file" dialog and returns the selected file. Does not
+     * return a file if the user canceled the dialog window. If the selected
+     * file already exists, an extra confirmation dialog is shown to make
+     * sure the user wants to overwrite the file.
+     * <p>
+     * If this file dialog was created with a filter on file extension, and
+     * the entered file name does not have a file extension, it will be
+     * automatically added based on the filter.
+     */
+    public Optional<File> showSaveDialog() {
+        return showSaveDialog(null);
     }
     
     private File showSwingSaveDialog(JFrame parent) {
@@ -170,24 +233,26 @@ public class ComboFileDialog {
         String noButton = bundle.getString("ComboFileDialog.overwriteNo");
         String message = bundle.getString("ComboFileDialog.overwrite", selected.getName());
 
-        if (Popups.message(parent, "", message, List.of(yesButton, noButton)) == 0) {
-            return selected;
-        } else {
-            return null;
-        }
+        int choice = Popups.builder()
+            .withWarningIcon()
+            .withMessage(message)
+            .withButtons(yesButton, noButton)
+            .show(parent);
+
+        return choice == 0 ? selected : null;
     }
 
     private FileDialog createAWTFileDialog(JFrame parent, boolean saveMode) {
         FileDialog fileDialog = new FileDialog(parent);
         fileDialog.setMode(saveMode ? FileDialog.SAVE : FileDialog.LOAD);
-        fileDialog.setTitle(getRealTitle(saveMode));
+        fileDialog.setTitle(getTitle(saveMode));
         fileDialog.setDirectory(startDirectory.getAbsolutePath());
         return fileDialog;
     }
     
     private JFileChooser createSwingFileDialog(boolean saveMode) {
         JFileChooser dialog = new JFileChooser();
-        dialog.setDialogTitle(getRealTitle(saveMode));
+        dialog.setDialogTitle(getTitle(saveMode));
         dialog.setCurrentDirectory(startDirectory);
         dialog.setFileSelectionMode(JFileChooser.FILES_ONLY);
         dialog.setMultiSelectionEnabled(false); 
@@ -197,15 +262,13 @@ public class ComboFileDialog {
         return dialog;	
     }
     
-    private String getRealTitle(boolean saveMode) {
-        if (title != null) {
+    private String getTitle(boolean saveMode) {
+        if (title != null && !title.isEmpty()) {
             return title;
+        } else if (saveMode) {
+            return bundle.getString("ComboFileDialog.defaultSaveTitle");
         } else {
-            if (saveMode) {
-                return bundle.getString("ComboFileDialog.defaultSaveTitle");
-            } else {
-                return bundle.getString("ComboFileDialog.defaultOpenTitle");
-            }
+            return bundle.getString("ComboFileDialog.defaultOpenTitle");
         }
     }
     
@@ -217,107 +280,85 @@ public class ComboFileDialog {
      */
     private boolean hasValidFileName(File file) {
         String name = file.getName();
-        
-        for (Character c : ILLEGAL_CHARS) {
-            if (name.contains(c.toString())) {
-                return false;
-            }
-        }
-        
-        return !name.trim().isEmpty() && FILENAME_CHARSET.newEncoder().canEncode(name);
+
+        return !name.trim().isEmpty() &&
+            INVALID_CHARS.matchesNoneOf(name) &&
+            FILENAME_CHARSET.newEncoder().canEncode(name);
     }
 
-    private boolean hasValidExtension(File file, String... extensions) {
-        if (filter == null && extensions.length == 0) {
+    private boolean hasValidFileExtension(File file) {
+        if (filter.accept(file)) {
             return true;
         }
         
-        if (filter != null && filter.accept(file)) {
+        if (filter instanceof FileExtFilter extFilter) {
+            String ext = Files.getFileExtension(file.getName()).toLowerCase();
+            return extFilter.extensions.contains(ext);
+        } else {
             return true;
         }
-        
-        String ext = Files.getFileExtension(file.getName()).toLowerCase();
-        return FileExtFilter.normalizeFileExtensions(extensions).contains(ext);
-    }
-    
-    public void setTitle(String title) {
-        this.title = title;
     }
 
-    public void setStartDirectory(File start) {
-        if (start == null || !start.exists()) {
-            // Use the platform default directory
-            this.startDirectory = getDefaultStartDirectory();
-            return;
-        }
-        
-        if (start.isDirectory()) {
-            this.startDirectory = start;
+    private String getDefaultFileExtension() {
+        if (filter instanceof FileExtFilter extFilter) {
+            return extFilter.extensions.getFirst();
         } else {
-            this.startDirectory = start.getParentFile();
-        }
-    }
-    
-    public void setStartDirectory(String path) {
-        if (path != null && path.length() > 0) {
-            setStartDirectory(new File(path));
-        } else {
-            startDirectory = getDefaultStartDirectory();
+            return null;
         }
     }
 
-    private File getDefaultStartDirectory() {
-        return Platform.getUserDataDirectory();
-    }
-    
     /**
-     * Sets a filter so that the dialog will only show files with the specified
-     * file extension(s).
-     *
-     * @param description A textual description of the filter.
-     * @param extensions An array of file name extensions, such as "png", or "jpg".
-     * @throws IllegalArgumentException if the filter has no file extensions.
-     */
-    public void setFilter(String description, String... extensions) {
-        if (extensions.length == 0) {
-            throw new IllegalArgumentException("Filter must have at least one file extension"); 
-        }
-        filter = new FileExtFilter(description, extensions);
-    }
-    
-    /**
-     * Simple implementation of a file name filter that allows files with one of
+     * Simple implementation of a file filter that allows files with one of
      * the passed file extensions, as well as all directories.
      */
     private static class FileExtFilter extends FileFilter {
         
-        private String description;
         private List<String> extensions;
     
-        public FileExtFilter(String description, String... extensions) {
-            this.description = description + " (" + Joiner.on(", ").join(extensions) + ")";
+        public FileExtFilter(List<String> extensions) {
+            Preconditions.checkArgument(!extensions.isEmpty(), "No file extensions");
             this.extensions = normalizeFileExtensions(extensions);
         }
-        
+
+        public List<String> normalizeFileExtensions(List<String> extensions) {
+            return extensions.stream()
+                .map(ext -> ext.startsWith(".") ? ext.substring(1) : ext)
+                .map(String::toLowerCase)
+                .toList();
+        }
+
         @Override
         public boolean accept(File file) {
             if (file.isDirectory()) {
                 return true;
+            } else if (SYSTEM_FILES.contains(file.getName())) {
+                return false;
             } else {
                 String ext = Files.getFileExtension(file.getName()).toLowerCase();
-                return extensions.contains(ext) && !SYSTEM_FILES.contains(file.getName().toLowerCase());
+                return extensions.contains(ext);
             }
         }
         
         @Override
         public String getDescription() {
-            return description;
+            return String.join(", ", extensions);
         }
-        
-        public static List<String> normalizeFileExtensions(String[] extensions) {
-            return Arrays.stream(extensions)
-                .map(ext -> ext.startsWith(".") ? ext.substring(1) : ext)
-                .toList();
+    }
+
+    /**
+     * Implementation of a file filter that simply accepts all files without
+     * any restrictions
+     */
+    private static class AcceptAllFilter extends FileFilter {
+
+        @Override
+        public boolean accept(File file) {
+            return true;
+        }
+
+        @Override
+        public String getDescription() {
+            return SwingUtils.getCustomComponentsBundle().getString("ComboFileDialog.allFiles");
         }
     }
 }

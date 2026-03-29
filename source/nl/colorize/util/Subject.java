@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Preconditions;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
@@ -38,16 +37,17 @@ import java.util.stream.Stream;
  */
 public final class Subject<T> implements Publisher<T> {
 
-    private List<SubjectSubscription> subscriptions;
+    private List<Subscriber<? super T>> subscribers;
     private List<Object> undelivered;
     private boolean completed;
 
+    private static final Runnable EMPTY_COMPLETE = () -> {};
     private static final Logger LOGGER = LogHelper.getLogger(Subject.class);
 
     public Subject() {
-        this.completed = false;
-        this.subscriptions = new CopyOnWriteArrayList<>();
+        this.subscribers = new CopyOnWriteArrayList<>();
         this.undelivered = new CopyOnWriteArrayList<>();
+        this.completed = false;
     }
 
     /**
@@ -60,13 +60,13 @@ public final class Subject<T> implements Publisher<T> {
             return;
         }
 
-        if (subscriptions.isEmpty()) {
+        if (subscribers.isEmpty()) {
             undelivered.add(event);
             return;
         }
 
-        for (SubjectSubscription subscription : subscriptions) {
-            subscription.subscriber.onNext(event);
+        for (Subscriber<? super T> subscriber : subscribers) {
+            subscriber.onNext(event);
         }
     }
 
@@ -82,13 +82,13 @@ public final class Subject<T> implements Publisher<T> {
             return;
         }
 
-        if (subscriptions.isEmpty()) {
+        if (subscribers.isEmpty()) {
             undelivered.add(error);
             return;
         }
 
-        for (SubjectSubscription subscription : subscriptions) {
-            subscription.subscriber.onError(error);
+        for (Subscriber<? super T> subscriber : subscribers) {
+            subscriber.onError(error);
         }
     }
 
@@ -124,12 +124,12 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     private Subscription registerSubscription(Subscriber<? super T> subscriber) {
-        Preconditions.checkNotNull(subscriber, "Null subscriber");
-
-        SubjectSubscription subscription = new SubjectSubscription(subscriber);
-        subscriptions.add(subscription);
+        subscribers.add(subscriber);
+        Subscription subscription = makeSubscription(subscriber);
         subscriber.onSubscribe(subscription);
-        sendUndelivered(subscriber);
+        if (!undelivered.isEmpty()) {
+            sendUndelivered(subscriber);
+        }
         return subscription;
     }
 
@@ -142,43 +142,73 @@ public final class Subject<T> implements Publisher<T> {
                 subscriber.onNext((T) undeliveredEvent);
             }
         }
+    }
 
-        undelivered.clear();
+    private Subscription makeSubscription(Subscriber<? super T> subscriber) {
+        return new Subscription() {
+            @Override
+            public void request(long n) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void cancel() {
+                subscribers.remove(subscriber);
+            }
+        };
     }
 
     /**
-     * Registers the specified callback function as a subscriber for events.
-     * The subscriber will log errors, but not explicitly handle them.
-     * Returns a {@link Subscription} for the registered subscriber.
+     * Registers a subscriber that will invoke the specified callback functions
+     * on events, errors, and completion, respectively. The new subscriber will
+     * immediately be notified of any undelivered events.
+     *
+     * @return A {@link Subscription} for the registered subscriber.
      */
-    public Subscription subscribe(Consumer<T> onEvent) {
-        Consumer<Throwable> onError = e -> LOGGER.log(Level.SEVERE, "Unhandled subscriber error", e);
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
+    public Subscription subscribe(
+        Consumer<T> onEvent,
+        Consumer<Throwable> onError,
+        Runnable onComplete
+    ) {
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, onComplete);
         return registerSubscription(subscriber);
     }
 
     /**
-     * Registers the specified callback functions as event and error
-     * subscribers. If there are currently undelivered events or errors,
-     * the new subscriber will immediately be notified of them.
+     * Registers a subscriber that will invoke the specified callback functions
+     * on events and errors, respectively. The new subscriber will immediately
+     * be notified of any undelivered events.
      *
      * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribe(Consumer<T> onEvent, Consumer<Throwable> onError) {
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
         return registerSubscription(subscriber);
     }
 
     /**
-     * Registers the specified callback function as an error subscriber. If
-     * there are currently undelivered events or errors, the new subscriber
-     * will immediately be notified of them.
+     * Registers a subscriber that will invoke the specified callback functions
+     * on events. The new subscriber will immediately be notified of any
+     * undelivered events.
+     *
+     * @return A {@link Subscription} for the registered subscriber.
+     */
+    public Subscription subscribe(Consumer<T> onEvent) {
+        Consumer<Throwable> onError = e -> LOGGER.log(Level.SEVERE, "Unhandled subscriber error", e);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
+        return registerSubscription(subscriber);
+    }
+
+    /**
+     * Registers a subscriber that will invoke the specified callback functions
+     * on errors. The new subscriber will immediately be notified of any
+     * undelivered errors.
      *
      * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribeErrors(Consumer<Throwable> onError) {
         Consumer<T> onEvent = _ -> {};
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
         return registerSubscription(subscriber);
     }
 
@@ -186,8 +216,9 @@ public final class Subject<T> implements Publisher<T> {
      * Subscribes the specified other {@link Subject} to listen for both
      * events and errors generated by this {@link Subject}. This
      * effectively means that events published by this instance will be
-     * forwarded to {@code subscriber}'s subscribers. Returns a
-     * {@link Subscription} for the registered subscriber.
+     * forwarded to {@code subscriber}'s subscribers.
+     *
+     * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribe(Subject<T> subscriber) {
         return subscribe(subscriber::next, subscriber::nextError);
@@ -201,8 +232,8 @@ public final class Subject<T> implements Publisher<T> {
         if (!completed) {
             completed = true;
 
-            for (SubjectSubscription subscription : subscriptions) {
-                subscription.subscriber.onComplete();
+            for (Subscriber<? super T> subscriber : subscribers) {
+                subscriber.onComplete();
             }
         }
     }
@@ -321,37 +352,15 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
-     * Implementation of the {@link Subscription} interface that allows a
-     * subscriber to unsubscribe itself.
-     */
-    @AllArgsConstructor
-    private class SubjectSubscription implements Subscription {
-
-        private Subscriber<? super T> subscriber;
-
-        @Override
-        public void request(long n) {
-            // Subjects already inform subscribers of historic
-            // events, so requesting additional events has no
-            // meaning in this implementation.
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void cancel() {
-            subscriptions.removeIf(this::equals);
-        }
-    }
-
-    /**
      * Implementation of the {@link Subscriber} interface that uses callback
      * methods to process incoming events and errors.
      */
     @AllArgsConstructor
     private static class CallbackSubscriber<T> implements Subscriber<T> {
 
-        private Consumer<T> eventCallback;
-        private Consumer<Throwable> errorCallback;
+        private Consumer<T> onEvent;
+        private Consumer<Throwable> onError;
+        private Runnable onComplete;
 
         @Override
         public void onSubscribe(Subscription subscription) {
@@ -359,16 +368,17 @@ public final class Subject<T> implements Publisher<T> {
 
         @Override
         public void onNext(T event) {
-            eventCallback.accept(event);
+            onEvent.accept(event);
         }
 
         @Override
         public void onError(Throwable error) {
-            errorCallback.accept(error);
+            onError.accept(error);
         }
 
         @Override
         public void onComplete() {
+            onComplete.run();
         }
     }
 }

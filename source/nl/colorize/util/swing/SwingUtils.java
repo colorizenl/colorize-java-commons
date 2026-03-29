@@ -60,6 +60,9 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -829,6 +832,32 @@ public final class SwingUtils {
                 callback.accept(field.getText());
             }
         });
+    }
+
+    /**
+     * Creates a {@link FocusListener} that forwards focus gained events to
+     * the specified callback function.
+     */
+    public static FocusListener toFocusGainedListener(Runnable callback) {
+        return new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                callback.run();
+            }
+        };
+    }
+
+    /**
+     * Creates a {@link FocusListener} that forwards focus lost events to the
+     * specified callback function.
+     */
+    public static FocusListener toFocusLostListener(Runnable callback) {
+        return new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                callback.run();
+            }
+        };
     }
 
     public static <T> JComboBox<String> createComboBox(Collection<T> items, T selected) {

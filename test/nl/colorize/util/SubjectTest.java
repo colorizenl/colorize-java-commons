@@ -302,4 +302,50 @@ class SubjectTest {
 
         assertEquals("[a, b]", received.toString());
     }
+
+    @Test
+    void undeliverableEventsToMultipleSubscribers() {
+        Subject<String> subject = Subject.of("a", "b", "c");
+
+        List<String> receivedA = new ArrayList<>();
+        subject.subscribe(receivedA::add);
+
+        List<String> receivedB = new ArrayList<>();
+        subject.subscribe(receivedB::add);
+
+        subject.next("d");
+
+        assertEquals("[a, b, c, d]", receivedA.toString());
+        assertEquals("[a, b, c, d]", receivedB.toString());
+    }
+
+    @Test
+    void subscribeErrors() {
+        Subject<Integer> subject = Subject.run(() -> 1 / 0);
+        List<Throwable> received = new ArrayList<>();
+        subject.subscribeErrors(received::add);
+
+        assertEquals(1, received.size());
+        assertEquals(ArithmeticException.class, received.getFirst().getClass());
+    }
+
+    @Test
+    void useAllThreeCallbacks() {
+        Subject<Integer> subject = new Subject<>();
+        List<String> received = new ArrayList<>();
+
+        subject.subscribe(
+            _ -> received.add("event"),
+            _ -> received.add("error"),
+            () -> received.add("completed")
+        );
+
+        subject.next(1);
+        subject.next(() -> 2 / 0);
+        subject.next(3);
+        subject.complete();
+        subject.next(4);
+
+        assertEquals(List.of("event", "error", "event", "completed"), received);
+    }
 }

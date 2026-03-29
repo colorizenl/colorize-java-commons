@@ -22,18 +22,19 @@ import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.LayoutManager;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Panel that arranges components in a 2 x N grid. This layout is similar to how 
@@ -66,6 +67,7 @@ public class FormPanel extends JPanel implements LayoutManager {
     private static final String VALUE_CELL = "nl.colorize.FormPanel.VALUE_CELL";
     private static final float LABEL_COLUMN_FRACTION = 0.4f;
     private static final float VALUE_COLUMN_FRACTION = 0.6f;
+    private static final Color VALIDATION_FAILED_COLOR = new Color(220, 148, 152);
     
     /**
      * Creates a {@code FormPanel} with alignments and margins conforming to the
@@ -312,12 +314,7 @@ public class FormPanel extends JPanel implements LayoutManager {
         Signal<String> signal = Signal.of(initialValue);
         JTextField field = new JTextField(initialValue);
         field.addActionListener(_ -> signal.set(field.getText()));
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                signal.set(field.getText());
-            }
-        });
+        field.addFocusListener(SwingUtils.toFocusLostListener(() -> signal.set(field.getText())));
         addRow(label, field);
         return signal;
     }
@@ -332,15 +329,44 @@ public class FormPanel extends JPanel implements LayoutManager {
         Signal<String> signal = Signal.of(initialValue);
         JTextField field = new JTextField(initialValue);
         field.addActionListener(_ -> signal.set(field.getText()));
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                signal.set(field.getText());
-            }
-        });
+        field.addFocusListener(SwingUtils.toFocusLostListener(() -> signal.set(field.getText())));
         SwingUtils.wrapDocumentListener(field, signal::set);
         addRow(label, field);
         return signal;
+    }
+
+    /**
+     * Dynamically adds a text field and returns a {@link Signal} that can be
+     * used to process or subscribe to results. Only values matching the
+     * specified validation predicate will be used. If validation fails, the
+     * field will be marked visually.
+     */
+    public Signal<String> addStringField(String label, String initial, Predicate<String> validate) {
+        Signal<String> signal = Signal.of(initial);
+        JTextField field = new JTextField(initial);
+        Color originalBackground = field.getBackground();
+        Runnable callback = () -> {
+            if (validate.test(field.getText())) {
+                signal.set(field.getText());
+                field.setBackground(originalBackground);
+            } else {
+                field.setBackground(VALIDATION_FAILED_COLOR);
+            }
+        };
+        field.addActionListener(_ -> callback.run());
+        field.addFocusListener(SwingUtils.toFocusLostListener(callback));
+        addRow(label, field);
+        return signal;
+    }
+
+    /**
+     * Dynamically adds a text field and returns a {@link Signal} that can be
+     * used to process or subscribe to results. Only values matching the
+     * specified regular expression will be used. If validation fails, the
+     * field will be marked visually.
+     */
+    public Signal<String> addStringField(String label, String initial, Pattern validate) {
+        return addStringField(label, initial, value -> validate.matcher(value).matches());
     }
 
     /**
@@ -362,13 +388,15 @@ public class FormPanel extends JPanel implements LayoutManager {
     public Signal<Integer> addIntField(String label, int initialValue) {
         Signal<Integer> signal = Signal.of(initialValue);
         JTextField field = new JTextField(String.valueOf(initialValue));
-        field.addActionListener(_ -> {
+        Runnable callback = () -> {
             try {
                 signal.set(Integer.parseInt(field.getText()));
             } catch (NumberFormatException e) {
                 signal.set(initialValue);
             }
-        });
+        };
+        field.addActionListener(_ -> callback.run());
+        field.addFocusListener(SwingUtils.toFocusLostListener(callback));
         addRow(label, field);
         return signal;
     }
@@ -403,13 +431,15 @@ public class FormPanel extends JPanel implements LayoutManager {
     public Signal<Float> addFloatField(String label, float initialValue) {
         Signal<Float> signal = Signal.of(initialValue);
         JTextField field = new JTextField(String.valueOf(initialValue));
-        field.addActionListener(_ -> {
+        Runnable callback = () -> {
             try {
                 signal.set(Float.parseFloat(field.getText()));
             } catch (NumberFormatException e) {
                 signal.set(initialValue);
             }
-        });
+        };
+        field.addActionListener(_ -> callback.run());
+        field.addFocusListener(SwingUtils.toFocusLostListener(callback));
         addRow(label, field);
         return signal;
     }

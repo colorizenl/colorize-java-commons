@@ -110,15 +110,13 @@ public class ImageViewerUIT {
 
     private void openImageDirectory() {
         ComboFileDialog fileDialog = new ComboFileDialog();
-        File selected = fileDialog.showOpenDialog(null);
-
-        if (selected != null) {
+        fileDialog.showOpenDialog(null).ifPresent(selected -> {
             File dir = selected.getParentFile();
             imageFiles = locateImageFiles(dir);
             imageCache.invalidate();
             refreshImageList();
             selectImage(selected);
-        }
+        });
     }
 
     private List<File> locateImageFiles(File dir) {

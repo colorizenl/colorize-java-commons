@@ -6,6 +6,8 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +138,7 @@ public class Cache<K, V> {
      * capacity, the oldest values will be removed.
      */
     public static <K, V> Cache<K, V> from(Function<K, V> computeFunction, int capacity) {
+        Preconditions.checkArgument(capacity > 0, "Invalid capacity: " + capacity);
         return new Cache<>(computeFunction, capacity);
     }
 }
