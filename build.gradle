@@ -76,18 +76,18 @@ mavenPublishing {
                 url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
                 distribution = "http://www.apache.org/licenses/LICENSE-2.0.txt"
             }
-            developers {
-                developer {
-                    id = "colorize"
-                    name = "Colorize"
-                    url = "https://clrz.nl"
-                }
+        }
+        developers {
+            developer {
+                id = "colorize"
+                name = "Colorize"
+                url = "https://clrz.nl"
             }
-            scm {
-                url = "https://github.com/colorizenl/colorize-java-commons"
-                connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
-                developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
-            }
+        }
+        scm {
+            url = "https://github.com/colorizenl/colorize-java-commons"
+            connection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
+            developerConnection = "scm:git:https://github.com/colorizenl/colorize-java-commons.git"
         }
     }
 }
