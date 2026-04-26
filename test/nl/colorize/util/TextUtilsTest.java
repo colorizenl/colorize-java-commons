@@ -10,8 +10,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,18 +49,15 @@ public class TextUtilsTest {
         assertEquals("testa", TextUtils.addTrailing("test", "a"));
         assertEquals("test", TextUtils.addTrailing("test", "t"));
     }
-    
+
     @Test
-    public void testRemoveLeadingAndTrailing() {
-        assertEquals("1, [2]]", TextUtils.removeLeading("[1, [2]]", "["));
-        assertEquals("", TextUtils.removeLeading("", "["));
-        
-        assertEquals("[1, [2", TextUtils.removeTrailing("[1, [2]]", "]"));
-        assertEquals("", TextUtils.removeTrailing("", "]"));
-        
-        assertEquals("1, [2", TextUtils.removeLeadingAndTrailing("[1, [2]]", "[", "]"));
+    void removeSurrounding() {
+        assertEquals("test", TextUtils.removeSurrounding("xtestx", "x"));
+        assertEquals("test", TextUtils.removeSurrounding("xtest", "x"));
+        assertEquals("test", TextUtils.removeSurrounding("testx", "x"));
+        assertEquals("test", TextUtils.removeSurrounding("test", "x"));
     }
-    
+
     @Test
     public void testMatchAll() {
         Pattern regex = Pattern.compile("\\w(\\w)");
@@ -159,5 +158,17 @@ public class TextUtilsTest {
     void limit() {
         assertEquals("text", TextUtils.limit("text", 4));
         assertEquals("long...", TextUtils.limit("long text", 4));
+    }
+
+    @Test
+    void autoSort() {
+        Comparator<String> sort = TextUtils.autoSortAsc();
+        Comparator<String> desc = TextUtils.autoSortDesc();
+
+        assertEquals(List.of("a", "B"), Stream.of("B", "a").sorted(sort).toList());
+        assertEquals(List.of("B", "a"), Stream.of("B", "a").sorted(desc).toList());
+        assertEquals(List.of("9", "10"), Stream.of("9", "10").sorted(sort).toList());
+        assertEquals(Arrays.asList("9", null), Stream.of("9", null).sorted(sort).toList());
+        assertEquals(Arrays.asList("9", null), Stream.of("9", null).sorted(desc).toList());
     }
 }

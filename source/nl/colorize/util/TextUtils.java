@@ -19,6 +19,7 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -105,25 +106,42 @@ public final class TextUtils {
         }
         return str + suffix;
     }
-    
-    public static String removeLeading(String str, String leading) {
-        while (str.startsWith(leading)) {
-            str = str.substring(leading.length());
+
+    /**
+     * Removes the specified fragment from the start of {@code str}.
+     *
+     * @throws IllegalArgumentException if {@code fragment} is empty.
+     */
+    public static String removeLeading(String str, String fragment) {
+        Preconditions.checkArgument(!fragment.isEmpty(), "Empty fragment");
+        while (str.startsWith(fragment)) {
+            str = str.substring(fragment.length());
         }
         return str;
     }
 
-    public static String removeTrailing(String str, String trailing) {
-        while (str.endsWith(trailing)) {
-            str = str.substring(0, str.length() - trailing.length());
+    /**
+     * Removes the specified fragment from the end of {@code str}.
+     *
+     * @throws IllegalArgumentException if {@code fragment} is empty.
+     */
+    public static String removeTrailing(String str, String fragment) {
+        Preconditions.checkArgument(!fragment.isEmpty(), "Empty fragment");
+        while (str.endsWith(fragment)) {
+            str = str.substring(0, str.length() - fragment.length());
         }
         return str;
     }
 
-    public static String removeLeadingAndTrailing(String str, String leading, String trailing) {
-        str = removeLeading(str, leading);
-        str = removeTrailing(str, trailing);
-        return str;
+    /**
+     * Removes the specified fragment from both the start and the end of
+     * {@code str}.
+     *
+     * @throws IllegalArgumentException if {@code fragment} is empty.
+     */
+    public static String removeSurrounding(String str, String fragment) {
+        Preconditions.checkArgument(!fragment.isEmpty(), "Empty fragment");
+        return removeTrailing(removeLeading(str, fragment), fragment);
     }
 
     public static boolean startsWith(String str, Collection<String> alternatives) {
@@ -371,5 +389,50 @@ public final class TextUtils {
         buffer.append(".");
         buffer.append(Strings.padStart(String.valueOf(milliseconds), 3, '0'));
         return buffer.toString();
+    }
+
+    /**
+     * Returns a {@link Comparator} that sorts strings in ascending order,
+     * based on what is considered a reasonable default for a human-readable
+     * list.
+     *
+     * <ul>
+     *   <li>If a string can be parsed as a number, it will be sorted as such.
+     *       This helps to avoid confusion when sorting number-strings in
+     *       lexicographic order.</li>
+     *   <li>{@code null} values are always sorted at the end.</li>
+     *   <li>Remaining strings are compared in case-insensitive order.</li>
+     * </ul>
+     */
+    public static Comparator<String> autoSortAsc() {
+        return Comparator.nullsLast(TextUtils::autoSort);
+    }
+
+    /**
+     * Returns a {@link Comparator} that sorts strings in descending order,
+     * based on what is considered a reasonable default for a human-readable
+     * list.
+     *
+     * <ul>
+     *   <li>If a string can be parsed as a number, it will be sorted as such.
+     *       This helps to avoid confusion when sorting number-strings in
+     *       lexicographic order.</li>
+     *   <li>{@code null} values are always sorted at the end.</li>
+     *   <li>Remaining strings are compared in case-insensitive order.</li>
+     * </ul>
+     */
+    public static Comparator<String> autoSortDesc() {
+        Comparator<String> base = TextUtils::autoSort;
+        return Comparator.nullsLast(base.reversed());
+    }
+
+    private static int autoSort(String a, String b) {
+        try {
+            float numericA = Float.parseFloat(a);
+            float numericB = Float.parseFloat(b);
+            return Float.compare(numericA, numericB);
+        } catch (NumberFormatException e) {
+            return a.toLowerCase().compareTo(b.toLowerCase());
+        }
     }
 }

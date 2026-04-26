@@ -1,7 +1,7 @@
 plugins {
-    id "io.freefair.lombok" version "9.2.0"
+    id "io.freefair.lombok" version "9.4.0"
     id "com.vanniktech.maven.publish" version "0.36.0"
-    id "com.github.ben-manes.versions" version "0.53.0"
+    id "com.github.ben-manes.versions" version "0.54.0"
     id "net.ltgt.errorprone" version "5.1.0"
 }
 
@@ -26,10 +26,10 @@ repositories {
 
 dependencies {
     api "org.jspecify:jspecify:1.0.0"
-    api "com.google.guava:guava:33.5.0-jre"
+    api "com.google.guava:guava:33.6.0-jre"
     testImplementation "org.junit.jupiter:junit-jupiter:6.0.3"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-    errorprone "com.google.errorprone:error_prone_core:2.48.0"
+    errorprone "com.google.errorprone:error_prone_core:2.49.0"
 }
 
 test {

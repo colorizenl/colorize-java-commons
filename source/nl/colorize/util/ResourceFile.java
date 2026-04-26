@@ -66,6 +66,16 @@ public record ResourceFile(String path) {
         return pathComponents.getLast();
     }
 
+    /**
+     * Opens this resource file and returns the resulting stream. As explained
+     * in the class documentation, this will first search the classpath and
+     * will then search the local file system.
+     *
+     * @throws ResourceException if this resource file does not exist or
+     *         cannot be read.
+     * @throws UnsupportedOperationException when running on TeaVM, which does
+     *         not support reading resource files from the classpath.
+     */
     public InputStream openStream() {
         if (Platform.isTeaVM()) {
             throw new UnsupportedOperationException("Resource files are not supported on TeaVM");
@@ -95,11 +105,15 @@ public record ResourceFile(String path) {
         throw new ResourceException("Resource file not found: " + path);
     }
 
-    public BufferedReader openReader(Charset charset) {
-        InputStreamReader reader = new InputStreamReader(openStream(), charset);
-        return new BufferedReader(reader);
-    }
-
+    /**
+     * Opens this resource file and reads its contents, returning the result
+     * as a byte array.
+     *
+     * @throws ResourceException if this resource file does not exist or
+     *         cannot be read.
+     * @throws UnsupportedOperationException when running on TeaVM, which does
+     *         not support reading resource files from the classpath.
+     */
     public byte[] readBytes() {
         try (InputStream stream = openStream()) {
             return stream.readAllBytes();
@@ -108,6 +122,27 @@ public record ResourceFile(String path) {
         }
     }
 
+    /**
+     * Opens this resource file as a text file and returns a reader, using the
+     * specified character encoding.
+     */
+    public BufferedReader openReader(Charset charset) {
+        InputStreamReader reader = new InputStreamReader(openStream(), charset);
+        return new BufferedReader(reader);
+    }
+
+    /**
+     * Opens this resource file as a text file and returns a reader, using the
+     * UTF-8 character encoding.
+     */
+    public BufferedReader openReader() {
+        return openReader(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Opens this resource file as a text file and reads all text in the file,
+     * using the specified character encoding.
+     */
     public String read(Charset charset) {
         try (BufferedReader reader = openReader(charset)) {
             return CharStreams.toString(reader);
@@ -116,10 +151,18 @@ public record ResourceFile(String path) {
         }
     }
 
+    /**
+     * Opens this resource file as a text file and reads all text in the file,
+     * using the UTF-8 character encoding.
+     */
     public String read() {
         return read(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Opens this resource file as a text file and reads all lines in the file,
+     * using the specified character encoding.
+     */
     public List<String> readLines(Charset charset) {
         try (BufferedReader reader = openReader(charset)) {
             return reader.lines().toList();
@@ -128,6 +171,10 @@ public record ResourceFile(String path) {
         }
     }
 
+    /**
+     * Opens this resource file as a text file and reads all lines in the file,
+     * using the UTF-8 character encoding.
+     */
     public List<String> readLines() {
         return readLines(StandardCharsets.UTF_8);
     }

@@ -9,6 +9,7 @@ package nl.colorize.util.swing;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Subject;
+import nl.colorize.util.TextUtils;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -121,7 +122,7 @@ public class Table<R> extends JPanel implements TableModel {
      * an explicit sort order.
      */
     private int sortRows(Object a, Object b) {
-        return 0;
+        return TextUtils.autoSortAsc().compare((String) a, (String) b);
     }
 
     @Override
