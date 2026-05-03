@@ -231,6 +231,19 @@ public final class FileUtils {
     }
 
     /**
+     * Shorthand for {@code Files.walk} to iterate over files in a directory,
+     * with only files matching the specified suffix being returned.
+     *
+     * @throws FileNotFoundException if the specified directory does not exist.
+     * @throws IOException if an I/O error occurs while walking the directory.
+     * @throws IllegalArgumentException if {@code ext} is an empty string.
+     */
+    public static List<File> walkFiles(File dir, String ext) throws IOException {
+        Preconditions.checkArgument(!ext.isEmpty(), "Empty filter");
+        return walkFiles(dir, file -> file.getName().toLowerCase().endsWith(ext.toLowerCase()));
+    }
+
+    /**
      * Returns {@code file}'s path relative to {@code base}. For example, the path
      * "/a/b/c/d.txt" relative to "/a/b" would return "c/d.txt". If both paths do
      * not share a common base {@code file}'s absolute path will be returned.

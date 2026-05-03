@@ -38,6 +38,7 @@ public class CSVFormat {
     public static final CSVFormat SEMICOLON = withHeaders(';');
 
     private static final CharMatcher NEWLINE_MATCHER = CharMatcher.is('\n');
+    private static final String ESCAPED_NEWLINE = "\\n";
     private static final CharMatcher QUOTE_MATCHER = CharMatcher.is('"');
 
     private CSVFormat(boolean headers, char delimiter, String lineSeparator, boolean quotes) {
@@ -125,7 +126,9 @@ public class CSVFormat {
         if (quotes) {
             return parseQuotedLine(line);
         } else {
-            return Splitter.on(delimiter).splitToList(line);
+            return Splitter.on(delimiter).splitToStream(line)
+                .map(cell -> cell.replace(ESCAPED_NEWLINE, "\n"))
+                .toList();
         }
     }
 
@@ -209,7 +212,7 @@ public class CSVFormat {
 
     private String encodeCell(String value) {
         CharMatcher delimiterMatcher = CharMatcher.is(delimiter);
-        String cell = NEWLINE_MATCHER.replaceFrom(value, " ");
+        String cell = NEWLINE_MATCHER.replaceFrom(value, ESCAPED_NEWLINE);
 
         if (quotes) {
             return "\"" + QUOTE_MATCHER.replaceFrom(cell, "\"\"") + "\"";

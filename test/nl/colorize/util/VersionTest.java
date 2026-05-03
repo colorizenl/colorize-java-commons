@@ -110,19 +110,10 @@ public class VersionTest {
         assertFalse(Version.canParse(null));
         assertFalse(Version.canParse(""));
     }
-    
-    @Test
-    public void testTruncate() {
-        assertEquals("1.2.3", Version.parse("1.2.3").truncate(3).toString());
-        assertEquals("1.2", Version.parse("1.2.3").truncate(2).toString());
-        assertEquals("1.2.3", Version.parse("1.2.3.beta").truncate(3).toString());
-        assertEquals("1.2", Version.parse("1.2.3.beta").truncate(2).toString());
-    }
 
     @Test
     public void testUnknown() {
         assertEquals("UNKNOWN", Version.UNKNOWN.toString());
-        assertEquals(Version.UNKNOWN, Version.UNKNOWN);
         assertTrue(Version.parse("1.0.0").isNewerThan(Version.UNKNOWN));
         assertTrue(Version.parse("0.1.0").isNewerThan(Version.UNKNOWN));
     }

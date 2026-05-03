@@ -169,4 +169,12 @@ public class PostDataTest {
 
         assertEquals(List.of("a", "b"), names);
     }
+
+    @Test
+    void escapeNewLineCharacters() {
+        PostData postData = PostData.parse("?a=2&b=3\n4");
+
+        assertEquals("a=2&b=3%0A4", postData.encode());
+        assertEquals("3\n4", PostData.parse(postData.encode()).getRequiredParameter("b"));
+    }
 }

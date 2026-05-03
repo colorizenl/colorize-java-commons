@@ -172,4 +172,15 @@ class CSVFormatTest {
         assertFalse(format.of("1", "2").hasColumnInformation());
         assertThrows(IllegalArgumentException.class, () -> format.of(List.of("a", "b"), "1"));
     }
+
+    @Test
+    void escapeNewLineCharacters() {
+        CSVFormat format = CSVFormat.withoutHeaders('\t');
+        CSVRecord record = format.of("a", "b\nc");
+
+        assertEquals("a", record.get(0));
+        assertEquals("b\nc", record.get(1));
+        assertEquals("a\tb\\nc", record.toCSV().trim());
+        assertEquals("b\nc", format.parseCSV("a\tb\\nc").getFirst().get(1));
+    }
 }

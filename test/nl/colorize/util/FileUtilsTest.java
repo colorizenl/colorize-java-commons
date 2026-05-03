@@ -176,6 +176,17 @@ public class FileUtilsTest {
     }
 
     @Test
+    void walkFilesWithExt(@TempDir File tempDir) throws IOException {
+        Files.writeString(new File(tempDir, "a.txt").toPath(), "a", UTF_8);
+        Files.writeString(new File(tempDir, "b.log").toPath(), "b", UTF_8);
+
+        List<File> files = FileUtils.walkFiles(tempDir, ".log");
+
+        assertEquals(1, files.size());
+        assertEquals("b.log", files.getFirst().getName());
+    }
+
+    @Test
     void walkFilesOnSingleFile(@TempDir File tempDir) throws IOException {
         File tempFile = new File(tempDir, "test.txt");
         Files.writeString(tempFile.toPath(), "1234", UTF_8);

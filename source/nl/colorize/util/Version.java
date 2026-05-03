@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 
@@ -27,7 +26,6 @@ public final class Version implements Comparable<Version> {
     
     private static final Pattern VERSION_STRING_PATTERN = Pattern.compile("v?(\\d[\\.\\d]*)(.*)");
     private static final Splitter VERSION_SPLITTER = Splitter.on(".").omitEmptyStrings();
-    private static final Joiner VERSION_JOINER = Joiner.on(".");
 
     private Version(String versionString, List<Integer> digits) {
         this.versionString = versionString;
@@ -68,7 +66,7 @@ public final class Version implements Comparable<Version> {
      *
      * @throws IllegalArgumentException if {@code precision} is 0 or less.
      */
-    public int compareTo(Version other, int precision) {
+    protected int compareTo(Version other, int precision) {
         Preconditions.checkArgument(precision > 0, "Invalid precision: " + precision);
 
         for (int i = 0; i < precision; i++) {
@@ -92,27 +90,6 @@ public final class Version implements Comparable<Version> {
     public boolean isNewerThan(Version other) {
         return compareTo(other) > 0;
     }
-    
-    public boolean isOlderThan(Version other) {
-        return compareTo(other) < 0;
-    }
-    
-    /**
-     * Returns a new {@code Version} instance that is a truncated version of this
-     * one. For example, truncating the version number 1.2.3 to 2 digits will
-     * return 1.2. Truncating a version number that contains textual suffixes will
-     * remove those suffixes.
-     * @throws IllegalArgumentException if there is not at least 1 digit left.
-     */
-    public Version truncate(int maxDigits) {
-        Preconditions.checkArgument(maxDigits >= 1, "Must keep at least 1 digit");
-
-        List<Integer> truncatedDigits = digits.stream()
-            .limit(Math.min(maxDigits, digits.size()))
-            .toList();
-
-        return new Version(VERSION_JOINER.join(truncatedDigits), truncatedDigits);
-    }
 
     public boolean isUnknown() {
         return equals(UNKNOWN);
@@ -132,7 +109,9 @@ public final class Version implements Comparable<Version> {
     }
     
     /**
-     * Returns the version string that is represented by this object.
+     * Returns the version string that is represented by this object. Note
+     * this always returns the <em>original</em> version string that was
+     * used to create this instance.
      */
     @Override
     public String toString() {
@@ -143,7 +122,9 @@ public final class Version implements Comparable<Version> {
     }
     
     /**
-     * Parses a version number from the specified version string.
+     * Parses a version number from the specified version string. An empty
+     * string will return {@link #UNKNOWN}. A non-empty string that is not
+     * a valid version number will result in an exception.
      *
      * @throws IllegalArgumentException if the version string cannot be parsed.
      */
@@ -156,7 +137,7 @@ public final class Version implements Comparable<Version> {
 
         Preconditions.checkArgument(matcher.matches(), "Cannot parse version: " + versionString);
 
-        List<Integer> digits = VERSION_SPLITTER.splitToList(matcher.group(1)).stream()
+        List<Integer> digits = VERSION_SPLITTER.splitToStream(matcher.group(1))
             .map(Integer::parseInt)
             .toList();
 

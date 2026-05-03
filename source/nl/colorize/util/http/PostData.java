@@ -211,11 +211,11 @@ public class PostData implements Iterable<Tuple<String, String>> {
      * Creates a {@code PostData} instance from existing key/value pairs. The
      * parameter order will be based on the map's iteration order.
      */
-    public static PostData create(Map<String, ?> data) {
+    public static PostData create(Map<String, String> data) {
         TupleList<String, String> params = new TupleList<>();
 
-        for (Map.Entry<String, ?> entry : data.entrySet()) {
-            String value = entry.getValue() != null ? entry.getValue().toString() : "";
+        for (Map.Entry<String, String> entry : data.entrySet()) {
+            String value = entry.getValue() != null ? entry.getValue() : "";
             params.add(entry.getKey(), value);
         }
 
