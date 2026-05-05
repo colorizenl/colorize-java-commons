@@ -50,7 +50,7 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation LINEAR = (x0, x1, delta) -> {
-        return x0 + Math.clamp(delta, 0f, 1f) * (x1 - x0);
+        return x0 + delta * (x1 - x0);
     };
 
     /**
@@ -69,64 +69,14 @@ public interface Interpolation {
      * </pre>
      */
     public static final Interpolation EASE = (x0, x1, delta) -> {
-        float delta2 = 3f - (Math.clamp(delta, 0f, 1f) * 2f);
+        float delta2 = 3f - (delta * 2f);
         return x0 + (delta * delta * delta2) * (x1 - x0);
     };
 
     /**
-     * Cubic easing interpolation.
-     * <p>
-     * <pre>
-     * . . . . . . x x x
-     * . . . . . . . . .
-     * . . . . . x . . .
-     * . . . . . . . . .
-     * . . . . . . . . .
-     * . . . . x . . . .
-     * . . . . . . . . .
-     * . . . x . . . . .
-     * x x x . . . . . .
-     * </pre>
-     */
-    public static final Interpolation CUBIC = (x0, x1, delta) -> {
-        delta = Math.clamp(delta, 0f, 1f) / 0.5f;
-        if (delta < 1f) {
-            return (x1 - x0) / 2f * delta * delta * delta + x0;
-        } else {
-            delta -= 2f;
-            return (x1 - x0) / 2f * (delta * delta * delta + 2f) + x0;
-        }
-    };
-
-    /**
-     * Quadratic easing interpolation.
-     * <p>
-     * <pre>
-     * . . . . . . . x x
-     * . . . . . . x . .
-     * . . . . . . . . .
-     * . . . . . x . . .
-     * . . . . x . . . .
-     * . . . . . . . . .
-     * . . . x . . . . .
-     * . . . . . . . . .
-     * x x x . . . . . .
-     * </pre>
-     */
-    public static final Interpolation QUADRATIC = (x0, x1, delta) -> {
-        delta = Math.clamp(delta, 0f, 1f) / 0.5f;
-        if (delta < 1f) {
-            return (x1 - x0) / 2f * delta * delta + x0;
-        } else {
-            delta--;
-            return -(x1 - x0) / 2f * (delta * (delta - 2f) - 1f) + x0;
-        }
-    };
-
-    /**
-     * Returns the interpolated value between {@code x0} and {@code x1}. The value
-     * of {@code delta} is a number between 0 and 1 describing how much of the
-     * animation has been completed.
+     * Returns the interpolated value between {@code x0} and {@code x1}. The
+     * value of {@code delta} is a number between 0 and 1 describing how much
+     * of the animation has been completed.
      */
     public float interpolate(float x0, float x1, float delta);
 }

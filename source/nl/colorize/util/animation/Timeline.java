@@ -290,6 +290,7 @@ public class Timeline implements Animatable {
         // the entire timeline, we need a value between 0 and 1 for the
         // relative position between these two key frames.
         float relativeDelta = (playhead - prev.time()) / (next.time() - prev.time());
+        relativeDelta = Math.clamp(relativeDelta, 0f, 1f);
         
         return interpolationMethod.interpolate(prev.value(), next.value(), relativeDelta);
     }

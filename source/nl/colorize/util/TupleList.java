@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Stream;
 
 /**
@@ -222,5 +223,18 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
      */
     public static <L, R> TupleList<L, R> empty() {
         return new TupleList<>(Collections.emptyList());
+    }
+
+    /**
+     * Returns a custom {@link Collector} that can be used to gather the
+     * contents of a stream into a (mutable) {@link TupleList}.
+     */
+    public static <L, R> Collector<Tuple<L, R>, ?, TupleList<L, R>> collect() {
+        return Collector.of(TupleList::new, TupleList::add, (a, b) -> {
+            TupleList<L, R> combined = new TupleList<>();
+            combined.addAll(a);
+            combined.addAll(b);
+            return combined;
+        });
     }
 }

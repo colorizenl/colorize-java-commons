@@ -41,20 +41,15 @@ public class InterpolationTest {
     }
 
     @Test
-    public void testCubicInterpolation() {
-        assertEquals(0f, Interpolation.CUBIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.0625f, Interpolation.CUBIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.CUBIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.9375f, Interpolation.CUBIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.CUBIC.interpolate(0f, 1f, 1f), EPSILON);
-    }
+    void extrapolate() {
+        assertEquals(10f, Interpolation.LINEAR.interpolate(10f, 20f, 0f));
+        assertEquals(20f, Interpolation.LINEAR.interpolate(10f, 20f, 1f));
 
-    @Test
-    public void testQuadraticInterpolation() {
-        assertEquals(0f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0f), EPSILON);
-        assertEquals(0.125f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.25f), EPSILON);
-        assertEquals(0.5f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.5f), EPSILON);
-        assertEquals(0.875f, Interpolation.QUADRATIC.interpolate(0f, 1f, 0.75f), EPSILON);
-        assertEquals(1f, Interpolation.QUADRATIC.interpolate(0f, 1f, 1f), EPSILON);
+        assertEquals(25f, Interpolation.LINEAR.interpolate(10f, 20f, 1.5f));
+        assertEquals(30f, Interpolation.LINEAR.interpolate(10f, 20f, 2f));
+
+        assertEquals(0f, Interpolation.LINEAR.interpolate(10f, 20f, -1f));
+        assertEquals(-10f, Interpolation.LINEAR.interpolate(10f, 20f, -2f));
+        assertEquals(-20f, Interpolation.LINEAR.interpolate(10f, 20f, -3f));
     }
 }

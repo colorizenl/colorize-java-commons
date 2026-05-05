@@ -59,9 +59,7 @@ public class InterpolationUIT extends JPanel implements Animatable {
     private static final List<Interpolation> INTERPOLATION_METHODS = List.of(
         Interpolation.DISCRETE,
         Interpolation.LINEAR,
-        Interpolation.EASE,
-        Interpolation.CUBIC,
-        Interpolation.QUADRATIC
+        Interpolation.EASE
     );
 
     public static void main(String[] args) {

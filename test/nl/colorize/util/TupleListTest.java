@@ -167,4 +167,15 @@ class TupleListTest {
         assertTrue(list.containsRight("b"));
         assertTrue(list.containsRight("c"));
     }
+
+    @Test
+    void collect() {
+        TupleList<String, String> tuples = Stream.of("a", "b")
+            .map(value -> Tuple.of(value, value + "x"))
+            .collect(TupleList.collect());
+
+        assertEquals(2, tuples.size());
+        assertEquals(Tuple.of("a", "ax"), tuples.get(0));
+        assertEquals(Tuple.of("b", "bx"), tuples.get(1));
+    }
 }
