@@ -11,7 +11,7 @@ jobs:
         run: gradle coverage
       - name: Translation check
         run: |
-          translation-check.py resources/relative-date.properties
-          translation-check.py resources/custom-swing-components.properties
+          translation_check.py resources/relative-date.properties
+          translation_check.py resources/custom-swing-components.properties
       - name: Copyright header check
         run: copyright_check.py
