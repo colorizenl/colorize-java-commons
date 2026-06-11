@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class KeyFrameTest {
 
-    private static final float EPSILON = 0.001f;
+    private static final double EPSILON = 0.001;
 
     @Test
     void sortKeyFramesByTime() {
@@ -27,14 +27,8 @@ class KeyFrameTest {
         Collections.sort(keyFrames);
 
         assertEquals(3, keyFrames.size());
-        assertEquals(1f, keyFrames.get(0).time(), EPSILON);
-        assertEquals(1.5f, keyFrames.get(1).time(), EPSILON);
-        assertEquals(2f, keyFrames.get(2).time(), EPSILON);
-    }
-
-    @Test
-    void stringForm() {
-        assertEquals("1.0: 10.0", new KeyFrame(1, 10).toString());
-        assertEquals("0.25: 10.1", new KeyFrame(0.25f, 10.1f).toString());
+        assertEquals(1.0, keyFrames.get(0).time(), EPSILON);
+        assertEquals(1.5, keyFrames.get(1).time(), EPSILON);
+        assertEquals(2.0, keyFrames.get(2).time(), EPSILON);
     }
 }

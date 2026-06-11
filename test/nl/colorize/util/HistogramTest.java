@@ -102,7 +102,7 @@ class HistogramTest {
         histogram.count(JANUARY, "2", 2);
         histogram.count(FEBRUARY, "2");
 
-        Map<String, Float> percentages = histogram.getSeriesPercentages();
+        Map<String, Double> percentages = histogram.getSeriesPercentages();
 
         assertEquals("{2=75.0, 1=25.0}", percentages.toString());
     }

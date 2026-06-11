@@ -19,10 +19,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
+
+import static nl.colorize.util.TranslationBundle.NL;
 
 /**
  * Convenience functions for parsing, formatting, and working with dates. The
@@ -40,6 +43,14 @@ import java.util.regex.Pattern;
  * only partially available on some platforms and Java implementations.
  */
 public final class DateParser {
+
+    private static Memoized<TranslationBundle> relativeDateBundle = Memoized.compute(() -> {
+        ResourceFile en = new ResourceFile("relative-date.properties");
+        ResourceFile nl = new ResourceFile("relative-date-nl.properties");
+
+        return TranslationBundle.from(en)
+            .withTranslation(NL, nl);
+    });
 
     private static final List<DatePattern> DATE_PATTERNS = List.of(
         new DatePattern("\\d{8}",                                    "yyyyMMdd"),
@@ -64,31 +75,6 @@ public final class DateParser {
         ChronoUnit.MINUTES, GregorianCalendar.MINUTE,
         ChronoUnit.SECONDS, GregorianCalendar.SECOND
     );
-
-    /**
-     * Translation bundle that is used for formatting relative dates. This uses
-     * a constant instead of a "real" {@code .properties} file in order to
-     * preserve compatibility with TeaVM.
-     */
-    private static final TranslationBundle BUNDLE = TranslationBundle.from(
-        PropertyUtils.loadProperties("""
-            future=the future
-            now=just now
-            second=just now
-            seconds=seconds ago
-            minute=1 minute ago
-            minutes={0} minutes ago
-            hour=1 hour ago
-            hours={0} hours ago
-            day=yesterday
-            days={0} days ago
-            week=last week
-            weeks={0} weeks ago
-            month=1 month ago
-            months={0} months ago
-            year=1 year ago
-            years={0} years ago
-        """));
 
     private DateParser() {
     }
@@ -228,12 +214,15 @@ public final class DateParser {
 
     /**
      * Formats a date relative to another date, with the precision being
-     * decided by the distance between the two dates. Examples of returned
-     * values are "2 hours ago", "yesterday", and "3 weeks ago".
+     * decided by the distance between the two dates, in the specified locale.
+     * Examples of returned values are "2 hours ago", "yesterday", and
+     * "3 weeks ago".
      */
-    public static String formatRelative(Date date, Date reference) {
+    public static String formatRelative(Date date, Date reference, Locale locale) {
+        TranslationBundle bundle = relativeDateBundle.get().select(locale);
+
         if (date.getTime() > reference.getTime()) {
-            return BUNDLE.getString("future");
+            return bundle.getString("future");
         }
 
         long deltaInSeconds = Math.abs(date.getTime() - reference.getTime()) / 1000L;
@@ -244,23 +233,24 @@ public final class DateParser {
 
             if (deltaInSeconds >= 2L * secondsInUnit) {
                 String plural = chronoUnit.toString().toLowerCase();
-                return BUNDLE.getString(plural, deltaInUnit);
+                return bundle.getString(plural, deltaInUnit);
             } else if (deltaInSeconds >= secondsInUnit) {
                 String singular = TextUtils.removeTrailing(chronoUnit.toString().toLowerCase(), "s");
-                return BUNDLE.getString(singular, deltaInUnit);
+                return bundle.getString(singular, deltaInUnit);
             }
         }
 
-        return BUNDLE.getString("now");
+        return bundle.getString("now");
     }
 
     /**
-     * Formats a date relative to the current date, with the precision being
-     * decided by the distance between the two dates. Examples of returned
-     * values are "2 hours ago", "yesterday", and "3 weeks ago".
+     * Formats a date relative to another date, with the precision being
+     * decided by the distance between the two dates, in default locale of
+     * {@link Locale#US}.  Examples of returned values are "2 hours ago",
+     * "yesterday", and "3 weeks ago".
      */
-    public static String formatRelative(Date date) {
-        return formatRelative(date, new Date());
+    public static String formatRelative(Date date, Date reference) {
+        return formatRelative(date, reference, Locale.US);
     }
 
     /**

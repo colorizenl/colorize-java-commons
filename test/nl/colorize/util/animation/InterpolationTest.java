@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InterpolationTest {
 
-    private static final float EPSILON = 0.0001f;
+    private static final double EPSILON = 0.0001;
 
     @Test
     public void testDiscreteInterpolation() {
@@ -51,5 +51,23 @@ public class InterpolationTest {
         assertEquals(0f, Interpolation.LINEAR.interpolate(10f, 20f, -1f));
         assertEquals(-10f, Interpolation.LINEAR.interpolate(10f, 20f, -2f));
         assertEquals(-20f, Interpolation.LINEAR.interpolate(10f, 20f, -3f));
+    }
+
+    @Test
+    public void testSmootherstepInterpolation() {
+        assertEquals(0f, Interpolation.SMOOTHERSTEP.interpolate(0f, 1f, 0f), EPSILON);
+        assertEquals(0.1035f, Interpolation.SMOOTHERSTEP.interpolate(0f, 1f, 0.25f), EPSILON);
+        assertEquals(0.5f, Interpolation.SMOOTHERSTEP.interpolate(0f, 1f, 0.5f), EPSILON);
+        assertEquals(0.8964f, Interpolation.SMOOTHERSTEP.interpolate(0f, 1f, 0.75f), EPSILON);
+        assertEquals(1f, Interpolation.SMOOTHERSTEP.interpolate(0f, 1f, 1f), EPSILON);
+    }
+
+    @Test
+    void strictInterpolate() {
+        assertEquals(30.0, Interpolation.LINEAR.interpolate(10, 20, 2.0));
+        assertEquals(0.0, Interpolation.LINEAR.interpolate(10, 20, -1.0));
+
+        assertEquals(20.0, Interpolation.LINEAR.strictInterpolate(10, 20, 2.0));
+        assertEquals(10.0, Interpolation.LINEAR.strictInterpolate(10, 20, -1.0));
     }
 }

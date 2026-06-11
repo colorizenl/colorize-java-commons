@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SwingAnimatorTest {
 
-    private static final float EPSILON = 0.001f;
+    private static final double EPSILON = 0.001;
 
     @Test
     public void testPlayAnimation() {
@@ -118,16 +118,16 @@ public class SwingAnimatorTest {
      */
     private static class MockAnim implements Animatable {
 
-        private float totalTime;
-        private float duration;
+        private double totalTime;
+        private double duration;
 
-        public MockAnim(float duration) {
-            this.totalTime = 0f;
+        public MockAnim(double duration) {
+            this.totalTime = 0.0;
             this.duration = duration;
         }
 
         @Override
-        public void onFrame(float deltaTime) {
+        public void onFrame(double deltaTime) {
             totalTime += deltaTime;
         }
 

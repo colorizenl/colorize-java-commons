@@ -62,7 +62,7 @@ class TranslationBundleTest {
         );
 
         TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(textEN))
-            .link(TranslationBundle.from(NL, PropertyUtils.toProperties(textNL)));
+            .withTranslation(NL, PropertyUtils.toProperties(textNL));
 
         assertEquals("waarde", bundle.select(NL).getText("key.a"));
         assertEquals("dit is 1 parameter", bundle.select(NL).getText("key.b", "1"));
@@ -83,7 +83,7 @@ class TranslationBundleTest {
         );
 
         TranslationBundle bundle = TranslationBundle.from(PropertyUtils.toProperties(textEN))
-            .link(TranslationBundle.from(NL, PropertyUtils.toProperties(textNL)));
+            .withTranslation(NL, PropertyUtils.toProperties(textNL));
 
         assertEquals(Set.of("key.a", "key.b", "key.c"), bundle.select(NL).keySet());
         assertEquals(Set.of("key.a", "key.b"), bundle.keySet());
@@ -126,8 +126,8 @@ class TranslationBundleTest {
         Properties nl = PropertyUtils.loadProperties("a=snelheidsduivel");
 
         TranslationBundle bundle = TranslationBundle.from(Locale.US, us)
-            .link(TranslationBundle.from(Locale.UK, uk))
-            .link(TranslationBundle.from(NL, nl));
+            .withTranslation(Locale.UK, uk)
+            .withTranslation(NL, nl);
 
         assertEquals("speedster", bundle.select(Locale.US).getText("a"));
         assertEquals("pace merchant", bundle.select(Locale.UK).getText("a"));

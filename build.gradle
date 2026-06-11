@@ -9,7 +9,7 @@ apply plugin: "java-library"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2026.2"
+version = "2026.2.1"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -27,7 +27,7 @@ repositories {
 dependencies {
     api "org.jspecify:jspecify:1.0.0"
     api "com.google.guava:guava:33.6.0-jre"
-    testImplementation "org.junit.jupiter:junit-jupiter:6.0.3"
+    testImplementation "org.junit.jupiter:junit-jupiter:6.1.0"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
     errorprone "com.google.errorprone:error_prone_core:2.49.0"
 }

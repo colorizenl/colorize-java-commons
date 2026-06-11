@@ -436,13 +436,13 @@ public final class Utils2D {
      * @param delta Number between 0 and 1, where 0.0 indicates the "from" color
      *              and 1.0 indicates the "to" color.
      */
-    public static Color interpolateColor(Color from, Color to, float delta) {
+    public static Color interpolateColor(Color from, Color to, double delta) {
         delta = Math.clamp(delta, 0f, 1f);
 
-        int red = Math.round(from.getRed() + delta * (to.getRed() - from.getRed()));
-        int green = Math.round(from.getGreen() + delta * (to.getGreen() - from.getGreen()));
-        int blue = Math.round(from.getBlue() + delta * (to.getBlue() - from.getBlue()));
-        int alpha = Math.round(from.getAlpha() + delta * (to.getAlpha() - from.getAlpha()));
+        int red = (int) Math.round(from.getRed() + delta * (to.getRed() - from.getRed()));
+        int green = (int) Math.round(from.getGreen() + delta * (to.getGreen() - from.getGreen()));
+        int blue = (int) Math.round(from.getBlue() + delta * (to.getBlue() - from.getBlue()));
+        int alpha = (int) Math.round(from.getAlpha() + delta * (to.getAlpha() - from.getAlpha()));
         
         return new Color(red, green, blue, alpha);
     }

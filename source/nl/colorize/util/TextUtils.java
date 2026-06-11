@@ -307,7 +307,7 @@ public final class TextUtils {
      * This method is a convenience version for {@link NumberFormat}. It uses
      * the {@code en_US} locale, meaning that it will use the format "1,000.5".
      */
-    public static String numberFormat(float n, int decimals) {
+    public static String numberFormat(double n, int decimals) {
         Preconditions.checkArgument(decimals >= 0,
             "Invalid number of decimals: " + decimals);
 
@@ -326,7 +326,7 @@ public final class TextUtils {
      * “1:00:00”. If the value of {@code includeMilliseconds} is set to true,
      * the number of milliseconds will be appended to the result.
      */
-    public static String timeFormat(float seconds, boolean includeMilliseconds) {
+    public static String timeFormat(double seconds, boolean includeMilliseconds) {
         return timeFormat(Math.round(seconds * 1000f), includeMilliseconds);
     }
 
@@ -428,9 +428,9 @@ public final class TextUtils {
 
     private static int autoSort(String a, String b) {
         try {
-            float numericA = Float.parseFloat(a);
-            float numericB = Float.parseFloat(b);
-            return Float.compare(numericA, numericB);
+            double numericA = Double.parseDouble(a);
+            double numericB = Double.parseDouble(b);
+            return Double.compare(numericA, numericB);
         } catch (NumberFormatException e) {
             return a.toLowerCase().compareTo(b.toLowerCase());
         }

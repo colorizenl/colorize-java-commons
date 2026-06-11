@@ -21,6 +21,7 @@ import static java.time.temporal.ChronoUnit.YEARS;
 import static nl.colorize.util.DateParser.add;
 import static nl.colorize.util.DateParser.format;
 import static nl.colorize.util.DateParser.parse;
+import static nl.colorize.util.TranslationBundle.NL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -96,6 +97,14 @@ class DateParserTest {
         assertEquals("2 weeks ago", DateParser.formatRelative(parse("2022-06-15 15:00"), reference));
         assertEquals("1 month ago", DateParser.formatRelative(parse("2022-05-27 15:00"), reference));
         assertEquals("1 year ago", DateParser.formatRelative(parse("2021-06-15 15:00"), reference));
+    }
+
+    @Test
+    void formatRelativeTranslations() {
+        Date reference = parse("2022-07-01 15:00");
+
+        assertEquals("vorige week", DateParser.formatRelative(parse("2022-06-24"), reference, NL));
+        assertEquals("2 weken geleden", DateParser.formatRelative(parse("2022-06-15"), reference, NL));
     }
 
     @Test

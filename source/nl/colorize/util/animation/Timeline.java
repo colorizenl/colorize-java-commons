@@ -24,10 +24,10 @@ public class Timeline implements Animatable {
     private Interpolation interpolationMethod;
     private boolean loop;
 
-    private float playhead;
+    private double playhead;
     private int nextKeyFrameIndex;
 
-    private static final float EPSILON = 0.001f;
+    private static final double EPSILON = 0.001;
 
     /**
      * Creates a timeline that will interpolate between key frames using the
@@ -38,7 +38,7 @@ public class Timeline implements Animatable {
         this.interpolationMethod = interpolationMethod;
         this.loop = loop;
 
-        this.playhead = 0f;
+        this.playhead = 0.0;
         this.nextKeyFrameIndex = 0;
     }
     
@@ -62,8 +62,8 @@ public class Timeline implements Animatable {
      * The playhead is restricted to the range between zero and the timeline's
      * duration as returned by {@link #getDuration()}.
      */
-    public void setPlayhead(float position) {
-        float duration = getDuration();
+    public void setPlayhead(double position) {
+        double duration = getDuration();
         
         if (loop && position > duration) {
             playhead = position % duration;
@@ -101,25 +101,25 @@ public class Timeline implements Animatable {
 
     /**
      * Moves the playhead by the specified amount, in seconds. Passing a
-     * negative value will  move the playhead backwards. The playhead is
+     * negative value will move the playhead backwards. The playhead is
      * restricted to the range between zero and the timeline's duration as
      * returned by {@link #getDuration()}.
      *
      * @return The new position of this timeline's playhead.
      */
-    public float movePlayhead(float deltaTime) {
+    public double movePlayhead(double deltaTime) {
         setPlayhead(playhead + deltaTime);
         return playhead;
     }
 
     /**
      * Moves the playhead by the specified amount, in seconds. Passing a
-     * negative value will  move the playhead backwards. The playhead is
+     * negative value will move the playhead backwards. The playhead is
      * restricted to the range between zero and the timeline's duration as
      * returned by {@link #getDuration()}.
      */
     @Override
-    public void onFrame(float deltaTime) {
+    public void onFrame(double deltaTime) {
         movePlayhead(deltaTime);
     }
     
@@ -127,7 +127,7 @@ public class Timeline implements Animatable {
      * Moves the playhead back to the start of the timeline.
      */
     public void reset() {
-        setPlayhead(0f);
+        setPlayhead(0.0);
     }
     
     /**
@@ -142,7 +142,7 @@ public class Timeline implements Animatable {
      * the playhead will exist somewhere in the range between zero and the
      * value of {@link #getDuration()}.
      */
-    public float getPlayhead() {
+    public double getPlayhead() {
         return playhead;
     }
 
@@ -151,12 +151,12 @@ public class Timeline implements Animatable {
      * last key frame. If the timeline does not contain any key frames, this
      * method will return zero.
      */
-    public float getDuration() {
+    public double getDuration() {
         if (keyFrames.isEmpty()) {
-            return 0f;
+            return 0.0;
         }
 
-        KeyFrame last = keyFrames.get(keyFrames.size() - 1);
+        KeyFrame last = keyFrames.getLast();
         return last.time();
     }
     
@@ -165,13 +165,13 @@ public class Timeline implements Animatable {
      * where 0 is the beginning of the timeline and 1 is the timeline's
      * duration.
      */
-    public float getDelta() {
-        float duration = getDuration();
+    public double getDelta() {
+        double duration = getDuration();
 
-        if (playhead <= 0f) {
-            return 0f;
+        if (playhead <= 0.0) {
+            return 0.0;
         } else if (playhead >= duration) {
-            return 1f;
+            return 1.0;
         } else {
             return playhead / duration;
         }
@@ -217,8 +217,7 @@ public class Timeline implements Animatable {
 
         // Checking all key frames is relatively expensive if the
         // timeline is huge. However, the overwhelming majority
-        // of timelines are *not* huge, and even for the huge ones
-        // key frames tend to be inserted in order.
+        // of timelines are *not* huge.
         Preconditions.checkState(!checkKeyFrame(keyFrame.time()),
             "Timeline already contains a key frame at position " + keyFrame.time());
 
@@ -227,7 +226,7 @@ public class Timeline implements Animatable {
         return this;
     }
 
-    private boolean checkKeyFrame(float position) {
+    private boolean checkKeyFrame(double position) {
         return keyFrames.stream()
             .map(KeyFrame::time)
             .anyMatch(t -> t >= position - EPSILON && t <= position + EPSILON);
@@ -243,7 +242,7 @@ public class Timeline implements Animatable {
      * @throws IllegalStateException if this timeline already has a key
      *         frame at the same position.
      */
-    public Timeline addKeyFrame(float position, float value) {
+    public Timeline addKeyFrame(double position, double value) {
         KeyFrame keyFrame = new KeyFrame(position, value);
         return addKeyFrame(keyFrame);
     }
@@ -259,13 +258,13 @@ public class Timeline implements Animatable {
      * positioned in between key frames, interpolation will be used to
      * determine the current value.
      */
-    public float getValue() {
+    public double getValue() {
         if (keyFrames.isEmpty()) {
-            return 0f;
+            return 0.0;
         }
 
         if (nextKeyFrameIndex == 0) {
-            return keyFrames.get(0).value();
+            return keyFrames.getFirst().value();
         }
 
         KeyFrame prev = keyFrames.get(nextKeyFrameIndex - 1);
@@ -277,7 +276,7 @@ public class Timeline implements Animatable {
      * Interpolates between the specified two key frames based on the current
      * position of the playhead.
      */
-    private float interpolateValue(KeyFrame prev, KeyFrame next) {
+    private double interpolateValue(KeyFrame prev, KeyFrame next) {
         if (playhead <= prev.time()) {
             return prev.value();
         }
@@ -289,10 +288,8 @@ public class Timeline implements Animatable {
         // Although getDelta() already returns a value between 0 and 1 for,
         // the entire timeline, we need a value between 0 and 1 for the
         // relative position between these two key frames.
-        float relativeDelta = (playhead - prev.time()) / (next.time() - prev.time());
-        relativeDelta = Math.clamp(relativeDelta, 0f, 1f);
-        
-        return interpolationMethod.interpolate(prev.value(), next.value(), relativeDelta);
+        double relativeDelta = (playhead - prev.time()) / (next.time() - prev.time());
+        return interpolationMethod.strictInterpolate(prev.value(), next.value(), relativeDelta);
     }
 
     /**
@@ -304,7 +301,7 @@ public class Timeline implements Animatable {
     public Timeline reverse() {
         Timeline reversed = new Timeline(interpolationMethod, loop);
         for (int i = 0; i < keyFrames.size(); i++) {
-            float value = keyFrames.get(keyFrames.size() - i - 1).value();
+            double value = keyFrames.get(keyFrames.size() - i - 1).value();
             reversed.addKeyFrame(keyFrames.get(i).time(), value);
         }
         return reversed;

@@ -65,8 +65,8 @@ public class FormPanel extends JPanel implements LayoutManager {
     private static final String FORM_COMPONENT_PROPERTY = "nl.colorize.FormPanel.FORM_COMPONENT";
     private static final String LABEL_CELL = "nl.colorize.FormPanel.LABEL_CELL";
     private static final String VALUE_CELL = "nl.colorize.FormPanel.VALUE_CELL";
-    private static final float LABEL_COLUMN_FRACTION = 0.4f;
-    private static final float VALUE_COLUMN_FRACTION = 0.6f;
+    private static final double LABEL_COLUMN_FRACTION = 0.4;
+    private static final double VALUE_COLUMN_FRACTION = 0.6;
     private static final Color VALIDATION_FAILED_COLOR = new Color(220, 148, 152);
     
     /**
@@ -424,16 +424,16 @@ public class FormPanel extends JPanel implements LayoutManager {
     }
 
     /**
-     * Dynamically adds a text field that only accepts float values and
-     * returns a {@link Signal} that can be used to process or subscribe
+     * Dynamically adds a text field that only accepts {@code double} values
+     * and returns a {@link Signal} that can be used to process or subscribe
      * to results.
      */
-    public Signal<Float> addFloatField(String label, float initialValue) {
-        Signal<Float> signal = Signal.of(initialValue);
+    public Signal<Double> addDoubleField(String label, double initialValue) {
+        Signal<Double> signal = Signal.of(initialValue);
         JTextField field = new JTextField(String.valueOf(initialValue));
         Runnable callback = () -> {
             try {
-                signal.set(Float.parseFloat(field.getText()));
+                signal.set(Double.parseDouble(field.getText()));
             } catch (NumberFormatException e) {
                 signal.set(initialValue);
             }
@@ -587,9 +587,9 @@ public class FormPanel extends JPanel implements LayoutManager {
     
     private int calculateCellWidth(Component component, int availableWidth) {
         if (isLabelCell(component)) {
-            return Math.round(LABEL_COLUMN_FRACTION * availableWidth);
+            return (int) Math.round(LABEL_COLUMN_FRACTION * availableWidth);
         } else if (isValueCell(component)) {
-            return Math.round(VALUE_COLUMN_FRACTION * availableWidth);
+            return (int) Math.round(VALUE_COLUMN_FRACTION * availableWidth);
         } else {
             return availableWidth;
         }

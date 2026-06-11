@@ -101,7 +101,7 @@ public class CircularLoader extends JPanel implements Animatable {
         int innerRadius = outerRadius / 2 + 1;
 
         for (int i = 0; i < NUM_LINES; i++) {
-            float angle = (float) Math.toRadians(i * (360.0 / NUM_LINES));
+            double angle = Math.toRadians(i * (360.0 / NUM_LINES));
             int startX = (int) (Math.cos(angle) * outerRadius);
             int startY = (int) (Math.sin(angle) * outerRadius);
             int endX = (int) (Math.cos(angle) * innerRadius);
@@ -129,7 +129,7 @@ public class CircularLoader extends JPanel implements Animatable {
     }
     
     @Override
-    public void onFrame(float deltaTime) {
+    public void onFrame(double deltaTime) {
         currentFrame++;
         if (currentFrame >= NUM_FRAMES) {
             currentFrame = 0;

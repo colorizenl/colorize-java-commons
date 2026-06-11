@@ -81,6 +81,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,6 +89,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static nl.colorize.util.TranslationBundle.NL;
 
 /**
  * Miscellaneous utility and convenience methods for working with Swing. This
@@ -97,7 +100,7 @@ import java.util.logging.Logger;
  * Swing applications using the functionality provided by this library should
  * call {@link #initializeSwing()} before the first Swing component is created.
  * This is typically done from the Swing application's {@code main} method.
- * The initialization method will apply the platform's native look-and-feel,
+ * The initialization method will apply the platform's native look-and-feel
  * and will also configure some other aspects to make Swing applications feel
  * more native on various desktop platforms.
  */
@@ -105,8 +108,9 @@ public final class SwingUtils {
     
     private static AtomicBoolean isSwingInitialized = new AtomicBoolean(false);
 
-    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE = TranslationBundle.from(
-        new ResourceFile("custom-swing-components.properties"));
+    private static final TranslationBundle CUSTOM_COMPONENTS_BUNDLE = TranslationBundle
+        .from(new ResourceFile("custom-swing-components.properties"))
+        .withTranslation(NL, new ResourceFile("custom-swing-components-nl.properties"));
 
     private static final Color STANDARD_ROW_COLOR = new Color(255, 255, 255);
     private static final Color ALT_ROW_COLOR = new Color(245, 245, 245);
@@ -899,17 +903,17 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns a text field that always returns a valid float when its
-     * {@code getText()} method is called. If the value that was actually
-     * entered is not a number it will return 0 instead.
+     * Returns a text field that always returns a valid {@code double} when
+     * its {@code getText()} method is called. If the value that was actually
+     * entered is not a number, it will return 0 instead.
      */
-    public static JTextField createNumericTextField(float initialValue) {
+    public static JTextField createNumericTextField(double initialValue) {
         return new JTextField(String.valueOf(initialValue)) {
             @Override
             public String getText() {
                 String text = super.getText();
                 try {
-                    return String.valueOf(Float.parseFloat(text));
+                    return String.valueOf(Double.parseDouble(text));
                 } catch (NumberFormatException e) {
                     return "0";
                 }
@@ -1050,9 +1054,11 @@ public final class SwingUtils {
     /**
      * Returns the resource bundle containing the user interface text for all
      * custom Swing components provided by this library. This bundle can be
-     * used to change and/or translate the text.
+     * used to change and/or translate the text. Note that Swing applications
+     * will always use the system locale. It is not possible to change the
+     * Swing locale at runtime.
      */
-    static TranslationBundle getCustomComponentsBundle() {
-        return CUSTOM_COMPONENTS_BUNDLE;
+    public static TranslationBundle getCustomComponentsBundle() {
+        return CUSTOM_COMPONENTS_BUNDLE.select(Locale.getDefault());
     }
 }

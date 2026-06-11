@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
+import com.google.common.math.Stats;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -220,7 +221,7 @@ public class Histogram<B extends Comparable<B>> {
      * {@link #getSeries()}. Use {@link #getSeriesTotals()} if you need the
      * absolute numbers.
      */
-    public Map<String, Float> getSeriesPercentages() {
+    public Map<String, Double> getSeriesPercentages() {
         return normalizeFrequencyMap(sortFrequencyMap(seriesTotals));
     }
 
@@ -257,16 +258,19 @@ public class Histogram<B extends Comparable<B>> {
      * order as the original, but expressed as percentages instead of absolute
      * numbers.
      */
-    private Map<String, Float> normalizeFrequencyMap(Map<String, Integer> original) {
-        int total = original.values().stream()
-            .mapToInt(value -> value)
-            .sum();
+    private Map<String, Double> normalizeFrequencyMap(Map<String, Integer> original) {
+        int total = (int) Stats.of(original.values()).sum();
+        Map<String, Double> normalized = new LinkedHashMap<>();
 
-        Map<String, Float> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : original.entrySet()) {
-            float percentage = FloatStats.percentage(entry.getValue(), total);
-            normalized.put(entry.getKey(), percentage);
+            if (total > 0) {
+                double percentage = entry.getValue() * 100.0 / total;
+                normalized.put(entry.getKey(), percentage);
+            } else {
+                normalized.put(entry.getKey(), 0.0);
+            }
         }
+
         return normalized;
     }
 }

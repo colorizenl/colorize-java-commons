@@ -13,20 +13,17 @@ import com.google.common.base.Preconditions;
  * with {@link Timeline}. The key frame's {@code time} indicates its position
  * on the timeline, in seconds. The timeline will then use the key frame data,
  * interpolating between key frames when necessary.
+ *
+ * @see Timeline
  */
-public record KeyFrame(float time, float value) implements Comparable<KeyFrame> {
+public record KeyFrame(double time, double value) implements Comparable<KeyFrame> {
 
     public KeyFrame {
-        Preconditions.checkArgument(time >= 0f, "Invalid time position: " + time);
+        Preconditions.checkArgument(time >= 0.0, "Invalid time position: " + time);
     }
 
     @Override
     public int compareTo(KeyFrame other) {
-        return Float.compare(time, other.time);
-    }
-
-    @Override
-    public String toString() {
-        return time + ": " + value;
+        return Double.compare(time, other.time);
     }
 }

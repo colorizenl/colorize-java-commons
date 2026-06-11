@@ -39,7 +39,7 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
     private boolean allowMultipleExpanded;
     private SwingAnimator animator;
     
-    private static final float ANIMATION_DURATION = 0.4f;
+    private static final double ANIMATION_DURATION = 0.4;
     private static final Logger LOGGER = LogHelper.getLogger(AccordionPanel.class);
     
     public AccordionPanel(boolean allowMultipleExpanded) {
@@ -205,7 +205,7 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
             timeline.addKeyFrame(ANIMATION_DURATION, expanded ? fullHeight : 0);
 
             animator.play(timeline, dt -> {
-                currentHeight = Math.round(timeline.getValue());
+                currentHeight = (int) Math.round(timeline.getValue());
                 detailPanel.revalidate();
             });
         }

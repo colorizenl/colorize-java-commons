@@ -7,10 +7,7 @@
 package nl.colorize.util.animation;
 
 import nl.colorize.util.Stopwatch;
-import nl.colorize.util.swing.AnimatedColor;
 import org.junit.jupiter.api.Test;
-
-import java.awt.Color;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TimelineTest {
 
-    private static final float EPSILON = 0.001f;
+    private static final double EPSILON = 0.001;
 
     @Test
     public void testDuration() {
@@ -210,40 +207,6 @@ public class TimelineTest {
     }
 
     @Test
-    public void testAnimatedColor() {
-        AnimatedColor nonChangingColor = new AnimatedColor(Color.ORANGE);
-        assertRGBA(nonChangingColor, 255, 200, 0, 255);
-        nonChangingColor.onFrame(1);
-        assertRGBA(nonChangingColor, 255, 200, 0, 255);
-
-        AnimatedColor linearColor = new AnimatedColor(Color.RED, Color.BLUE, 2);
-        assertRGBA(linearColor, 255, 0, 0, 255);
-        linearColor.onFrame(1);
-        assertRGBA(linearColor, 128, 0, 128, 255);
-        linearColor.onFrame(1);
-        assertRGBA(linearColor, 0, 0, 255, 255);
-        linearColor.onFrame(1);
-        assertRGBA(linearColor, 0, 0, 255, 255);
-    }
-
-    @Test
-    public void testAnimatedColorWithKeyFrames() {
-        AnimatedColor colorWithKeyFrames = new AnimatedColor(Color.RED);
-        colorWithKeyFrames.addKeyFrame(3f, new Color(255, 0, 0, 105));
-        colorWithKeyFrames.addKeyFrame(4f, new Color(255, 0, 0, 5));
-        assertRGBA(colorWithKeyFrames, 255, 0, 0, 255);
-        colorWithKeyFrames.onFrame(1);
-        assertRGBA(colorWithKeyFrames, 255, 0, 0, 205);
-        colorWithKeyFrames.onFrame(1);
-        colorWithKeyFrames.onFrame(1);
-        assertRGBA(colorWithKeyFrames, 255, 0, 0, 105);
-        colorWithKeyFrames.onFrame(1);
-        assertRGBA(colorWithKeyFrames, 255, 0, 0, 5);
-        colorWithKeyFrames.onFrame(1);
-        assertRGBA(colorWithKeyFrames, 255, 0, 0, 5);
-    }
-
-    @Test
     public void testReplaceKeyFrame() {
         Timeline timeline = new Timeline();
         timeline.addKeyFrame(1f, 10f);
@@ -256,8 +219,8 @@ public class TimelineTest {
 
         String expected = """
             Timeline
-                1.0: 10.0
-                3.0: 30.0
+                KeyFrame[time=1.0, value=10.0]
+                KeyFrame[time=3.0, value=30.0]
             """;
 
         assertEquals(expected, timeline.toString());
@@ -286,9 +249,9 @@ public class TimelineTest {
 
         String expected = """
             Timeline
-                1.5: 1.0
-                2.0: 2.0
-                2.5: 3.0
+                KeyFrame[time=1.5, value=1.0]
+                KeyFrame[time=2.0, value=2.0]
+                KeyFrame[time=2.5, value=3.0]
             """;
 
         assertEquals(expected, timeline.toString());
@@ -304,10 +267,10 @@ public class TimelineTest {
 
         String expected = """
             Timeline
-                1.5: 1.0
-                2.0: 2.0
-                2.5: 3.0
-                4.0: 4.0
+                KeyFrame[time=1.5, value=1.0]
+                KeyFrame[time=2.0, value=2.0]
+                KeyFrame[time=2.5, value=3.0]
+                KeyFrame[time=4.0, value=4.0]
             """;
 
         assertEquals(expected, timeline.toString());
@@ -357,19 +320,23 @@ public class TimelineTest {
 
         String expected = """
             Timeline
-                0.0: 8.0
-                1.0: 4.0
-                2.0: 2.0
-                3.0: 1.0
+                KeyFrame[time=0.0, value=8.0]
+                KeyFrame[time=1.0, value=4.0]
+                KeyFrame[time=2.0, value=2.0]
+                KeyFrame[time=3.0, value=1.0]
             """;
 
         assertEquals(expected.trim(), timeline.reverse().toString().trim());
     }
 
-    private void assertRGBA(Color color, int r, int g, int b, int a) {
-        assertEquals(r, color.getRed());
-        assertEquals(g, color.getGreen());
-        assertEquals(b, color.getBlue());
-        assertEquals(a, color.getAlpha());
+    @Test
+    void movePlayheadWithWraparound() {
+        Timeline timeline = new Timeline(Interpolation.LINEAR, true);
+        timeline.addKeyFrame(0, 0);
+        timeline.addKeyFrame(1, 10);
+        timeline.movePlayhead(1.5);
+
+        assertEquals(0.5, timeline.getPlayhead(), EPSILON);
+        assertEquals(5.0, timeline.getValue(), EPSILON);
     }
 }

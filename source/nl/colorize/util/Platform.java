@@ -59,7 +59,7 @@ public enum Platform {
     private final String displayName;
     private final String osName;
 
-    private static final Map<String, String> MAC_VERSION_NAMES = new ImmutableMap.Builder<String, String>()
+    private static final Map<String, String> MAC_VERSIONS = new ImmutableMap.Builder<String, String>()
         .put("10.4", "Tiger")
         .put("10.5", "Leopard")
         .put("10.6", "Snow Leopard")
@@ -78,6 +78,7 @@ public enum Platform {
         .put("14.", "Sonoma")
         .put("15.", "Sequoia")
         .put("26.", "Tahoe")
+        .put("27.0", "Golden Gate")
         .build();
 
     private static final Splitter NATIVE_PATH_SPLITTER = Splitter.on(CharMatcher.anyOf(":;"))
@@ -150,9 +151,9 @@ public enum Platform {
     private static String getMacDisplayName() {
         String osVersion = System.getProperty("os.version");
 
-        String versionName = MAC_VERSION_NAMES.keySet().stream()
-            .filter(v -> osVersion.startsWith(v))
-            .map(MAC_VERSION_NAMES::get)
+        String versionName = MAC_VERSIONS.keySet().stream()
+            .filter(osVersion::startsWith)
+            .map(MAC_VERSIONS::get)
             .findFirst()
             .orElse(osVersion);
 

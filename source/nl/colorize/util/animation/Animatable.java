@@ -8,14 +8,16 @@ package nl.colorize.util.animation;
 
 /**
  * Animated object that expects to receive frame updates for as long as the
- * animation is active.
+ * animation is active. This interface does not define or enforce any
+ * particular mechanism for <em>playing</em> animations.
  */
 @FunctionalInterface
 public interface Animatable {
     
     /**
      * Called every frame update while the animation is active.
-     * @param deltaTime Time since the last frame update, in seconds.
+     *
+     * @param deltaTime Time elapsed since the last frame update, in seconds.
      */
-    public void onFrame(float deltaTime);
+    public void onFrame(double deltaTime);
 }

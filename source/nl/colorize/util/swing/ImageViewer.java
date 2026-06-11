@@ -44,14 +44,14 @@ public class ImageViewer extends JPanel {
     private BufferedImage displayedImage;
     private int cameraX;
     private int cameraY;
-    private float cameraZoom;
+    private double cameraZoom;
     private Consumer<Graphics2D> backgroundRenderer;
     private Color outlineColor;
 
-    private static final float ZOOM_KEY_INCREMENT = 0.25f;
-    private static final float ZOOM_SCROLL_INCREMENT = 0.02f;
-    private static final float PAN_INCREMENT = 1f;
-    private static final float MIN_ZOOM_LEVEL = 0.001f;
+    private static final double ZOOM_KEY_INCREMENT = 0.25;
+    private static final double ZOOM_SCROLL_INCREMENT = 0.02;
+    private static final double PAN_INCREMENT = 1;
+    private static final double MIN_ZOOM_LEVEL = 0.001;
     private static final Color CHECKERBOARD_GRAY = new Color(240, 240, 240);
     private static final int CHECKERBOARD_BLOCK = 20;
 
@@ -99,7 +99,7 @@ public class ImageViewer extends JPanel {
     }
 
     private void handleScrollEvent(MouseWheelEvent event) {
-        float scroll = (float) event.getPreciseWheelRotation();
+        double scroll = event.getPreciseWheelRotation();
         changeZoom(cameraZoom + scroll * ZOOM_SCROLL_INCREMENT);
     }
 
@@ -118,8 +118,8 @@ public class ImageViewer extends JPanel {
         backgroundRenderer.accept(g2);
 
         if (displayedImage != null) {
-            int width = Math.round(displayedImage.getWidth() * cameraZoom);
-            int height = Math.round(displayedImage.getHeight() * cameraZoom);
+            int width = (int) Math.round(displayedImage.getWidth() * cameraZoom);
+            int height = (int) Math.round(displayedImage.getHeight() * cameraZoom);
             int x = getWidth() / 2 - width / 2 - cameraX;
             int y = getHeight() / 2 - height / 2 - cameraY;
             g2.drawImage(displayedImage, x, y, width, height, null);
@@ -164,8 +164,8 @@ public class ImageViewer extends JPanel {
         if (displayedImage == null) {
             changeZoom(1f);
         } else {
-            float horizontalZoom = (float) getWidth() / (float) displayedImage.getWidth();
-            float verticalZoom = (float) getHeight() / (float) displayedImage.getHeight();
+            double horizontalZoom = (double) getWidth() / (double) displayedImage.getWidth();
+            double verticalZoom = (double) getHeight() / (double) displayedImage.getHeight();
             changeZoom(Math.min(horizontalZoom, verticalZoom));
         }
     }
@@ -175,9 +175,9 @@ public class ImageViewer extends JPanel {
      * (0, 0) means the image will be positioned in the exact center of the
      * component.
      */
-    private void changePan(float x, float y) {
-        cameraX = Math.round(x);
-        cameraY = Math.round(y);
+    private void changePan(double x, double y) {
+        cameraX = (int) Math.round(x);
+        cameraY = (int) Math.round(y);
         repaint();
     }
 
@@ -185,7 +185,7 @@ public class ImageViewer extends JPanel {
      * Changes the zoom level to the specified value. 1.0 means the image is
      * displayed at its native size.
      */
-    public void changeZoom(float zoom) {
+    public void changeZoom(double zoom) {
         cameraZoom = Math.max(zoom, MIN_ZOOM_LEVEL);
         repaint();
     }

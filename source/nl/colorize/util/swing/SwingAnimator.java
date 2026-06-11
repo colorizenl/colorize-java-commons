@@ -68,8 +68,8 @@ public class SwingAnimator {
      * updates until this method is called.
      */
     public void start() {
-        final float frameTimeInSeconds = 1f / framerate;
-        final int frameTimeInMilliseconds = Math.round(frameTimeInSeconds * 1000);
+        double frameTimeInSeconds = 1.0 / framerate;
+        int frameTimeInMilliseconds = (int) Math.round(frameTimeInSeconds * 1000);
 
         swingTimer = new Timer(frameTimeInMilliseconds, e -> performFrameUpdate(frameTimeInSeconds));
         swingTimer.setInitialDelay(frameTimeInMilliseconds);
@@ -90,7 +90,7 @@ public class SwingAnimator {
     /**
      * Performs a frame update for all animations that are currently playing.
      */
-    protected void performFrameUpdate(float deltaTime) {
+    protected void performFrameUpdate(double deltaTime) {
         List<Animatable> snapshot = List.copyOf(currentlyPlaying);
 
         for (Animatable anim : snapshot) {
@@ -98,7 +98,7 @@ public class SwingAnimator {
         }
     }
 
-    private void doFrameUpdate(Animatable anim, float deltaTime) {
+    private void doFrameUpdate(Animatable anim, double deltaTime) {
         if (isCurrentlyActive(anim)) {
             anim.onFrame(deltaTime);
         }
@@ -147,53 +147,53 @@ public class SwingAnimator {
     public void cancelAll() {
         currentlyPlaying.clear();
     }
-    
-    public void animateBackgroundColor(JComponent component, Color target, float duration) {
-        AnimatedColor targetColor = new AnimatedColor(component.getBackground(), target, duration);
-        component.setBackground(targetColor);
-        
+
+    public void animateBackgroundColor(JComponent component, Color target, double duration) {
+        Color original = component.getBackground();
+
         Timeline timeline = new Timeline(Interpolation.LINEAR);
-        timeline.addKeyFrame(0f, 0f);
+        timeline.addKeyFrame(0, 0);
         timeline.addKeyFrame(duration, duration);
 
-        play(timeline, dt -> {
-            targetColor.setPlayhead(timeline.getValue());
+        play(timeline, _ -> {
+            Color background = Utils2D.interpolateColor(original, target, timeline.getDelta());
+            component.setBackground(background);
             component.repaint();
         });
     }
     
-    public void animateForegroundColor(JComponent component, Color target, float duration) {
-        AnimatedColor targetColor = new AnimatedColor(component.getForeground(), target, duration);
-        component.setForeground(targetColor);
-        
+    public void animateForegroundColor(JComponent component, Color target, double duration) {
+        Color original = component.getForeground();
+
         Timeline timeline = new Timeline(Interpolation.LINEAR);
-        timeline.addKeyFrame(0f, 0f);
+        timeline.addKeyFrame(0, 0);
         timeline.addKeyFrame(duration, duration);
 
-        play(timeline, dt -> {
-            targetColor.setPlayhead(timeline.getValue());
+        play(timeline, _ -> {
+            Color foreground = Utils2D.interpolateColor(original, target, timeline.getDelta());
+            component.setBackground(foreground);
             component.repaint();
         });
     }
     
-    public void animateWidth(JComponent component, int target, float duration) {
+    public void animateWidth(JComponent component, int target, double duration) {
         Timeline timeline = new Timeline(Interpolation.EASE);
         timeline.addKeyFrame(0f, component.getPreferredSize().width);
         timeline.addKeyFrame(duration, target);
 
         play(timeline, dt -> {
-            SwingUtils.setPreferredWidth(component, Math.round(timeline.getValue()));
+            SwingUtils.setPreferredWidth(component, (int) Math.round(timeline.getValue()));
             component.revalidate();
         });
     }
     
-    public void animateHeight(JComponent component, int target, float duration) {
+    public void animateHeight(JComponent component, int target, double duration) {
         Timeline timeline = new Timeline(Interpolation.EASE);
         timeline.addKeyFrame(0f, component.getPreferredSize().height);
         timeline.addKeyFrame(duration, target);
 
         play(timeline, dt -> {
-            SwingUtils.setPreferredHeight(component, Math.round(timeline.getValue()));
+            SwingUtils.setPreferredHeight(component, (int) Math.round(timeline.getValue()));
             component.revalidate();
         });
     }
