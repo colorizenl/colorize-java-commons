@@ -66,7 +66,7 @@ public final class Version implements Comparable<Version> {
      *
      * @throws IllegalArgumentException if {@code precision} is 0 or less.
      */
-    protected int compareTo(Version other, int precision) {
+    private int compareTo(Version other, int precision) {
         Preconditions.checkArgument(precision > 0, "Invalid precision: " + precision);
 
         for (int i = 0; i < precision; i++) {

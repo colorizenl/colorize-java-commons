@@ -41,7 +41,6 @@ public final class Subject<T> implements Publisher<T> {
     private List<Object> undelivered;
     private boolean completed;
 
-    private static final Runnable EMPTY_COMPLETE = () -> {};
     private static final Logger LOGGER = LogHelper.getLogger(Subject.class);
 
     public Subject() {
@@ -182,7 +181,7 @@ public final class Subject<T> implements Publisher<T> {
      * @return A {@link Subscription} for the registered subscriber.
      */
     public Subscription subscribe(Consumer<T> onEvent, Consumer<Throwable> onError) {
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, () -> {});
         return registerSubscription(subscriber);
     }
 
@@ -195,7 +194,7 @@ public final class Subject<T> implements Publisher<T> {
      */
     public Subscription subscribe(Consumer<T> onEvent) {
         Consumer<Throwable> onError = e -> LOGGER.log(Level.SEVERE, "Unhandled subscriber error", e);
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, () -> {});
         return registerSubscription(subscriber);
     }
 
@@ -208,7 +207,7 @@ public final class Subject<T> implements Publisher<T> {
      */
     public Subscription subscribeErrors(Consumer<Throwable> onError) {
         Consumer<T> onEvent = _ -> {};
-        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, EMPTY_COMPLETE);
+        Subscriber<T> subscriber = new CallbackSubscriber<>(onEvent, onError, () -> {});
         return registerSubscription(subscriber);
     }
 

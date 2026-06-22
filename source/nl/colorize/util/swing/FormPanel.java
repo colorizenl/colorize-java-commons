@@ -544,7 +544,7 @@ public class FormPanel extends JPanel implements LayoutManager {
             
             for (Component component : row) {
                 if (checkBoxesInValueColumn && component instanceof JCheckBox) {
-                    x += Math.round(LABEL_COLUMN_FRACTION * availableWidth) + horizontalMargin;
+                    x += (int) Math.round(LABEL_COLUMN_FRACTION * availableWidth) + horizontalMargin;
                 }
                 int cellWidth = calculateCellWidth(component, availableWidth);
                 component.setBounds(x, y, cellWidth, rowHeight);

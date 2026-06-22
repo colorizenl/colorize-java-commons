@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -56,6 +57,7 @@ public class TextUtilsTest {
         assertEquals("test", TextUtils.removeSurrounding("xtest", "x"));
         assertEquals("test", TextUtils.removeSurrounding("testx", "x"));
         assertEquals("test", TextUtils.removeSurrounding("test", "x"));
+        assertEquals("test", TextUtils.removeSurrounding("[test]", "[", "]"));
     }
 
     @Test
@@ -170,5 +172,48 @@ public class TextUtilsTest {
         assertEquals(List.of("9", "10"), Stream.of("9", "10").sorted(sort).toList());
         assertEquals(Arrays.asList("9", null), Stream.of("9", null).sorted(sort).toList());
         assertEquals(Arrays.asList("9", null), Stream.of("9", null).sorted(desc).toList());
+    }
+
+    @Test
+    void splitChunks() {
+        List<String> lines = List.of(
+            "[section]",
+            "key = value",
+            "",
+            "[other]",
+            "something = else",
+            "[dangling]",
+            "[moredangling]"
+        );
+
+        List<List<String>> chunks = TextUtils.splitChunks(lines, line -> line.startsWith("["));
+
+        assertEquals(4, chunks.size());
+        assertEquals(List.of("[section]", "key = value"), chunks.get(0));
+        assertEquals(List.of("[other]", "something = else"), chunks.get(1));
+        assertEquals(List.of("[dangling]"), chunks.get(2));
+        assertEquals(List.of("[moredangling]"), chunks.get(3));
+    }
+
+    @Test
+    void matchObjects() {
+        Pattern pattern = Pattern.compile("(\\w+)\\s*=\\s*(\\w+)");
+        String text = "a=2\nb=3\nc\nd=4\n";
+        List<MatchResult> matches = TextUtils.match(text, pattern);
+
+        assertEquals(3, matches.size());
+        assertEquals("a", matches.getFirst().group(1));
+        assertEquals("2", matches.getFirst().group(2));
+    }
+
+    @Test
+    void matchObjectsLines() {
+        Pattern pattern = Pattern.compile("(\\w+)\\s*=\\s*(\\w+)");
+        List<String> lines = List.of("a=2", "b", "c=4 d=5");
+        List<MatchResult> matches = TextUtils.matchLines(lines, pattern);
+
+        assertEquals(1, matches.size());
+        assertEquals("a", matches.getFirst().group(1));
+        assertEquals("2", matches.getFirst().group(2));
     }
 }

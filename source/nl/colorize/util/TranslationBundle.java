@@ -47,6 +47,7 @@ public final class TranslationBundle extends ResourceBundle {
      * constants like {@link Locale#US}.
      */
     //TODO This cannot use Locale.of because it's not yet supported by TeaVM.
+    @SuppressWarnings("deprecation")
     public static final Locale NL = new Locale("nl");
 
     /**

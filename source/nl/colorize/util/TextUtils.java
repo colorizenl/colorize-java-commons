@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -144,6 +146,18 @@ public final class TextUtils {
         return removeTrailing(removeLeading(str, fragment), fragment);
     }
 
+    /**
+     * Removes the specified fragments from the start and the end of
+     * {@code str}.
+     *
+     * @throws IllegalArgumentException if one of the fragments is empty.
+     */
+    public static String removeSurrounding(String str, String leading, String trailing) {
+        Preconditions.checkArgument(!leading.isEmpty(), "Empty fragment");
+        Preconditions.checkArgument(!trailing.isEmpty(), "Empty fragment");
+        return removeTrailing(removeLeading(str, leading), trailing);
+    }
+
     public static boolean startsWith(String str, Collection<String> alternatives) {
         Preconditions.checkArgument(!alternatives.isEmpty(),
             "Must provide at least one alternative");
@@ -169,13 +183,32 @@ public final class TextUtils {
     }
 
     /**
-     * Returns all matches for a regular expression.
+     * Returns a list containing all matches for a regular expression, with
+     * each match being represented by a {@link MatchResult}.
      *
-     * @param group Adds the specified capture group to the list of results.
+     * @deprecated This method is made redundant by {@link Matcher#results()},
+     *             although that is not yet supported by TeaVM. Avoid using
+     *             this method if your application does not need to support
+     *             TeaVM.
+     */
+    @Deprecated
+    public static List<MatchResult> match(String input, Pattern regex) {
+        Matcher matcher = regex.matcher(input);
+        List<MatchResult> matches = new ArrayList<>();
+        while (matcher.find()) {
+            matches.add(matcher.toMatchResult());
+        }
+        return matches;
+    }
+
+    /**
+     * Returns a list containing all matches for a regular expression, with
+     * each match being represented by the match group with the specified
+     * index.
      */
     public static List<String> matchAll(String input, Pattern regex, int group) {
-        List<String> matches = new ArrayList<>();
         Matcher matcher = regex.matcher(input);
+        List<String> matches = new ArrayList<>();
         while (matcher.find()) {
             matches.add(matcher.group(group));
         }
@@ -183,16 +216,16 @@ public final class TextUtils {
     }
     
     /**
-     * Returns all matches for a regular expression.
+     * Returns a list containing all matches for a regular expression, with
+     * each match being represented by the entire matched text.
      */
     public static List<String> matchAll(String input, Pattern regex) {
         return matchAll(input, regex, 0);
     }
-    
+
     /**
-     * Returns the first match of a regular expression.
-     *
-     * @param group Adds the specified capture group to the list of results.
+     * Returns the first match of a regular expression, with the match being
+     * represented by the match group with the specified index.
      */
     public static Optional<String> matchFirst(String input, Pattern regex, int group) {
         Matcher matcher = regex.matcher(input);
@@ -202,9 +235,10 @@ public final class TextUtils {
             return Optional.empty();
         }
     }
-    
+
     /**
-     * Returns the first match of a regular expression.
+     * Returns the first match of a regular expression, with the match being
+     * represented by the entire matched text.
      */
     public static Optional<String> matchFirst(String input, Pattern regex) {
         return matchFirst(input, regex, 0);
@@ -267,7 +301,11 @@ public final class TextUtils {
     /**
      * Runs a regular expression on all lines within the specified string, then
      * invokes a callback function for every match.
+     *
+     * @deprecated Prefer using {@link #matchLines(List, Pattern)} to have more
+     *             explicit control over splitting the text into lines.
      */
+    @Deprecated
     public static void matchLines(String input, Pattern regex, Consumer<List<String>> callback) {
         for (String line : LINE_SPLITTER.split(input)) {
             Matcher matcher = regex.matcher(line);
@@ -282,12 +320,19 @@ public final class TextUtils {
         }
     }
 
-    private static BufferedReader toBufferedReader(Reader reader) {
-        if (reader instanceof BufferedReader buffer) {
-            return buffer;
-        } else {
-            return new BufferedReader(reader);
+    /**
+     * Returns a list containing all lines matching a regular expression, with
+     * each match being represented by a {@link MatchResult}.
+     */
+    public static List<MatchResult> matchLines(List<String> lines, Pattern regex) {
+        List<MatchResult> matches = new ArrayList<>();
+        for (String line : lines) {
+            Matcher matcher = regex.matcher(line);
+            if (matcher.matches()) {
+                matches.add(matcher.toMatchResult());
+            }
         }
+        return matches;
     }
 
     /**
@@ -300,6 +345,33 @@ public final class TextUtils {
             return str;
         }
         return str.substring(0, maxLength) + "...";
+    }
+
+    /**
+     * Groups a list of strings into "chunks" delimited by line matching the
+     * specified predicate. This is conceptually similar to {@link Splitter},
+     * but operating on entire lines rather than characters. Also,
+     * <em>unlike</em> {@link Splitter}, the marker line is included in the
+     * resulting chunk.
+     */
+    public static List<List<String>> splitChunks(List<String> lines, Predicate<String> marker) {
+        List<List<String>> chunks = new ArrayList<>();
+
+        for (String line : lines) {
+            if (marker.test(line) || chunks.isEmpty()) {
+                chunks.add(new ArrayList<>());
+            }
+            chunks.getLast().add(line);
+        }
+
+        chunks.forEach(TextUtils::trimChunk);
+        return chunks;
+    }
+
+    private static void trimChunk(List<String> chunk) {
+        while (!chunk.isEmpty() && chunk.getLast().trim().isEmpty()) {
+            chunk.removeLast();
+        }
     }
 
     /**
@@ -433,6 +505,14 @@ public final class TextUtils {
             return Double.compare(numericA, numericB);
         } catch (NumberFormatException e) {
             return a.toLowerCase().compareTo(b.toLowerCase());
+        }
+    }
+
+    private static BufferedReader toBufferedReader(Reader reader) {
+        if (reader instanceof BufferedReader buffer) {
+            return buffer;
+        } else {
+            return new BufferedReader(reader);
         }
     }
 }

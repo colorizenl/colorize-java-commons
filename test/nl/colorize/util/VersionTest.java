@@ -50,12 +50,7 @@ public class VersionTest {
         assertTrue(v1.compareTo(v1) == 0);
         assertEquals(v1, Version.parse("10.4.0"));
         assertEquals(v1, Version.parse("10.4.0.0.0.0"));
-    }
-    
-    @Test
-    public void testCompareWithPrecision() {
-        assertEquals(-1, Version.parse("1.0.0").compareTo(Version.parse("1.0.2"), 3));
-        assertEquals(0, Version.parse("1.0.0").compareTo(Version.parse("1.0.2"), 2));
+        assertEquals(-1, Version.parse("1.0.0").compareTo(Version.parse("1.0.2")));
     }
     
     @Test
