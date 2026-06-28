@@ -220,8 +220,13 @@ public enum Platform {
 
     /**
      * Convenience method that returns true if the current platform can be
-     * considered a desktop platform. The current implementation, somewhat
-     * controversially, does <em>not</em> consider Linux a desktop platform.
+     * considered a desktop platform.
+     * <p>
+     * The current implementation, somewhat controversially, does <em>not</em>
+     * consider Linux a desktop platform. This library has been used to create
+     * desktop applications for many years, and there are simply too many
+     * compatibility problems to consider Linux distributions as "it just
+     * works" desktop platforms.
      */
     public static boolean isDesktopPlatform() {
         return isWindows() || isMac();
@@ -320,13 +325,13 @@ public enum Platform {
     }
 
     /**
-     * Returns a {@code File} that points to the current user's desktop directory.
-     * Note that this method is only available on desktop platforms, and that even
-     * then some platforms might not allow applications to write directly to the
-     * user's desktop.
+     * Returns a {@code File} that points to the current user's desktop
+     * directory. Note that this method is only available on desktop
+     * platforms, and that even then some platforms might not allow
+     * applications to write directly to the user's desktop.
      *
-     * @throws UnsupportedOperationException if the user desktop is not available
-     *         or not accessible.
+     * @throws UnsupportedOperationException if the user's desktop is not
+     *         available or not accessible.
      */
     public static File getUserDesktopDir() {
         if (Platform.isMacAppStore()) {
@@ -350,7 +355,7 @@ public enum Platform {
     }
 
     /**
-     * Returns the platform's directory for storing application data, for the
+     * Returns the platform's directory for storing application data for the
      * application with the specified name.
      *
      * @throws IllegalArgumentException If the application name cannot be used
@@ -405,11 +410,12 @@ public enum Platform {
     }
 
     /**
-     * Returns the platform's standard directory for storing user data (e.g. "My
-     * Documents" on Windows).
+     * Returns the platform's standard directory for storing user data. For
+     * example, this will return the location "My Documents" on Windows and
+     * the location of the user's "Documents" directory on Mac.
      *
-     * @throws UnsupportedOperationException if the platform does not allow access
-     *         to user files (e.g. Google App Engine).
+     * @throws UnsupportedOperationException if the platform does not allow
+     *         access to user files (e.g. Google App Engine).
      */
     public static File getUserDataDirectory() {
         if (isWindows()) {
@@ -467,9 +473,9 @@ public enum Platform {
     }
 
     /**
-     * Returns the default timezone. By default, this will return the
-     * {@code Europe/Amsterdam} time zone. The default time zone can be set
-     * explicitly using the environment variable {@code COLORIZE_TIMEZONE}.
+     * Returns the platform's default timezone. By default, this will return
+     * the {@code Europe/Amsterdam} time zone. The default time zone can be
+     * set explicitly using the environment variable {@code COLORIZE_TIMEZONE}.
      * If the requested time zone is not available on the current platform,
      * the GMT time zone is used instead.
      */
@@ -483,10 +489,11 @@ public enum Platform {
 
     /**
      * Returns the {@link ZoneId} for the default time zone as returned by
-     * {@link #getDefaultTimeZone()}. The default time zone can be changed
-     * using the environment variable {@code COLORIZE_TIMEZONE_ENV}. If the
-     * requested time zone is not available on the current platform, the
-     * GMT time zone is used instead.
+     * {@link #getDefaultTimeZone()}. By default, this will assume the
+     * {@code Europe/Amsterdam} time zone. The default time zone can be
+     * changed using the environment variable {@code COLORIZE_TIMEZONE_ENV}.
+     * If the requested time zone is not available on the current platform,
+     * the GMT time zone is used instead.
      */
     public static ZoneId getDefaultTimeZoneId() {
         // Cannot use TimeZone.toZoneId(), because that method

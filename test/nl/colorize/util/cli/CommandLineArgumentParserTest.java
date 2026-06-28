@@ -6,11 +6,14 @@
 
 package nl.colorize.util.cli;
 
+import com.google.common.base.Splitter;
+import nl.colorize.util.Tuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -241,6 +244,26 @@ class CommandLineArgumentParserTest {
         assertEquals("something", values.a);
     }
 
+    @Test
+    void unknownTypeIsException() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            argParser.parse(toArgs("--z", "a::b"), CustomTypeExample.class);
+        });
+    }
+
+    @Test
+    void registerTypeMapper() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        argParser.registerTypeMapper(Tuple.class, value -> {
+            List<String> parts = Splitter.on("::").splitToList(value);
+            return Tuple.of(parts.get(0), parts.get(1));
+        });
+        CustomTypeExample values = argParser.parse(toArgs("--z", "a::b"), CustomTypeExample.class);
+
+        assertEquals(Tuple.of("a", "b"), values.z);
+    }
+
     private String[] toArgs(String... argv) {
         return argv;
     }
@@ -250,5 +273,9 @@ class CommandLineArgumentParserTest {
         private @Arg(defaultValue = "2", usage = "This field has usage information") int b;
         private @Arg boolean c;
         private @Arg(name = "e", required = false) String d;
+    }
+
+    private static class CustomTypeExample {
+        private @Arg Tuple<String, String> z;
     }
 }

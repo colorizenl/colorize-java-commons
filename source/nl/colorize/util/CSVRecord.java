@@ -118,6 +118,18 @@ public class CSVRecord {
         return format.toCSV(this);
     }
 
+    /**
+     * Returns a {@link Config} that represents the contents of this CSV
+     * record. This allows the text-based CSV values to be parsed into
+     * various data types.
+     *
+     * @throws IllegalStateException if no column name information is available.
+     */
+    public Config toConfig() {
+        Preconditions.checkState(!columns.isEmpty(), "No column name information available");
+        return Config.from(this::get);
+    }
+
     @Override
     public String toString() {
         return toCSV();

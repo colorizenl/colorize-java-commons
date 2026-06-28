@@ -7,9 +7,8 @@
 package nl.colorize.util.cli;
 
 import com.google.common.base.Strings;
-import lombok.Getter;
+import nl.colorize.util.Config;
 import nl.colorize.util.Platform;
-import nl.colorize.util.PropertyDeserializer;
 
 import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
@@ -21,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -28,17 +28,37 @@ import java.util.stream.Stream;
  * provided arguments accordingly. This class only allows named arguments and
  * flags, arguments without an explicit name are not supported.
  * <p>
- * Refer to the library's README file for information and examples on how to
- * define a command line interface using this class.
+ * The following example shows how to define a simple command line interface:
+ * <p>
+ * <pre><code>
+ * public class MyApp {
+ *     {@literal @}Arg(name = "--input", usage = "Input directory")
+ *     public File inputDir
+ *
+ *     {@literal @}Arg
+ *     public boolean overwrite;
+ *
+ *     public static void main(String[] argv) {
+ *         CommandLineArgumentParser argParser = new CommandLineArgumentParser(MyApp.class);
+ *         MyApp app = argParser.parse(argv, MyApp.class);
+ *     }
+ * }
+ * </code></pre>
  * <p>
  * When providing argument values on the command line, argument names are
  * considered case-insensitive and normalized. For example, using "input",
  * "-input", "--input", or "--input=value" all map to the same argument.
  * <p>
- * This class exists because Args4j has not been updated since 2016. Command
- * line arguments are defined using annotations, in a similar way to Args4j.
- * However, the annotations are added to record fields, which Args4j couldn't
- * use because it predates records being introduced in Java 17.
+ * Command line arguments are parsed using {@link Config}. This comes with
+ * support for all standard data types, as explained in the {@link Config}
+ * class documentation. Support for additional data types can be added by
+ * providing a custom {@link Config} in the constructor.
+ * <p>
+ * This class exists because Args4j has not (at the time of writing) been
+ * updated in over five years. This class is similar to Args4j in that
+ * command line arguments are defined using annotations. However, it also
+ * supports records, a Java feature that is not supported by Args4j since
+ * records didn't exist when it was last updated.
  */
 public class CommandLineArgumentParser {
 
@@ -47,7 +67,7 @@ public class CommandLineArgumentParser {
     private boolean exitOnFail;
     private List<String> descriptionLines;
     private boolean colors;
-    @Getter private PropertyDeserializer propertyDeserializer;
+    private Config propertyDeserializer;
 
     private static final String DEFAULT_VALUE_MARKER = "$$default";
 
@@ -65,7 +85,18 @@ public class CommandLineArgumentParser {
         this.exitOnFail = exitOnFail;
         this.descriptionLines = new ArrayList<>();
         this.colors = Platform.isMac() || Platform.isLinux();
-        this.propertyDeserializer = new PropertyDeserializer();
+        this.propertyDeserializer = Config.raw();
+    }
+
+    /**
+     * Registers a type mapper function to parse command line arguments into
+     * the specified type. The type needs to be an exact match, matching a
+     * type hierarchy is not supported.
+     *
+     * @see Config#registerTypeMapper(Class, Function) (Class, Function)
+     */
+    public <T> void registerTypeMapper(Class<T> type, Function<String, T> typeMapper) {
+        propertyDeserializer.registerTypeMapper(type, typeMapper);
     }
 
     /**
@@ -237,7 +268,7 @@ public class CommandLineArgumentParser {
     private Object convertArgValue(Field field, String value) {
         try {
             Class<?> type = field.getType();
-            return propertyDeserializer.parse(value, type);
+            return propertyDeserializer.get(value, type);
         } catch (IllegalArgumentException e) {
             String argName = getArgName(field);
             throw new CommandLineInterfaceException("Invalid value for '" + argName + "': " + value);

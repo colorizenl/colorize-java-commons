@@ -50,6 +50,8 @@ public final class TranslationBundle extends ResourceBundle {
     @SuppressWarnings("deprecation")
     public static final Locale NL = new Locale("nl");
 
+    public static final Locale DEFAULT_LOCALE = Locale.US;
+
     /**
      * Creates a new {@link TranslationBundle} that contains translations for
      * the specified locale(s). The first translation in the list is considered
@@ -201,7 +203,7 @@ public final class TranslationBundle extends ResourceBundle {
      */
     public static TranslationBundle from(Locale locale, Properties contents) {
         if (locale == null) {
-            locale = Locale.US;
+            locale = DEFAULT_LOCALE;
         }
 
         Translation defaultTranslation = new Translation(locale, contents);
@@ -210,10 +212,11 @@ public final class TranslationBundle extends ResourceBundle {
 
     /**
      * Creates a new {@link TranslationBundle} based with the specified
-     * default translation and with {@link Locale#US} as the default locale.
+     * default translation and with {@link #DEFAULT_LOCALE} as the default
+     * locale.
      */
     public static TranslationBundle from(Properties contents) {
-        return from(Locale.US, contents);
+        return from(DEFAULT_LOCALE, contents);
     }
 
     /**
@@ -228,11 +231,12 @@ public final class TranslationBundle extends ResourceBundle {
 
     /**
      * Creates a new {@link TranslationBundle} based with the specified
-     * default translation and with {@link Locale#US} as the default locale.
-     * The translation data is loaded from a {@code .properties} file.
+     * default translation and with {@link #DEFAULT_LOCALE} as the default
+     * locale. The translation data is loaded from a {@code .properties}
+     * file.
      */
     public static TranslationBundle from(ResourceFile propertiesFile) {
-        return from(Locale.US, propertiesFile);
+        return from(DEFAULT_LOCALE, propertiesFile);
     }
 
     /**

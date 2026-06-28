@@ -9,7 +9,7 @@ apply plugin: "java-library"
 apply plugin: "jacoco"
 
 group = "nl.colorize"
-version = "2026.2.2"
+version = "2026.3"
 compileJava.options.encoding = "UTF-8"
 
 java {
@@ -47,9 +47,12 @@ jacocoTestReport {
 task coverage(dependsOn: ["test", "jacocoTestReport"]) {
     doLast {
         def report = file("${buildDir}/reports/jacoco/test/html/index.html").text
-        def coverage = report =~ "tfoot.*?ctr2.*?>([\\d.]+%).*?tfoot"
+        def loc = (report =~ "tfoot.*?bar.*?>[\\d,]+ of ([\\d,]+).*?tfoot")[0][1].replace(",", "")
+        def coverage = (report =~ "tfoot.*?ctr2.*?>([\\d.]+)%.*?tfoot")[0][1]
         println "-" * 40
-        println "Test coverage: " + coverage[0][1]
+        println "Lines of code:    ${loc}"
+        println "Test coverage:    ${coverage}%"
+        file("${buildDir}/reports/coverage.yaml").text = "loc: ${loc}\ncoverage: ${coverage}\n"
     }
 }
 

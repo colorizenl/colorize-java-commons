@@ -3,16 +3,17 @@ Colorize Java Commons
 
 [![Maven Central](https://img.shields.io/maven-central/v/nl.colorize/colorize-java-commons)](
 https://central.sonatype.com/artifact/nl.colorize/colorize-java-commons)
-[![Documentation](https://img.shields.io/badge/docs-javadoc-yellow)](
+[![Documentation](https://img.shields.io/badge/docs-javadoc-purple)](
 https://api.clrz.nl/colorize-java-commons)
-[![License](https://img.shields.io/badge/license-apache_2.0-purple)](
+[![License](https://img.shields.io/badge/license-apache_2.0-olive)](
 https://www.apache.org/licenses/LICENSE-2.0)
+![Test coverage](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fapi.clrz.nl%2Fcoverage%2Fcolorize-java-commons.yaml&query=%24.coverage&suffix=%25&label=test%20coverage&color=green)
 
 Set of Java libraries for web, desktop, and mobile applications. It is used in all Java-based
 applications and libraries developed by [Colorize](http://www.colorize.nl), where it has been
 in use since 2007.
 
-The library focuses on portability, and supports a wide variety of platforms and environments.
+The library focuses on portability and supports a wide variety of platforms and environments.
 It can be used in back-end applications, in cloud environments, in desktop applications
 on  Windows/Mac/Linux, in mobile apps on Android and iOS, and in the browser
 via [TeaVM](http://teavm.org)).
@@ -32,7 +33,7 @@ to the dependencies section in `pom.xml`:
 <dependency>
     <groupId>nl.colorize</groupId>
     <artifactId>colorize-java-commons</artifactId>
-    <version>2026.2.2</version>
+    <version>2026.3</version>
 </dependency>
 ```
     
@@ -40,7 +41,7 @@ The library can also be used in Gradle projects:
 
 ```groovy
 dependencies {
-    implementation "nl.colorize:colorize-java-commons:2026.2.2"
+    implementation "nl.colorize:colorize-java-commons:2026.3"
 }
 ```
     
