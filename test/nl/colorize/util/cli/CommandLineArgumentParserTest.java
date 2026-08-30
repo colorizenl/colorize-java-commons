@@ -264,6 +264,14 @@ class CommandLineArgumentParserTest {
         assertEquals(Tuple.of("a", "b"), values.z);
     }
 
+    @Test
+    void defaultValueIsAllowedToBeEmptyString() {
+        CommandLineArgumentParser argParser = new CommandLineArgumentParser("test", out, false);
+        EmptyDefaultValueExample values = argParser.parse(toArgs(), EmptyDefaultValueExample.class);
+
+        assertEquals("", values.z);
+    }
+
     private String[] toArgs(String... argv) {
         return argv;
     }
@@ -277,5 +285,9 @@ class CommandLineArgumentParserTest {
 
     private static class CustomTypeExample {
         private @Arg Tuple<String, String> z;
+    }
+
+    private static class EmptyDefaultValueExample {
+        private @Arg(defaultValue = "") String z;
     }
 }

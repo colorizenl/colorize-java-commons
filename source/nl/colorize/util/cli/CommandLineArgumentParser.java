@@ -266,6 +266,13 @@ public class CommandLineArgumentParser {
     }
 
     private Object convertArgValue(Field field, String value) {
+        // This is a special case, because empty strings are normally
+        // considered an absent property by Config, but an empty
+        // string is an OK default value in this class.
+        if (field.getType().equals(String.class)) {
+            return value;
+        }
+
         try {
             Class<?> type = field.getType();
             return propertyDeserializer.get(value, type);

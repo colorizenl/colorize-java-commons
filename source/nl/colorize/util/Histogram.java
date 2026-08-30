@@ -263,12 +263,8 @@ public class Histogram<B extends Comparable<B>> {
         Map<String, Double> normalized = new LinkedHashMap<>();
 
         for (Map.Entry<String, Integer> entry : original.entrySet()) {
-            if (total > 0) {
-                double percentage = entry.getValue() * 100.0 / total;
-                normalized.put(entry.getKey(), percentage);
-            } else {
-                normalized.put(entry.getKey(), 0.0);
-            }
+            double percentage = total > 0 ? entry.getValue() * 100.0 / total : 0;
+            normalized.put(entry.getKey(), percentage);
         }
 
         return normalized;

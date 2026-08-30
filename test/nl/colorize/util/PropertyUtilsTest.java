@@ -124,4 +124,12 @@ public class PropertyUtilsTest {
 
         assertEquals("This is a test", properties.getProperty("a"));
     }
+
+    @Test
+    void loadEmptyPropertiesFromEmptyString() {
+        Properties properties = PropertyUtils.loadProperties("");
+        Map<String, String> map = PropertyUtils.toMap(properties);
+
+        assertEquals(Map.of(), map);
+    }
 }
