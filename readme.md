@@ -120,7 +120,7 @@ Cache<String, Result> responseCache = Cache.from(key -> expensiveOperation(key))
 Refer to `CustomComponentsUIT` for an example application. This example uses the following
 components:
 
-- `Accordion`: Consists of different sections which can be expanded or collapsed.
+- `AccordionPanel`: Consists of different sections which can be expanded or collapsed.
 - `CircularLoader`: A "spinner" that indicates the application is loading.
 - `FormPanel`: A form builder that makes it easy to add name/field pairs with a common form layout.
 - `ImageViewer`: Easily display an image in a Swing component with pan and zoom controls.
@@ -128,7 +128,6 @@ components:
 - `Popups`: Shows various pop-up and modal dialog windows.
 - `PropertyEditor`: UI for adding, removing, or changing name/value properties.
 - `SimpleTable`: A simplified version of `JTable` that is easier to work with.
-- `SuggestingComboBox`: Combination of a text field and a `JComboBox` that matches suggestions. 
 
 In addition to the cross-platform component library, `MacIntegrationUIT` contains an example
 application that shows integration with some Mac system functionality.
