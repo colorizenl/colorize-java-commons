@@ -9,6 +9,7 @@ package nl.colorize.util.swing;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Subject;
+import nl.colorize.util.Subscribable;
 import nl.colorize.util.TextUtils;
 
 import javax.swing.JComponent;
@@ -378,22 +379,22 @@ public class Table<R> extends JPanel implements TableModel {
     }
 
     /**
-     * Returns a {@link Subject} that can be used to subscribe to events
+     * Returns a {@link Subscribable} that can be used to subscribe to events
      * whenever the selected row changes.
      */
-    public Subject<R> onSelect() {
+    public Subscribable<R> onSelect() {
         Subject<R> subject = new Subject<>();
         addActionListener(e -> subject.next(getSelectedRowKey()));
         return subject;
     }
 
     /**
-     * Returns a {@link Subject} that can be used to subscribe to events
+     * Returns a {@link Subscribable} that can be used to subscribe to events
      * whenever the selected row is double-clicked. The event passed to
      * subscribers is the currently selected row key, i.e. the row that was
      * double-clicked.
      */
-    public Subject<R> onDoubleClick() {
+    public Subscribable<R> onDoubleClick() {
         return doubleClick
             .map(Table::getSelectedRowKey)
             .filter(row -> row != null);

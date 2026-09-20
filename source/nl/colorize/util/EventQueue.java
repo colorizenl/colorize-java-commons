@@ -83,6 +83,11 @@ public class EventQueue<T> implements Subscriber<T> {
         received.clear();
     }
 
+    @Override
+    public String toString() {
+        return received.toString();
+    }
+
     /**
      * Factory method that creates an {@link EventQueue} and immediately
      * subscribes it to the specified {@link Subject}.

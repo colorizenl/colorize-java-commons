@@ -6,12 +6,15 @@ jobs:
     container: colorizenl/colorize-ci
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Unit tests
         run: gradle coverage
       - name: Translation check
         run: |
           translation_check.py resources/relative-date.properties
           translation_check.py resources/custom-swing-components.properties
+      - name: SpotBugs quality check
+        run: gradle spotbugsMain
+        continue-on-error: true
       - name: Copyright header check
         run: copyright_check.py

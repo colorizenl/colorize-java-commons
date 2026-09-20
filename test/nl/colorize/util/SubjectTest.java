@@ -11,9 +11,11 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -292,12 +294,31 @@ class SubjectTest {
     @Test
     void unsubscribeUsingSubscription() {
         List<String> received = new ArrayList<>();
+        AtomicReference<Subscription> subscription = new AtomicReference<>();
 
         Subject<String> subject = new Subject<>();
         subject.next("a");
-        Subscription subscription = subject.subscribe(received::add);
+        subject.subscribe(new Flow.Subscriber<>() {
+            @Override
+            public void onSubscribe(Subscription sub) {
+                subscription.set(sub);
+            }
+
+            @Override
+            public void onNext(String item) {
+                received.add(item);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
         subject.next("b");
-        subscription.cancel();
+        subscription.get().cancel();
         subject.next("c");
 
         assertEquals("[a, b]", received.toString());

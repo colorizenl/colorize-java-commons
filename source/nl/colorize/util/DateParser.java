@@ -6,7 +6,6 @@
 
 package nl.colorize.util;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 import java.text.ParseException;
@@ -184,12 +183,15 @@ public final class DateParser {
      *         the list of supported time units.
      */
     public static Date add(Date original, ChronoUnit unit, int amount) {
-        Preconditions.checkArgument(CALENDAR_FIELD_MAPPING.containsKey(unit),
-            "Time unit not supported: " + unit);
+        Integer unitField = CALENDAR_FIELD_MAPPING.get(unit);
+
+        if (unitField == null) {
+            throw new IllegalArgumentException("Time unit not supported: " + unit);
+        }
 
         GregorianCalendar calendar = new GregorianCalendar(Platform.getDefaultTimeZone());
         calendar.setTime(original);
-        calendar.add(CALENDAR_FIELD_MAPPING.get(unit), amount);
+        calendar.add(unitField, amount);
         return calendar.getTime();
     }
 

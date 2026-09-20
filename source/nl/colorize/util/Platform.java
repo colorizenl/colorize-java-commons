@@ -368,11 +368,12 @@ public enum Platform {
             File applicationDataRoot = new File(System.getenv("APPDATA"));
             return new File(applicationDataRoot, app);
         } else if (isMacAppStore()) {
-            return new File(System.getenv("HOME"));
+            return getUserHomeDir();
         } else if (isMac()) {
             // These directory names are always in English, regardless
             // of the language of the user interface.
-            File applicationSupport = new File(System.getenv("HOME") + "/Library/Application Support");
+            String userHomeDir = getUserHomeDir().getAbsolutePath();
+            File applicationSupport = new File(userHomeDir + "/Library/Application Support");
             return new File(applicationSupport, app);
         } else if (hasWritableFileSystem()) {
             return new File(getUserHomeDir(), "." + app);
@@ -421,11 +422,12 @@ public enum Platform {
         if (isWindows()) {
             return getWindowsMyDocumentsDirectory();
         } else if (isMacAppStore()) {
-            return new File(System.getenv("HOME"));
+            return getUserHomeDir();
         } else if (isMac()) {
             // The "Documents" directory has the same name on non-English
             // versions of macOS, according to Apple's documentation.
-            return new File(System.getenv("HOME") + "/Documents");
+            String userHomeDir = getUserHomeDir().getAbsolutePath();
+            return new File(userHomeDir + "/Documents");
         } else if (hasWritableFileSystem()) {
             return getUserHomeDir();
         } else {

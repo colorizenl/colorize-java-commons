@@ -59,11 +59,11 @@ is used to indicate which classes are supported on which platforms:
 
 | Package                      | Back-end? | Desktop? | Mobile? | Browser/TeaVM? |
 |------------------------------|-----------|----------|---------|----------------|
-| `nl.colorize.util`           | ✅         | ✅        | ✅       | ✅              |
-| `nl.colorize.util.animation` | ✅         | ✅        | ✅       | ✅              |
-| `nl.colorize.util.cli`       | ✅         | ✅        | ❌       | ❌              |
-| `nl.colorize.util.http`      | ✅         | ✅        | ❌       | ❌              |
-| `nl.colorize.util.swing`     | ❌         | ✅        | ❌       | ❌              |              
+| `nl.colorize.util`           | ✅        | ✅       | ✅      | ✅             |
+| `nl.colorize.util.animation` | ✅        | ✅       | ✅      | ✅             |
+| `nl.colorize.util.cli`       | ✅        | ✅       | ❌      | ❌             |
+| `nl.colorize.util.http`      | ✅        | ✅       | ❌      | ❌             |
+| `nl.colorize.util.swing`     | ❌        | ✅       | ❌      | ❌             |              
 
 In the table above, "back-end" refers to any type of headless back-end application or service. 
 Deployment can range from [Docker](https://www.docker.com) containers to cloud-native 
@@ -202,6 +202,7 @@ The following Gradle build tasks are available:
 - `gradle assemble` creates the JAR file for distribution.
 - `gradle test` runs all unit tests.
 - `gradle coverage` runs all unit tests and reports on test coverage.
+- `gradle spotbugsMain` runs the [SpotBugs](https://spotbugs.github.io) quality check.
 - `gradle javadoc` generates the JavaDoc API documentation.
 - `gradle dependencyUpdates` checks for and reports on library updates.
 - `gradle publishToMavenCentral` publishes the library to Maven Central.

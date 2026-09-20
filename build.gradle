@@ -1,7 +1,8 @@
 plugins {
     id "io.freefair.lombok" version "9.5.0"
     id "com.vanniktech.maven.publish" version "0.37.0"
-    id "io.github.ben-manes.versions" version "0.61.0"
+    id "io.github.ben-manes.versions" version "0.64.0"
+    id "com.github.spotbugs" version "6.5.11"
 }
 
 apply plugin: "java-library"
@@ -40,6 +41,11 @@ jacocoTestReport {
             fileTree(dir: it, exclude: ["**/swing/**", "**/Platform*"])
         })
     }
+}
+
+spotbugs {
+    ignoreFailures = false
+    omitVisitors = ["ConstructorThrow", "DumbMethods", "FindReturnRef", "RuntimeExceptionCapture"]
 }
 
 task coverage(dependsOn: ["test", "jacocoTestReport"]) {

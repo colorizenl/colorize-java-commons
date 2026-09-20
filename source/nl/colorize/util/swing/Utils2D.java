@@ -95,8 +95,9 @@ public final class Utils2D {
     }
     
     public static void savePNG(BufferedImage image, File dest) throws IOException {
-        FileOutputStream stream = new FileOutputStream(dest);
-        savePNG(image, stream);
+        try (FileOutputStream stream = new FileOutputStream(dest)) {
+            savePNG(image, stream);
+        }
     }
     
     public static void saveJPEG(BufferedImage image, OutputStream output) throws IOException {
@@ -114,8 +115,9 @@ public final class Utils2D {
     }
     
     public static void saveJPEG(BufferedImage image, File dest) throws IOException {
-        FileOutputStream stream = new FileOutputStream(dest);
-        saveJPEG(image, stream);
+        try (FileOutputStream stream = new FileOutputStream(dest)) {
+            saveJPEG(image, stream);
+        }
     }
 
     /**
