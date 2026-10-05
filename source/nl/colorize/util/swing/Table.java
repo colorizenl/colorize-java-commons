@@ -16,12 +16,12 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.RowSorter;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
-import javax.swing.table.TableStringConverter;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -37,7 +37,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -56,6 +55,7 @@ public class Table<R> extends JPanel implements TableModel {
     private List<String> columns;
     private List<Row<R>> rows;
     private Map<R, String> tooltips;
+    private Map<Integer, Comparator<String>> columnSorters;
     private List<TableModelListener> modelListeners;
     private Subject<Table<R>> doubleClick;
 
@@ -74,11 +74,11 @@ public class Table<R> extends JPanel implements TableModel {
         this.columns = List.copyOf(columns);
         this.rows = new ArrayList<>();
         this.tooltips = new HashMap<>();
+        this.columnSorters = new HashMap<>();
         this.modelListeners = new ArrayList<>();
         this.doubleClick = new Subject<>();
 
         createTable();
-        initDefaultSortOrder();
     }
 
     public Table(String... columns) {
@@ -90,8 +90,8 @@ public class Table<R> extends JPanel implements TableModel {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateColumnsFromModel(false);
         table.createDefaultColumnsFromModel();
-        table.setAutoCreateRowSorter(true);
-        table.addMouseListener(SwingUtils.toMouseReleasedListener(e -> {
+        table.setRowSorter(createRowSorter());
+        table.addMouseListener(SwingUtils.createMouseReleasedListener(e -> {
             if (e.getClickCount() == 2) {
                 doubleClick.next(Table.this);
             }
@@ -100,30 +100,13 @@ public class Table<R> extends JPanel implements TableModel {
         add(SwingUtils.wrapInScrollPane(table), BorderLayout.CENTER);
     }
 
-    @SuppressWarnings("unchecked")
-    private void initDefaultSortOrder() {
-        TableRowSorter<TableModel> rowSorter = (TableRowSorter<TableModel>) table.getRowSorter();
-        rowSorter.setModel(this);
-        rowSorter.setStringConverter(new TableStringConverter() {
+    private RowSorter<Table<R>> createRowSorter() {
+        return new TableRowSorter<>(this) {
             @Override
-            public String toString(TableModel model, int row, int column) {
-                Object value = getValueAt(row, column);
-                return Objects.toString(value);
+            public Comparator<?> getComparator(int column) {
+                return columnSorters.getOrDefault(column, TextUtils.autoSortAsc());
             }
-        });
-
-        for (int i = 0; i < columns.size(); i++) {
-            setColumnSorter(i, this::sortRows);
-        }
-    }
-
-    /**
-     * Default sort order that is used when no explicit order is defined for
-     * that column. Use {@link #setColumnSorter(int, Comparator)} to define
-     * an explicit sort order.
-     */
-    private int sortRows(Object a, Object b) {
-        return TextUtils.autoSortAsc().compare((String) a, (String) b);
+        };
     }
 
     @Override
@@ -151,7 +134,7 @@ public class Table<R> extends JPanel implements TableModel {
     private Class<?> getCellClass(Object cell) {
         return switch (cell) {
             case null -> Object.class;
-            case Number n -> Number.class;
+            case Number _ -> Number.class;
             default -> cell.getClass();
         };
     }
@@ -252,20 +235,7 @@ public class Table<R> extends JPanel implements TableModel {
             removeRow(rows.size() - 1);
         }
     }
-    
-    /**
-     * Replaces the table's columns with the specified values. Note that this
-     * will also remove all rows from the table.
-     */
-    public void replaceColumns(List<String> newColumns) {
-        Preconditions.checkArgument(!newColumns.isEmpty(),
-            "Table must contain at least 1 column");
-        
-        columns = List.copyOf(newColumns);
-        removeAllRows();
-        table.createDefaultColumnsFromModel();
-    }
-    
+
     @Override
     public int getRowCount() {
         return rows.size();
@@ -337,14 +307,22 @@ public class Table<R> extends JPanel implements TableModel {
     
     public void setColumnSorter(int columnIndex, Comparator<String> columnSorter) {
         assertColumnIndex(columnIndex);
-        TableRowSorter<?> rowSorter = (TableRowSorter<?>) table.getRowSorter();
-        rowSorter.setComparator(columnIndex, columnSorter);
+        columnSorters.put(columnIndex, columnSorter);
     }
     
     public void setColumnWidth(int columnIndex, int width) {
         assertColumnIndex(columnIndex);
         table.getColumnModel().getColumn(columnIndex).setMaxWidth(width);
         table.getColumnModel().getColumn(columnIndex).setPreferredWidth(width);
+    }
+
+    public void setColumnWidths(List<Integer> widths) {
+        Preconditions.checkArgument(widths.size() == columns.size(),
+            "Invalid column count, expected " + columns.size() + " but got " + widths.size());
+
+        for (int i = 0; i < widths.size(); i++) {
+            setColumnWidth(i, widths.get(i));
+        }
     }
     
     public void setTableCellRenderer(int columnIndex, TableCellRenderer renderer) {
@@ -423,17 +401,22 @@ public class Table<R> extends JPanel implements TableModel {
         }
         
         private void paintEmptyRows(Graphics2D g2) {
-            int startY = 0;
-            if (getRowCount() > 0) {
-                Rectangle last = getCellRect(getRowCount() - 1, 0, true);
-                startY = last.y + last.height;
+            int y = 0;
+            int row = 0;
+
+            while (row < getRowCount()) {
+                Rectangle cell = getCellRect(row, 0, true);
+                g2.setColor(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
+                g2.fillRect(0, cell.y, Math.max(getWidth(), cell.width), cell.height);
+                row++;
+                y = cell.y + cell.height;
             }
 
-            int row = getRowCount();
-            for (int y = startY; y <= getHeight(); y += getRowHeight()) {
+            while (y <= getHeight()) {
                 g2.setColor(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
                 g2.fillRect(0, y, getWidth(), getRowHeight());
                 row++;
+                y += getRowHeight();
             }
         }
         

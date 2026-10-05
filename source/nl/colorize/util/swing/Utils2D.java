@@ -217,30 +217,6 @@ public final class Utils2D {
     }
 
     /**
-     * Returns a new image that contains the original in the center, but is
-     * surrounded with empty padding until the target width and height are
-     * reached.
-     */
-    private static BufferedImage addPadding(BufferedImage original, int width, int height) {
-        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = createGraphics(result, true, false);
-        g2.drawImage(original, width / 2 - original.getWidth() / 2,
-            height / 2 - original.getHeight() / 2, null);
-        g2.dispose();
-        return result;
-    }
-
-    /**
-     * Returns a new image that contains the original in the center, but is
-     * surrounded by the specified amount of empty padding.
-     */
-    public static BufferedImage addPadding(BufferedImage original, int padding) {
-        int targetWidth = original.getWidth() + padding * 2;
-        int targetHeight = original.getHeight() + padding * 2;
-        return addPadding(original, targetWidth, targetHeight);
-    }
-
-    /**
      * Convenience method that casts an AWT {@link Graphics} instance to
      * {@link Graphics2D}, then configures its rendering hints based on
      * the provided parameters.
@@ -496,8 +472,7 @@ public final class Utils2D {
      * result as a new image. The shadow will be cast from the non-transparent
      * contents from the orginal image. Because the shadow will also take up
      * some space, the image should ideally contain some empty padding to
-     * accommodate for the shadow. {@link #addPadding(BufferedImage, int)} can
-     * be used to add additional padding, if necessary.
+     * accommodate for the shadow.
      *
      * @param color Drop shadow color.
      * @param size The offset between the shadow and the original image.

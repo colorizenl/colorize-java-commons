@@ -60,7 +60,7 @@ public class AccordionPanel<K> extends JPanel implements LayoutManager {
         add(titlePanel);
         add(detailsPanel);
         
-        titlePanel.addMouseListener(SwingUtils.toMouseReleasedListener(e -> expandSubPanel(info)));
+        titlePanel.addMouseListener(SwingUtils.createMouseReleasedListener(e -> expandSubPanel(info)));
     }
     
     public void removeSubPanel(K key) {

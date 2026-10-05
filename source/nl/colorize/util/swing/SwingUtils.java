@@ -16,8 +16,6 @@ import nl.colorize.util.Subject;
 import nl.colorize.util.TranslationBundle;
 import nl.colorize.util.Tuple;
 
-import javax.swing.AbstractButton;
-import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -41,7 +39,6 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -52,7 +49,6 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Image;
-import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -72,17 +68,14 @@ import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -119,26 +112,7 @@ public final class SwingUtils {
 
     private SwingUtils() {
     }
-    
-    /**
-     * Returns true if the current platform is a "headless" (non-graphical) 
-     * environment, and AWT/Swing/JavaFX are not supported.
-     */
-    public static boolean isHeadlessEnvironment() {
-        if (GraphicsEnvironment.isHeadless()) {
-            return true;
-        }
-        
-        // Some platforms claim they are not headless, but in
-        // reality still do not support graphical user interfaces.
-        try {
-            Desktop.getDesktop();
-            return false;
-        } catch (HeadlessException e) {
-            return true;
-        }
-    }
-    
+
     /**
      * Initializes Swing by selecting the best look-and-feel for the current
      * platform. On macOS this method also changes system properties so that
@@ -174,6 +148,29 @@ public final class SwingUtils {
         } catch (HeadlessException e) {
             return new Dimension(0, 0);
         }
+    }
+
+    /**
+     * Returns the platform's user interface scale factor. On Mac, this always
+     * returns 1.0 because Mac OS applies a consistent scale factor to the
+     * entire desktop. On Windows, desktop resolution/scale factor and UI scale
+     * factor are two independent settings.
+     * <p>
+     * This method returns the UI scale factor for the <em>default</em> screen.
+     * This could be different from the screen that is going to display the
+     * application, but we don't know this yet because this method is called
+     * before the window is even created.
+     */
+    public static float getDesktopScaleFactor() {
+        if (!Platform.isWindows()) {
+            return 1f;
+        }
+
+        return (float) GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .getDefaultScreenDevice()
+            .getDefaultConfiguration()
+            .getDefaultTransform()
+            .getScaleX();
     }
 
     /**
@@ -536,38 +533,7 @@ public final class SwingUtils {
         SwingUtils.setPreferredWidth(scrollPane, width);
         return scrollPane;
     }
-    
-    /**
-     * Returns the width available to child components within a container. This 
-     * excludes insets and other space used by the platform's look-and-feel.
-     */
-    public static int getAvailableWidth(Container parent) {
-        Insets insets = parent.getInsets();
-        return parent.getWidth() - insets.left - insets.right;
-    }
-    
-    /**
-     * Returns the width available to child components within a container. This 
-     * excludes insets and other space used by the platform's look-and-feel.
-     */
-    public static int getAvailableHeight(Container parent) {
-        Insets insets = parent.getInsets();
-        return parent.getHeight() - insets.top - insets.bottom;
-    }
-    
-    public static int getSelectedButton(List<? extends AbstractButton> radioButtons) {
-        for (int i = 0; i < radioButtons.size(); i++) {
-            if (radioButtons.get(i).isSelected()) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    public static int getSelectedButton(ButtonGroup buttonGroup) {
-        return getSelectedButton(Collections.list(buttonGroup.getElements()));
-    }
-    
+
     /**
      * Removes the platform's default look-and-feel from a button.
      *
@@ -581,54 +547,6 @@ public final class SwingUtils {
         if (!keepPadding) {
             button.setBorder(null);
         }
-    }
-    
-    /**
-     * Looks through the available font families and returns the first match from
-     * {@code requestedFontFamilies} which is available on the system. If there
-     * are no matches the default font family of "SansSerif" (which is guaranteed
-     * to be available by Swing) is returned.
-     */
-    public static String findAvailableFontFamily(String... requestedFontFamilies) {
-        GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        String[] systemFonts = environment.getAvailableFontFamilyNames();
-
-        return Arrays.stream(requestedFontFamilies)
-            .flatMap(requested -> findFontFamily(systemFonts, requested).stream())
-            .findFirst()
-            .orElse("SansSerif");
-    }
-
-    private static Optional<String> findFontFamily(String[] systemFonts, String requested) {
-        return Arrays.stream(systemFonts)
-            .filter(font -> font.equalsIgnoreCase(requested))
-            .findFirst();
-    }
-
-    /**
-     * Returns a {@link KeyListener} that forwards {@code keyReleased} events
-     * to the specified callback method.
-     */
-    public static KeyListener toKeyReleasedListener(Consumer<KeyEvent> callback) {
-        return new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent event) {
-                callback.accept(event);
-            }
-        };
-    }
-
-    /**
-     * Returns a {@link MouseListener} that forwards {@code mouseReleased}
-     * events to the specified callback method.
-     */
-    public static MouseListener toMouseReleasedListener(Consumer<MouseEvent> callback) {
-        return new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent event) {
-                callback.accept(event);
-            }
-        };
     }
 
     /**
@@ -675,34 +593,6 @@ public final class SwingUtils {
         label.setForeground(textColor);
         return label;
     }
-    
-    /**
-     * Creates a button suitable for usage in a toolbar. The size of the button
-     * and the size of the icon will depend on the platform's user interface
-     * conventions.
-     */
-    public static JButton createToolBarButton(String label, ImageIcon icon) {
-        if (icon.getIconWidth() != TOOLBAR_ICON_SIZE || icon.getIconHeight() != TOOLBAR_ICON_SIZE) {
-            icon = new ImageIcon(Utils2D.scaleImage(icon.getImage(), TOOLBAR_ICON_SIZE, 
-                    TOOLBAR_ICON_SIZE, true));
-        }
-        
-        JButton button = new JButton(label, icon);
-        button.setHorizontalTextPosition(JButton.CENTER);
-        button.setVerticalTextPosition(JButton.BOTTOM);
-        button.setFont(button.getFont().deriveFont(11f));
-        removeLookAndFeel(button, true);
-        return button;
-    }
-
-    /**
-     * Creates a button suitable for usage in a toolbar. The size of the button
-     * and the size of the icon will depend on the platform's user interface
-     * conventions.
-     */
-    public static JButton createToolBarButton(String label, BufferedImage icon) {
-        return createToolBarButton(label, new ImageIcon(icon));
-    }
 
     /**
      * Creates a {@link KeyListener} that will only listen to key pressed
@@ -731,6 +621,19 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns a {@link MouseListener} that forwards {@code mouseReleased}
+     * events to the specified callback method.
+     */
+    public static MouseListener createMouseReleasedListener(Consumer<MouseEvent> callback) {
+        return new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                callback.accept(event);
+            }
+        };
+    }
+
+    /**
      * Creates a {@link ComponentListener} that will only listen to component
      * resize events, and will invoke the specified callback when such events
      * occur.
@@ -754,17 +657,10 @@ public final class SwingUtils {
 
         removeLookAndFeel(button, false);
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setForeground(hoverColor);
-            }
-            
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setForeground(normalColor);
-            }
-        });
+        button.addMouseListener(toHoverListener(
+            _ -> button.setForeground(hoverColor),
+            _ -> button.setForeground(normalColor)
+        ));
 
         return button;
     }
@@ -937,29 +833,6 @@ public final class SwingUtils {
                 callback.accept(g2, getSize());
             }
         };
-    }
-
-    /**
-     * Returns the platform's user interface scale factor. On Mac, this always
-     * returns 1.0 because Mac OS applies a consistent scale factor to the
-     * entire desktop. On Windows, desktop resolution/scale factor and UI scale
-     * factor are two independent settings.
-     * <p>
-     * This method returns the UI scale factor for the <em>default</em> screen.
-     * This could be different from the screen that is going to display the
-     * application, but we don't know this yet because this method is called
-     * before the window is even created.
-     */
-    public static float getDesktopScaleFactor() {
-        if (!Platform.isWindows()) {
-            return 1f;
-        }
-
-        return (float) GraphicsEnvironment.getLocalGraphicsEnvironment()
-            .getDefaultScreenDevice()
-            .getDefaultConfiguration()
-            .getDefaultTransform()
-            .getScaleX();
     }
 
     private static void paintStripedRows(Graphics2D g2, JComponent component, int rowHeight) {

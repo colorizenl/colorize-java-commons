@@ -158,17 +158,6 @@ public class Utils2DTest {
     }
 
     @Test
-    void addPadding() {
-        BufferedImage original = Utils2D.createTestImage(100, 100);
-        BufferedImage padded = Utils2D.addPadding(original, 50);
-
-        assertEquals(200, padded.getWidth());
-        assertEquals(200, padded.getHeight());
-        assertEquals(EMPTY.getRGB(), padded.getRGB(0, 100));
-        assertEquals(RED.getRGB(), padded.getRGB(100, 100));
-    }
-
-    @Test
     void scaleImage() {
         BufferedImage original = Utils2D.createTestImage(100, 100);
         BufferedImage scaled = Utils2D.scaleImage(original, 20, 20, false);

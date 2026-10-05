@@ -268,7 +268,10 @@ public final class URLLoader {
      *
      * @see #send(HttpRequest)
      */
-    public static HttpResponse<String> get(String url, Map<String, String> headers) throws IOException {
+    public static HttpResponse<String> get(
+        String url,
+        Map<String, String> headers
+    ) throws IOException {
         HttpRequest request = buildRequest("GET", url, headers, null);
         return send(request);
     }
