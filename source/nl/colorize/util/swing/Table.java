@@ -9,7 +9,6 @@ package nl.colorize.util.swing;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Subject;
-import nl.colorize.util.Subscribable;
 import nl.colorize.util.TextUtils;
 
 import javax.swing.JComponent;
@@ -224,7 +223,7 @@ public class Table<R> extends JPanel implements TableModel {
         removeRow(rowIndex);
     }
     
-    public void removeRow(int rowIndex) {
+    private void removeRow(int rowIndex) {
         assertRowIndex(rowIndex);
         rows.remove(rowIndex);
         fireTableEvent(TableModelEvent.DELETE, rowIndex, TableModelEvent.ALL_COLUMNS);
@@ -266,7 +265,7 @@ public class Table<R> extends JPanel implements TableModel {
      *             sorting the table will actually change the row order.
      */
     @Deprecated
-    public int getSelectedRowIndex() {
+    private int getSelectedRowIndex() {
         if (table.getSelectedRow() == -1) {
             return -1;
         }
@@ -357,22 +356,22 @@ public class Table<R> extends JPanel implements TableModel {
     }
 
     /**
-     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * Returns a {@link Subject} that can be used to subscribe to events
      * whenever the selected row changes.
      */
-    public Subscribable<R> onSelect() {
+    public Subject<R> onSelect() {
         Subject<R> subject = new Subject<>();
         addActionListener(e -> subject.next(getSelectedRowKey()));
         return subject;
     }
 
     /**
-     * Returns a {@link Subscribable} that can be used to subscribe to events
+     * Returns a {@link Subject} that can be used to subscribe to events
      * whenever the selected row is double-clicked. The event passed to
      * subscribers is the currently selected row key, i.e. the row that was
      * double-clicked.
      */
-    public Subscribable<R> onDoubleClick() {
+    public Subject<R> onDoubleClick() {
         return doubleClick
             .map(Table::getSelectedRowKey)
             .filter(row -> row != null);
@@ -394,7 +393,7 @@ public class Table<R> extends JPanel implements TableModel {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            
+
             Graphics2D g2 = Utils2D.createGraphics(g, false, false);
             paintEmptyRows(g2);
             paintColumnLines(g2);
@@ -405,9 +404,10 @@ public class Table<R> extends JPanel implements TableModel {
             int row = 0;
 
             while (row < getRowCount()) {
-                Rectangle cell = getCellRect(row, 0, true);
+                Rectangle cell = getCellRect(row, ((Table<?>) getModel()).columns.size() - 1, true);
+                int x = cell.x + cell.width;
                 g2.setColor(row % 2 == 0 ? STANDARD_ROW_COLOR : ALT_ROW_COLOR);
-                g2.fillRect(0, cell.y, Math.max(getWidth(), cell.width), cell.height);
+                g2.fillRect(x, cell.y, getWidth() - x, cell.height);
                 row++;
                 y = cell.y + cell.height;
             }

@@ -94,6 +94,7 @@ public class ImageViewerUIT {
 
     private void createImageList() {
         imageList = new Table<>("File", "Size");
+        imageList.setColumnWidth(0, 180);
         imageList.setColumnWidth(1, 80);
         imageList.onDoubleClick().subscribe(this::selectImage);
         SwingUtils.setPreferredWidth(imageList, 300);
@@ -109,7 +110,7 @@ public class ImageViewerUIT {
     }
 
     private void openImageDirectory() {
-        ComboFileDialog fileDialog = new ComboFileDialog();
+        ComboFileDialog fileDialog = new ComboFileDialog(List.of(".png", ".jpg"));
         fileDialog.showOpenDialog(null).ifPresent(selected -> {
             File dir = selected.getParentFile();
             imageFiles = locateImageFiles(dir);
@@ -120,7 +121,7 @@ public class ImageViewerUIT {
     }
 
     private List<File> locateImageFiles(File dir) {
-        File[] images = dir.listFiles((file, name) -> name.endsWith("jpg") || name.endsWith(".png"));
+        File[] images = dir.listFiles((_, name) -> name.endsWith("jpg") || name.endsWith(".png"));
         Preconditions.checkState(images != null, "Unable to open directory: " + dir.getAbsolutePath());
 
         return Arrays.stream(images)

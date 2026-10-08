@@ -8,7 +8,6 @@ package nl.colorize.util.swing;
 
 import lombok.Getter;
 import nl.colorize.util.Subject;
-import nl.colorize.util.Subscribable;
 import nl.colorize.util.TranslationBundle;
 
 import javax.swing.JButton;
@@ -30,7 +29,7 @@ public class PropertyEditor extends JPanel {
 
     @Getter private Map<String, String> properties;
     @Getter private TranslationBundle bundle;
-    private Subject<Map<String, String>> changes;
+    @Getter private Subject<Map<String, String>> changes;
     private Table<String> table;
 
     public PropertyEditor(Map<String, String> initialProperties) {
@@ -131,9 +130,5 @@ public class PropertyEditor extends JPanel {
         for (Map.Entry<String, String> entry : properties.entrySet()) {
             table.addRow(entry.getKey(), entry.getKey(), entry.getValue());
         }
-    }
-
-    public Subscribable<Map<String, String>> getChanges() {
-        return changes;
     }
 }

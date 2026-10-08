@@ -369,4 +369,14 @@ class SubjectTest {
 
         assertEquals(List.of("event", "error", "event", "completed"), received);
     }
+
+    @Test
+    void subscribeOnlyToComplete() {
+        List<String> received = new ArrayList<>();
+        Subject.of("1", "2")
+            .subscribeComplete(() -> received.add("completed"))
+            .complete();
+
+        assertEquals(List.of("completed"), received);
+    }
 }

@@ -79,21 +79,6 @@ public class ComboFileDialog {
     }
 
     /**
-     * Creates a new file dialog that will start in the specified location
-     * and does not have any restrictions in terms of which files it will
-     * or will not accept.
-     *
-     * @deprecated It's pretty uncommon to have a file dialog in applications
-     *             without <em>any</em> form of restrictions. It's generally
-     *             recommended to be specific within the file dialog itself
-     *             on which types of files you want users to be able to select.
-     */
-    @Deprecated
-    public ComboFileDialog() {
-        this(null, null, new AcceptAllFilter());
-    }
-
-    /**
      * Returns whether file dialogs are created using Swing (if this returns true)
      * or AWT (if this returns false). 
      */

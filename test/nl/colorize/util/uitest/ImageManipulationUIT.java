@@ -263,7 +263,7 @@ public class ImageManipulationUIT {
     }
 
     private void openImages() {
-        ComboFileDialog fileDialog = new ComboFileDialog();
+        ComboFileDialog fileDialog = new ComboFileDialog(List.of(".png", ".jpg"));
         fileDialog.showOpenDialog(null).ifPresent(selected -> {
             images.clear();
 
