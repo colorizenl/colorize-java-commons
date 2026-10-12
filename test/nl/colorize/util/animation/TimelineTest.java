@@ -138,9 +138,6 @@ public class TimelineTest {
 
         timeline.setPlayhead(5f);
         assertEquals(5f, timeline.getValue(), 0.01f);
-
-        timeline.removeKeyFrame(last);
-        assertEquals(3f, timeline.getValue(), 0.01f);
     }
 
     @Test
@@ -204,26 +201,6 @@ public class TimelineTest {
         assertTrue(kf.compareTo(new KeyFrame(2f, 20f)) < 0);
         assertTrue(kf.compareTo(new KeyFrame(1f, 20f)) == 0);
         assertTrue(kf.compareTo(new KeyFrame(0.5f, 20f)) > 0);
-    }
-
-    @Test
-    public void testReplaceKeyFrame() {
-        Timeline timeline = new Timeline();
-        timeline.addKeyFrame(1f, 10f);
-        KeyFrame middle = new KeyFrame(2f, 20f);
-        timeline.addKeyFrame(middle);
-        timeline.setPlayhead(20f);
-        timeline.removeKeyFrame(middle);
-        timeline.addKeyFrame(3f, 30f);
-        timeline.end();
-
-        String expected = """
-            Timeline
-                KeyFrame[time=1.0, value=10.0]
-                KeyFrame[time=3.0, value=30.0]
-            """;
-
-        assertEquals(expected, timeline.toString());
     }
 
     @Test

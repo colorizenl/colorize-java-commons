@@ -42,7 +42,9 @@ public class SubscribableCollection<E> extends ForwardingCollection<E> {
     @Override
     public boolean add(E element) {
         boolean result = elements.add(element);
-        addedElements.next(element);
+        if (result) {
+            addedElements.next(element);
+        }
         return result;
     }
 

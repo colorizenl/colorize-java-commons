@@ -198,7 +198,7 @@ public record ResourceFile(String path) {
      *         path to the {@code name} argument.
      */
     public ResourceFile sibling(String name) {
-        Preconditions.checkArgument(!name.startsWith("//"), "Cannot provide absolute path");
+        Preconditions.checkArgument(!name.startsWith("/"), "Cannot provide absolute path");
 
         List<String> pathComponents = PATH_SPLITTER.splitToList(path);
 

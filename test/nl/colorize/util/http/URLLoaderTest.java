@@ -180,6 +180,7 @@ public class URLLoaderTest {
 
         assertEquals("https://example.com?a=2&b=3", URLLoader.appendURL(base, query));
         assertEquals("https://example.com", URLLoader.appendURL(base, PostData.empty()));
+        assertEquals("https://example.com/b", URLLoader.appendURL(base, "..", "b"));
     }
 
     @Test

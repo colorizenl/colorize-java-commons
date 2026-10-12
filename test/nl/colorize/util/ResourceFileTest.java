@@ -117,5 +117,6 @@ public class ResourceFileTest {
     void getSibling() {
         assertEquals("other.txt", new ResourceFile("test.txt").sibling("other.txt").path());
         assertEquals("a/other.txt", new ResourceFile("a/test.txt").sibling("other.txt").path());
+        assertThrows(IllegalArgumentException.class, () -> new ResourceFile("a.txt").sibling("/b"));
     }
 }

@@ -6,7 +6,6 @@
 
 package nl.colorize.util.swing;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Preconditions;
 import nl.colorize.util.LogHelper;
 import nl.colorize.util.Platform;
@@ -147,12 +146,12 @@ public final class MacIntegration {
      */
     public static void showNotification(String title, String message) {
         try {
-            CharMatcher quotes = CharMatcher.is('"');
-            String script = String.format("display notification \"%s\" with title \"%s\"",
-                quotes.removeFrom(message), quotes.removeFrom(title));
-
-            Process process = new ProcessBuilder("osascript", "-e", script)
-                .start();
+            Process process = new ProcessBuilder("osascript",
+                "-e", "on run argv",
+                "-e", "display notification (item 1 of argv) with title (item 2 of argv)",
+                "-e", "end run",
+                message, title
+            ).start();
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {

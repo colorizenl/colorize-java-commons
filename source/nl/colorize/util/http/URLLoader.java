@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 /**
  * Utility class that contains convenience methods for creating and sending
  * HTTP requests using the HTTP client in {@code java.net.http}.
@@ -153,7 +151,7 @@ public final class URLLoader {
     public static HttpResponse<String> send(HttpClient client, HttpRequest request) throws IOException {
         try {
             HttpResponse<String> response = client.send(request,
-                HttpResponse.BodyHandlers.ofString(UTF_8));
+                HttpResponse.BodyHandlers.ofString());
             checkStatus(response);
             return response;
         } catch (InterruptedException e) {
@@ -191,7 +189,7 @@ public final class URLLoader {
      */
     public static HttpResponse<String> sendUnchecked(HttpRequest request) throws IOException {
         try (HttpClient httpClient = createClient()) {
-            return httpClient.send(request, HttpResponse.BodyHandlers.ofString(UTF_8));
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException e) {
             throw new IOException("HTTP request interrupted", e);
         }
@@ -280,12 +278,12 @@ public final class URLLoader {
      * Appends the specified path components to a URL. The contents of each
      * path component will be URL-encoded.
      *
-     * @throws IllegalArgumentException if the base URL already includes a
-     *         query string, meaning that path components can no longer be
-     *         appended to it.
+     * @throws IllegalStateException if the base URL already includes a query
+     *         string, meaning that path components can no longer be appended
+     *         to it.
      */
     public static String appendURL(String baseURL, String... pathComponents) {
-        Preconditions.checkArgument(!baseURL.contains("?"),
+        Preconditions.checkState(!baseURL.contains("?"),
             "URL already contains a query string: " + baseURL);
 
         if (pathComponents.length == 0) {
@@ -293,7 +291,7 @@ public final class URLLoader {
         }
 
         String path = Arrays.stream(pathComponents)
-            .filter(pathComponent -> !pathComponent.isEmpty())
+            .filter(pathComponent -> isValidPathComponent(pathComponent))
             .map(pathComponent -> UrlEscapers.urlPathSegmentEscaper().escape(pathComponent))
             .collect(Collectors.joining("/"));
 
@@ -303,6 +301,12 @@ public final class URLLoader {
         }
         url += path;
         return url;
+    }
+
+    private static boolean isValidPathComponent(String pathComponent) {
+        return !pathComponent.isEmpty() &&
+            !pathComponent.equals(".") &&
+            !pathComponent.equals("..");
     }
 
     /**

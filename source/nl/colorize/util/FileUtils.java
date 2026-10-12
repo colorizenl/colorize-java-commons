@@ -16,9 +16,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -179,27 +182,22 @@ public final class FileUtils {
 
         LOGGER.info("Deleting directory " + dir.getAbsolutePath());
 
-        deleteRecursive(dir);
-    }
-
-    private static void deleteRecursive(File dir) throws IOException {
-        for (File child : getDirectoryContents(dir)) {
-            if (child.isDirectory()) {
-                deleteRecursive(child);
-            } else {
-                delete(child);
+        Files.walkFileTree(dir.toPath(), new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
             }
-        }
 
-        delete(dir);
-    }
-
-    private static File[] getDirectoryContents(File dir) {
-        File[] contents = dir.listFiles();
-        if (contents == null) {
-            return new File[0];
-        }
-        return contents;
+            @Override
+            public FileVisitResult postVisitDirectory(Path subdir, IOException e) throws IOException {
+                if (e != null) {
+                    throw e;
+                }
+                Files.delete(subdir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     /**

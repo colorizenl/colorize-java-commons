@@ -189,7 +189,7 @@ public class Table<R> extends JPanel implements TableModel {
 
         Row<R> row = new Row<>(key, formattedCells);
         rows.add(row);
-        fireTableEvent(rows.size() - 1, TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT);
+        fireTableEvent(TableModelEvent.INSERT, rows.size() - 1, TableModelEvent.ALL_COLUMNS);
     }
 
     /**

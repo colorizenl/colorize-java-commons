@@ -138,7 +138,7 @@ public final class Subject<T> implements Publisher<T> {
     @SuppressWarnings("unchecked")
     private void sendUndelivered(Subscriber<? super T> subscriber) {
         for (Object undeliveredEvent : undelivered) {
-            if (undeliveredEvent instanceof Exception error) {
+            if (undeliveredEvent instanceof Throwable error) {
                 subscriber.onError(error);
             } else {
                 subscriber.onNext((T) undeliveredEvent);

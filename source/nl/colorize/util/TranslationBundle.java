@@ -42,15 +42,18 @@ public final class TranslationBundle extends ResourceBundle {
     private Translation defaultTranslation;
     private Translation selectedTranslation;
 
+    /**
+     * Returns the default locale assumed by {@link TranslationBundle} if no
+     * explicit locale is defined. This is defined as {@link Locale#US} and
+     * is <em>not</em> dependent on the system locale.
+     */
     public static final Locale DEFAULT_LOCALE = Locale.US;
 
     /**
      * Predefined constant for the Dutch language locale, similar to other
      * constants like {@link Locale#US}.
      */
-    //TODO This cannot use Locale.of because it's not yet supported by TeaVM.
-    @SuppressWarnings("deprecation")
-    public static final Locale NL = new Locale("nl");
+    public static final Locale NL = Locale.of("nl");
 
     /**
      * Creates a new {@link TranslationBundle} that contains translations for

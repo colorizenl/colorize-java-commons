@@ -64,6 +64,10 @@ public class Timeline implements Animatable {
      */
     public void setPlayhead(double position) {
         double duration = getDuration();
+
+        if (duration == 0.0) {
+            return;
+        }
         
         if (loop && position > duration) {
             playhead = position % duration;
@@ -223,6 +227,7 @@ public class Timeline implements Animatable {
 
         keyFrames.add(keyFrame);
         Collections.sort(keyFrames);
+        scanNextKeyFrame(true);
         return this;
     }
 
@@ -245,11 +250,6 @@ public class Timeline implements Animatable {
     public Timeline addKeyFrame(double position, double value) {
         KeyFrame keyFrame = new KeyFrame(position, value);
         return addKeyFrame(keyFrame);
-    }
-
-    public void removeKeyFrame(KeyFrame keyFrame) {
-        keyFrames.remove(keyFrame);
-        setPlayhead(Math.min(playhead, getDuration()));
     }
 
     /**

@@ -59,7 +59,7 @@ public final class DateParser {
         new DatePattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd HH:mm:ss"),
         new DatePattern("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}", "yyyy-MM-dd'T'HH:mm:ss"),
         new DatePattern("\\d{1,2}-\\d{1,2}-\\d{4}",                  "dd-MM-yyyy"),
-        new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}",        "dd-MM-yyyy HH:mm:ss"),
+        new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}",        "dd-MM-yyyy HH:mm"),
         new DatePattern("\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}", "dd-MM-yyyy HH:mm:ss"),
         new DatePattern("\\d{2}/\\d{2}/\\d{4}",                      "MM/dd/yyyy")
     );

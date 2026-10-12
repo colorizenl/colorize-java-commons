@@ -46,8 +46,10 @@ public class Cache<K, V> {
      * it, then return it.
      */
     public V get(K key) {
-        if (contents.containsKey(key)) {
-            return contents.get(key);
+        V existingValue = contents.get(key);
+
+        if (existingValue != null) {
+            return existingValue;
         }
 
         V value = computeFunction.apply(key);

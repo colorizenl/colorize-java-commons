@@ -7,7 +7,6 @@
 package nl.colorize.util;
 
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import lombok.AllArgsConstructor;
@@ -397,8 +396,9 @@ public enum Platform {
      *         application data (e.g. Google App Engine).
      */
     public static File getApplicationData(String app, String path) {
-        Preconditions.checkArgument(!path.trim().isEmpty() && !path.startsWith("/"),
-            "Invalid path: " + path);
+        if (path.trim().isEmpty() || path.startsWith("/") || path.contains("..")) {
+            throw new IllegalArgumentException("Invalid path: " + path);
+        }
 
         File appDataDir = getApplicationDataDirectory(app);
         try {
@@ -452,7 +452,7 @@ public enum Platform {
      *         to user files (e.g. Google App Engine).
      */
     public static File getUserData(String path) {
-        if (path.isEmpty() || path.startsWith("/")) {
+        if (path.isEmpty() || path.startsWith("/") || path.contains("..")) {
             throw new IllegalArgumentException("Invalid path: " + path);
         }
         
