@@ -6,16 +6,21 @@
 
 package nl.colorize.util;
 
+import com.google.common.base.Preconditions;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -240,6 +245,27 @@ public final class Subject<T> implements Publisher<T> {
     }
 
     /**
+     * Registers a subscriber that blocks the current thread until the next
+     * event has been received. Returns an empty result if the specified
+     * duration (in milliseconds) has been reached without receiving an event.
+     *
+     * @throws IllegalArgumentException if {@code timeout} is negative or zero.
+     */
+    public Optional<T> block(long timeout) {
+        Preconditions.checkArgument(timeout > 0L, "Invalid timeout: " + timeout);
+
+        BlockingQueue<T> queue = new ArrayBlockingQueue<>(1);
+        subscribe(queue::add);
+        try {
+            T result = queue.poll(timeout, TimeUnit.MILLISECONDS);
+            return Optional.ofNullable(result);
+        } catch (InterruptedException e) {
+            LOGGER.warning("Thread was interrupted awaiting asynchronous event");
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Marks this {@link Subject} as completed, meaning that no new events
      * or errors will be published to subscribers.
      */
@@ -364,6 +390,73 @@ public final class Subject<T> implements Publisher<T> {
         backgroundThread.start();
 
         return subject;
+    }
+
+    /**
+     * Performs the specified operation, automatically retrying multiple times
+     * until the operation succeeds. Returns a {@link Subject} that can be used
+     * to subscribe to the results.
+     * <p>
+     * Note that intermediate failures will <em>not</em> be propagated to
+     * subscribers. If the operation does not succeed within the requested
+     * number of attempts, the last failure is sent to subscribers.
+     *
+     * @param attempts The number of attempts before considering the operation
+     *                 as failed.
+     *
+     * @throws IllegalArgumentException if {@code attempts} is less than 2. A
+     *         value of 1 is not allowed as that effectively means there is no
+     *         retry. In that situation, use {@link #runAsync(Callable)}
+     *         instead.
+     */
+    public static <T> Subject<T> retry(Callable<T> operation, int attempts) {
+        Subject<T> subject = new Subject<>();
+        retryOperation(operation, attempts, subject);
+        return subject;
+    }
+
+    /**
+     * Performs the specified operation in a new thread, automatically retrying
+     * multiple times until the operation succeeds. Returns a {@link Subject}
+     * that can be used to subscribe to the results.
+     * <p>
+     * Note that intermediate failures will <em>not</em> be propagated to
+     * subscribers. If the operation does not succeed within the requested
+     * number of attempts, the last failure is sent to subscribers.
+     *
+     * @param attempts The number of attempts before considering the operation
+     *                 as failed.
+     *
+     * @throws IllegalArgumentException if {@code attempts} is less than 2. A
+     *         value of 1 is not allowed as that effectively means there is no
+     *         retry. In that situation, use {@link #runAsync(Callable)}
+     *         instead.
+     */
+    public static <T> Subject<T> retryAsync(Callable<T> operation, int attempts) {
+        Subject<T> subject = new Subject<>();
+        Thread backgroundThread = new Thread(() -> retryOperation(operation, attempts, subject),
+            "Subject-" + UUID.randomUUID());
+        backgroundThread.start();
+        return subject;
+    }
+
+    private static <T> void retryOperation(Callable<T> operation, int attempts, Subject<T> subject) {
+        Preconditions.checkArgument(attempts >= 2, "Invalid number of attempts: " + attempts);
+
+        Exception lastError = null;
+
+        for (int i = 0; i < attempts; i++) {
+            try {
+                T result = operation.call();
+                subject.next(result);
+                return;
+            } catch (Exception e) {
+                LOGGER.warning("Asynchronous operation failed, retrying");
+                lastError = e;
+            }
+        }
+
+        subject.nextError(lastError);
     }
 
     /**

@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Subscriber;
@@ -19,6 +21,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SubjectTest {
 
@@ -378,5 +382,115 @@ class SubjectTest {
             .complete();
 
         assertEquals(List.of("completed"), received);
+    }
+
+    @Test
+    void blockUntilEvent() {
+        Subject<Integer> subject = new Subject<>();
+
+        Thread backgroundThread = new Thread(() -> {
+            try {
+                Thread.sleep(100);
+                subject.next(1);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        backgroundThread.start();
+
+        assertTrue(subject.block(500).isPresent());
+    }
+
+    @Test
+    void emptyEventIfTimeout() {
+        Subject<Integer> subject = new Subject<>();
+
+        Thread backgroundThread = new Thread(() -> {
+            try {
+                Thread.sleep(500);
+                subject.next(1);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        backgroundThread.start();
+
+        assertFalse(subject.block(100).isPresent());
+    }
+
+    @Test
+    void acceptAdditionalEventsAfterBlocking() {
+        Subject<Integer> subject = new Subject<>();
+        List<Integer> events = new ArrayList<>();
+        subject.subscribe(events::add);
+
+        Thread backgroundThread = new Thread(() -> {
+            try {
+                Thread.sleep(100);
+                subject.next(1);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        backgroundThread.start();
+
+        subject.next(2);
+
+        assertTrue(subject.block(500).isPresent());
+        assertEquals(List.of(2, 1), events);
+    }
+
+    @Test
+    void retry() {
+        AtomicInteger counter = new AtomicInteger(1);
+        List<String> events = new ArrayList<>();
+
+        Callable<String> operation = () -> {
+            int value = counter.incrementAndGet();
+            if (value < 2) {
+                throw new RuntimeException("error");
+            }
+            return String.valueOf(value);
+        };
+
+        Subject.retry(operation, 3)
+            .subscribe(events::add)
+            .subscribeErrors(_ -> events.add("error"));
+
+        assertEquals(List.of("2"), events);
+    }
+
+    @Test
+    void retryAsync() {
+        AtomicInteger counter = new AtomicInteger(1);
+
+        Callable<String> operation = () -> {
+            int value = counter.incrementAndGet();
+            if (value < 2) {
+                throw new RuntimeException("error");
+            }
+            return String.valueOf(value);
+        };
+
+        Optional<String> result = Subject.retry(operation, 3).block(500);
+
+        assertEquals("2", result.orElse(""));
+    }
+
+    @Test
+    void retryThatFailsLeadsToError() {
+        AtomicInteger counter = new AtomicInteger(1);
+        List<String> events = new ArrayList<>();
+
+        Callable<String> operation = () -> {
+            counter.incrementAndGet();
+            throw new RuntimeException("error");
+        };
+
+        Subject.retry(operation, 3)
+            .subscribe(events::add)
+            .subscribeErrors(_ -> events.add("error"));
+
+        assertEquals(List.of("error"), events);
     }
 }
