@@ -127,15 +127,13 @@ class SubjectTest {
     }
 
     @Test
-    void inBackgroundThread() throws InterruptedException {
+    void inBackgroundThread() {
         List<String> received = new CopyOnWriteArrayList<>();
         Subject<String> subject = Subject.runAsync(() -> {
-            Thread.sleep(500);
+            Thread.sleep(100);
             return "1";
         });
-        subject.subscribe(received::add);
-
-        Thread.sleep(1000);
+        subject.subscribe(received::add).block(1000);
 
         assertEquals("[1]", received.toString());
     }

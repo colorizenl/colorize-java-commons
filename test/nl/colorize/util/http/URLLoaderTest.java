@@ -14,7 +14,6 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,15 +121,12 @@ public class URLLoaderTest {
     }
 
     @Test
-    void sendWithCallback() throws InterruptedException {
-        List<Integer> result = new ArrayList<>();
+    void sendWithCallback() {
+        HttpResponse<String> response = URLLoader.sendAsync("GET", "https://clrz.nl", Map.of(), null)
+            .block(5000)
+            .get();
 
-        URLLoader.sendAsync("GET", "https://clrz.nl", Map.of(), null)
-            .subscribe(response -> result.add(response.statusCode()));
-
-        Thread.sleep(5000);
-
-        assertEquals(List.of(200), result);
+        assertEquals(200, response.statusCode());
     }
 
     @Test

@@ -30,6 +30,22 @@ public class Timeline implements Animatable {
     private static final double EPSILON = 0.001;
 
     /**
+     * Creates a timeline with the specified initial value at {@code t=0}.
+     */
+    public Timeline(double initialValue, Interpolation interpolationMethod, boolean loop) {
+        this(interpolationMethod, loop);
+        addKeyFrame(0.0, initialValue);
+    }
+
+    /**
+     * Creates a timeline with the specified initial value at {@code t=0},
+     * which will play once and not loop.
+     */
+    public Timeline(double initialValue, Interpolation interpolationMethod) {
+        this(initialValue, interpolationMethod, false);
+    }
+
+    /**
      * Creates a timeline that will interpolate between key frames using the
      * specified interpolation method.
      */
@@ -297,7 +313,13 @@ public class Timeline implements Animatable {
      * timeline, but in the reverse order. This means the first key frame in
      * the result will have the value of the last key frame in this timeline,
      * and vice versa.
+     *
+     * @deprecated The behavior of this method is not intuitive and hard to
+     *             understand in terms of what the reversed timeline will
+     *             actually look like. Prefer manually reversing the animation
+     *             over using this method.
      */
+    @Deprecated
     public Timeline reverse() {
         Timeline reversed = new Timeline(interpolationMethod, loop);
         for (int i = 0; i < keyFrames.size(); i++) {

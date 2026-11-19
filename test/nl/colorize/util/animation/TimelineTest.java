@@ -316,4 +316,18 @@ public class TimelineTest {
         assertEquals(0.5, timeline.getPlayhead(), EPSILON);
         assertEquals(5.0, timeline.getValue(), EPSILON);
     }
+
+    @Test
+    void createWithInitialValue() {
+        Timeline timeline = new Timeline(2.0, Interpolation.LINEAR)
+            .addKeyFrame(1.0, 3.0);
+
+        String expected = """
+            Timeline
+                KeyFrame[time=0.0, value=2.0]
+                KeyFrame[time=1.0, value=3.0]
+            """;
+
+        assertEquals(expected, timeline.toString());
+    }
 }

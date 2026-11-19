@@ -196,4 +196,11 @@ class ConfigTest {
         assertThrows(IllegalStateException.class,
             () -> config.registerTypeMapper(String.class, _ -> null));
     }
+
+    @Test
+    void fromPropertiesFile() {
+        Config config = Config.fromPropertiesFile(new ResourceFile("relative-date.properties"));
+
+        assertEquals("just now", config.getString("now"));
+    }
 }

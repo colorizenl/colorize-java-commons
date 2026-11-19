@@ -204,7 +204,7 @@ public class TupleList<L, R> extends ForwardingList<Tuple<L, R>> {
      */
     public static <L, R> TupleList<L, R> combine(List<L> leftEntries, List<R> rightEntries) {
         Preconditions.checkArgument(leftEntries.size() == rightEntries.size(),
-            "Lists have different length: " + leftEntries.size() + " versus" + rightEntries.size());
+            "Lists have different length: " + leftEntries.size() + " versus " + rightEntries.size());
 
         TupleList<L, R> tuples = create();
 

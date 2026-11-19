@@ -295,6 +295,15 @@ public abstract class Config {
     }
 
     /**
+     * Creates a {@link Config} from a {@code .properties} file. The file is
+     * loaded using {@link PropertyUtils#loadProperties(ResourceFile)}.
+     * Entries that are {@code null} or empty are treated as absent.
+     */
+    public static Config fromPropertiesFile(ResourceFile file) {
+        return from(PropertyUtils.loadProperties(file));
+    }
+
+    /**
      * Creates a {@link Config} that will consider every property to be
      * nonexistent. This means that every required property will result in
      * an exception, and every optional property will result in the default
